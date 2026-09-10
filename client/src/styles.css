@@ -446,3 +446,18 @@ button:disabled {
     padding: 14px 24px;
   }
 }
+
+.task-chooser {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 16px;
+}
+
+.task-chooser .ghost {
+  padding: 7px 10px;
+  font-size: 15px;
+}

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import mimetypes
+from contextlib import asynccontextmanager
 import os
 from pathlib import Path
 from uuid import uuid4
@@ -13,10 +14,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from server.api.models import ErrorDetail, ErrorEnvelope, HealthResponse
+from server.api.models import ErrorDetail, ErrorEnvelope, HealthResponse, ReadyResponse
 from server.api.routes import router
 from server.core.model_evaluator import build_evaluator
-from server.core.scenario_engine import ScenarioEngine, ScenarioError
+from server.core.scenario_engine import ScenarioEngine, ScenarioError, ScenarioVersionError
+from server.core.rag_runtime import warmup_rag
 from server.core.session import AuthError
 from server.storage import (
     IdempotencyConflictError,
@@ -48,10 +50,17 @@ def _error(status_code: int, code: str, message: str, retryable: bool = False, l
     return JSONResponse(status_code=status_code, content=envelope.model_dump(mode="json", exclude_none=True))
 
 
+@asynccontextmanager
+async def _lifespan(app: FastAPI):
+    app.state.require_dense = os.getenv("SKILLTOWN_REQUIRE_DENSE", "false").strip().lower() in {"1", "true", "yes", "on"}
+    app.state.rag_status = warmup_rag(app.state.require_dense)
+    yield
+
+
 def create_app(
     database_path: str | Path | None = None, web_dir: str | Path | None = None
 ) -> FastAPI:
-    app = FastAPI(title="SkillTown Learning API", version="1.0.0")
+    app = FastAPI(title="SkillTown Learning API", version="1.0.0", lifespan=_lifespan)
     app.state.store = Store(database_path or os.getenv("DATABASE_PATH", "data/skilltown.sqlite3"))
     app.state.engine = ScenarioEngine()
     app.state.evaluator = build_evaluator()
@@ -67,6 +76,11 @@ def create_app(
     def health():
         return HealthResponse()
 
+    @app.get("/ready", response_model=ReadyResponse, operation_id="readinessCheck")
+    def ready():
+        status = app.state.rag_status
+        return JSONResponse(status_code=200 if status.ready else 503, content=status.payload())
+
     @app.exception_handler(ApiError)
     async def api_error_handler(_request: Request, exc: ApiError):
         return _error(exc.status_code, exc.code, exc.message, exc.retryable)
@@ -78,6 +92,10 @@ def create_app(
     @app.exception_handler(NotFoundError)
     async def not_found_handler(_request: Request, exc: NotFoundError):
         return _error(404, "not_found", str(exc))
+
+    @app.exception_handler(ScenarioVersionError)
+    async def scenario_version_handler(_request: Request, exc: ScenarioVersionError):
+        return _error(409, "scenario_version_mismatch", str(exc), False)
 
     @app.exception_handler(ScenarioError)
     async def scenario_error_handler(_request: Request, exc: ScenarioError):

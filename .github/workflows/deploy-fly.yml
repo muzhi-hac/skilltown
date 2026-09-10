@@ -33,12 +33,12 @@ jobs:
           url="https://$app.fly.dev"
           # The machine may still be booting when deploy returns.
           for i in $(seq 1 30); do
-            if curl -fsS --max-time 10 "$url/health" >/dev/null 2>&1; then
+            if curl -fsS --max-time 10 "$url/ready" >/dev/null 2>&1; then
               echo "health check passed on attempt ${i}"
               break
             fi
             if [ "$i" = 30 ]; then
-              echo "timed out waiting for $url/health" >&2
+              echo "timed out waiting for $url/ready" >&2
               exit 1
             fi
             sleep 5

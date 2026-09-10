@@ -12,7 +12,10 @@ export interface PolicyCard {
   clause_id: string;
   title: string;
   text: string;
-  fictional: true;
+  /** False for passages quoted from the real EU corpus. */
+  fictional: boolean;
+  /** Which document the passage came from, when it is a real source. */
+  source?: string;
 }
 
 export interface ScenarioNode {
@@ -53,6 +56,7 @@ export interface Attempt {
   learning_updates: LearningUpdate[];
   is_complete: boolean;
   feedback_mode: FeedbackMode;
+  assessment_status: "assessed" | "deferred" | "not_requested";
   timing: { active_seconds: number; model_wait_seconds: number };
 }
 

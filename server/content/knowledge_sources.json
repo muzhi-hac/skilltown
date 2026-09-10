@@ -1,0 +1,40 @@
+{
+  "documents": [
+    {
+      "document_id": "eu_regulation_reference",
+      "basis_type": "regulation catalogue",
+      "region": "EU",
+      "subject": "Corporate compliance reference index",
+      "reference_date": "2026-09-10",
+      "operator": "SkillTown editorial",
+      "exceptions": "Training reference; applicable local transposition and organisational policy may add conditions.",
+      "source": "server/content/knowledge/eu_regulation_reference.md",
+      "verified_date": "2026-09-10",
+      "verification_sources": [
+        "https://eur-lex.europa.eu/eli/reg/2016/679/oj",
+        "https://eur-lex.europa.eu/eli/dir/2022/2555/oj",
+        "https://eur-lex.europa.eu/eli/reg/2024/1624/oj",
+        "https://eur-lex.europa.eu/eli/dir/2003/88/oj",
+        "https://eur-lex.europa.eu/eli/dir/2019/1937/oj"
+      ]
+    },
+    {
+      "document_id": "eu_thresholds_annex",
+      "basis_type": "practical thresholds annex",
+      "region": "EU",
+      "subject": "Compliance training thresholds and decision cards",
+      "reference_date": "2026-09-10",
+      "operator": "SkillTown editorial",
+      "exceptions": "Training reference; thresholds apply only with the scope and effective date stated in the cited passage.",
+      "source": "server/content/knowledge/eu_thresholds_annex.md",
+      "verified_date": "2026-09-10",
+      "verification_sources": [
+        "https://eur-lex.europa.eu/eli/reg/2016/679/oj",
+        "https://eur-lex.europa.eu/eli/dir/2022/2555/oj",
+        "https://eur-lex.europa.eu/eli/reg/2024/1624/oj",
+        "https://eur-lex.europa.eu/eli/dir/2003/88/oj",
+        "https://eur-lex.europa.eu/eli/dir/2019/1937/oj"
+      ]
+    }
+  ]
+}

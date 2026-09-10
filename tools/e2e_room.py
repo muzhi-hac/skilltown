@@ -26,15 +26,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from tools.shoot_page import CHROME, PORT, Session  # noqa: E402
 
-ANSWER_PASS = "Who pays for this, and is it tied to the renewal approval I own?"
-ANSWER_CONFLICT = (
-    "The renewal approval sits with me and they asked me to skip the expense record, "
-    "so I will pause and consult compliance."
-)
-ANSWER_BOUNDARY = (
-    "I will decline for now because the renewal approval sits with me; I will consult "
-    "compliance and we can meet once it is closed."
-)
+ANSWER_CLARIFY = "I first confirm the public-official role, the applicable Germany-specific rule and how €26 compares with its threshold."
+ANSWER_CONFLICT = "The linked payments total €12,000, splitting does not avoid the cash limit, and I will decline or escalate through the required process."
+ANSWER_BOUNDARY = "We became aware at 10:00 today and the breach is high risk, so I will notify the authority within 72 hours and affected people without undue delay; I will document and coordinate the next steps now."
 
 failures: list[str] = []
 
@@ -68,23 +62,19 @@ class Page:
         return False
 
     def click_text(self, fragment: str) -> bool:
-        """Click the first button whose label contains `fragment`."""
+        """Dispatch a click on the first enabled button with matching visible text."""
         script = f"""
         (() => {{
           const target = [...document.querySelectorAll('button')]
             .find(b => b.innerText.toLowerCase().includes({json.dumps(fragment.lower())})
                        && !b.disabled);
-          if (!target) return null;
-          const box = target.getBoundingClientRect();
-          return {{x: box.left + box.width / 2, y: box.top + box.height / 2}};
+          if (!target) return false;
+          target.click();
+          return true;
         }})()
         """
         result = self.session.send("Runtime.evaluate", expression=script, returnByValue=True)
-        box = result.get("result", {}).get("value")
-        if not box:
-            return False
-        self.session.click(int(box["x"]), int(box["y"]))
-        return True
+        return bool(result.get("result", {}).get("value"))
 
     def answer(self, text: str) -> None:
         self.session.send(
@@ -138,26 +128,44 @@ def main() -> int:
         check("no multiple-choice options are offered", "option" not in page.text().lower())
 
         print("3) The learner types their own answers")
-        page.answer(ANSWER_PASS)
-        check("question 2 arrives", page.wait_for("question 2"), page.text()[:200])
+        page.answer(ANSWER_CLARIFY)
+        check("cash screening question arrives", page.wait_for("€12,000 commercial transaction"), page.text()[:200])
         check("evidence is recorded", "evidence recorded" in page.text().lower())
         page.answer(ANSWER_CONFLICT)
-        check("question 3 arrives", page.wait_for("question 3"), page.text()[:200])
+        check("breach screening question arrives", page.wait_for("high-risk breach"), page.text()[:200])
         page.answer(ANSWER_BOUNDARY)
         check("the skill check completes", page.wait_for("complete", 20), page.text()[:200])
 
         print("4) Progress shows the learner's own words back")
         check("progress opens", page.click_text("my progress"))
-        check("the passport lists a skill", page.wait_for("gather the key context"), page.text()[:200])
+        check("progress view is visible", page.wait_for("what you have shown"), page.text()[:200])
+        check("the passport lists a skill", page.wait_for("gather relevant facts"), page.text()[:200])
         check(
             "the evidence quotes the learner",
-            "renewal approval" in page.text().lower(),
+            "public-official role" in page.text().lower(),
             page.text()[:200],
         )
         check("a next step is offered", "what to do next" in page.text().lower())
         check("progress closes", page.click_text("close"))
+        check("progress returns to the lesson", page.wait_for("mission: three-question starting check", 20), page.text()[:160])
+        check("screening lesson closes", page.click_text("close"))
 
-        print("5) Clearing the record really starts over")
+        print("5) Mira offers both grounded tasks")
+        check("Alex knocks next", page.wait_for("Alex is knocking", 20), page.text()[:160])
+        check("Alex task opens", page.click_text("open the door"))
+        check("Alex lesson starts", page.wait_for("gifts and hospitality", 20), page.text()[:160])
+        check("Alex lesson closes", page.click_text("close"))
+        check("Sam knocks next", page.wait_for("Sam is knocking", 20), page.text()[:160])
+        check("Sam task opens", page.click_text("open the door"))
+        check("Sam lesson starts", page.wait_for("cash and customer checks", 20), page.text()[:160])
+        check("Sam lesson closes", page.click_text("close"))
+        check("Mira knocks next", page.wait_for("Mira is knocking", 20), page.text()[:160])
+        check("Mira task chooser is visible", page.wait_for("choose a task", 20), page.text()[:160])
+        check("Mira review opens", page.click_text("review a case from your record"))
+        check("Mira review lesson starts", page.wait_for("mission: review a case from your record", 20), page.text()[:160])
+        check("Mira review closes", page.click_text("close"))
+
+        print("6) Clearing the record really starts over")
         check("clearing asks to confirm", page.click_text("clear my record"))
         check("the warning names what is deleted", page.wait_for("deletes every answer"))
         check("clearing confirmed", page.click_text("confirm clearing"))
@@ -165,7 +173,7 @@ def main() -> int:
         check("progress opens on a clean record", page.click_text("my progress"))
         check(
             "no evidence survives the clear",
-            page.wait_for("not yet verified") and "renewal approval" not in page.text().lower(),
+            page.wait_for("not yet verified") and "public-official role" not in page.text().lower(),
             page.text()[:200],
         )
     finally:

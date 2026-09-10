@@ -1,4 +1,6 @@
 anthropic>=1,<2
+# Dense retrieval: static distilled embeddings, numpy only (no torch).
+model2vec==0.9.0
 fastapi>=0.116,<1
 httpx>=0.28,<1
 pydantic>=2.11,<3

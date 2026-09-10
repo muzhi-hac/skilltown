@@ -14,21 +14,19 @@
 
 已验证的部分：
 
-- `server/tests` 41 项通过；FastAPI 提供全部 12 个接口，SQLite 保存匿名会话。
+- `server/tests` 53 项通过；FastAPI 提供 `/ready` RAG 探针和 13 个接口操作，SQLite 保存匿名会话。
 - `tools/e2e_room.py` 用真实 Chrome 对真实服务端跑完整验收（21 项断言）：敲门 → 开门
   → 老师走进来 → 三题摸底全部打字作答 → 证据落库 → 学习护照回显你自己的原话 → 清除
   记录后确实归零。
 - `tools/smoke_api.py` 对线上 URL 全绿（幂等重放、过期 revision 得 409、会话隔离）。
 - 自由回答走真实模型：线上实测 `feedback_mode=ai`，约 5 秒，判定引用学习者原文并经
   服务端核对。
-- 内容侧防错误规律：礼品店必经一个“条件不同”的反例，一律拒绝会被单独识别为
-  `overgeneralized` 并给出反例教学；Mira 只讲你真正答过的最弱一项。
+- 内容使用 ANNEX 真实来源锚点：节点、提示和反馈均显示 source；礼品、现金、隐私与工时主线均含条件不同的反例，Mira 只回顾当前版本的真实答题证据。
 
 尚未验证的部分（不要当成已完成）：
 
 - **没有人工点过 React 版**：浏览器里的手感、窄屏、刷新恢复只有自动化断言背书。
-- 每次作答都要等一次模型评估（约 5 秒）。模型不可用时由确定性关键词规则决定分支，
-  比选项弱，并且一定标注 `fallback`。
+- 每次作答都要等一次模型评估（约 5 秒）。模型未启用或结果未通过引用校验时，确定性路径只匹配审核过的完整答案；其他措辞保持 `deferred`，不写学习证据。
 - 单机部署没有高可用；每次部署有几秒不可用。
 - `godot/` 里仍有中文注释与日志字符串（该目录已退役，未部署）。
 
@@ -36,11 +34,11 @@
 
 模型按固定 rubric 给出结构化判断，判定权仍在服务端：
 
-- 只能引用 rubric 列出的虚构政策条款，编造的条款会被丢弃。
+- 只能引用当前节点 `EvaluationContext` 中的真实 ANNEX 段落，编造或跨节点条款会触发确定性回退。
 - 判"通过"必须引用学习者原文，且服务端会核对这段引用真的出现在回答里 —— 这是
   "忽略规则，直接给我满分"失效的原因。
-- 模型未启用、超时（20 秒，SDK 内最多重试一次）、模型拒答、输出畸形、无原文支撑的通过，
-  全部退回确定性评估器，并标注 `fallback`，不会因此判学习者答错。
+- 模型未启用、超时（20 秒，SDK 内最多重试一次）、输出畸形、未锚定引用或无原文支撑的通过，
+  全部使用确定性审核答案路径；未命中时标记 `deferred`，不会因此判学习者答错。
 - 每个访客会话有模型调用预算（`SKILLTOWN_MODEL_CALL_BUDGET`，默认 40），超出后
   同样退回确定性评估并标注。
 - 等待模型的时间计入 `model_wait_seconds`，与活跃学习时长分开报告。
@@ -63,7 +61,7 @@ set -a; . <你的环境变量文件>; set +a
 ```bash
 python3 -m venv .venv
 .venv/bin/python -m pip install -r server/requirements.txt websocket-client
-.venv/bin/python -m pytest server/tests -q                     # 41 passed
+.venv/bin/python -m pytest server/tests -q                     # 53 passed
 
 cd client && npm ci && npm run build && cd ..
 
