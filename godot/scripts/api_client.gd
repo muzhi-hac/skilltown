@@ -67,6 +67,14 @@ func rewind_attempt(attempt_id: String, revision: int) -> void:
 		"attempt"
 	)
 
+func record_activity(attempt_id: String, kind: String) -> void:
+	_request_json(
+		HTTPClient.METHOD_POST,
+		Config.API_PREFIX + "/attempts/" + attempt_id + "/activity",
+		{"client_event_id": _uuid_v4(), "kind": kind},
+		"activity"
+	)
+
 func get_passport() -> void:
 	_request_json(HTTPClient.METHOD_GET, Config.API_PREFIX + "/passport", {}, "passport")
 
@@ -159,6 +167,7 @@ func _on_request_completed(result: int, response_code: int, _headers: PackedStri
 			town = payload
 			town_received.emit(payload)
 		"attempt": attempt_received.emit(payload)
+		"activity": pass  # 204，无需广播
 		"hint": hint_received.emit(payload)
 		"passport": passport_received.emit(payload)
 		"recommendations": recommendations_received.emit(payload)

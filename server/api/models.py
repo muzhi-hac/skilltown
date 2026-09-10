@@ -116,6 +116,9 @@ class TownNpc(StrictModel):
 class TownResponse(StrictModel):
     categories: list[CategoryView]
     npcs: list[TownNpc]
+    # The opening screening is not attached to an NPC, but its id still comes from
+    # the server so the client never hard-codes a scenario id.
+    screening: TaskSummary | None = None
 
 
 class Choice(StrictModel):

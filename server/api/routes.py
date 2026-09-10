@@ -44,7 +44,7 @@ def _node_view(engine, scenario_id: str, node_id: str) -> dict:
     return {
         "id": node_id,
         "npc_id": node["npc_id"],
-        "category": scenario["category"],
+        "category": node.get("category", scenario["category"]),
         "text": node["text"],
         "choices": node.get("choices", []),
         "allow_text": node.get("allow_text", False),
@@ -95,9 +95,10 @@ def delete_session(request: Request, session: Session) -> Response:
 
 @router.get("/town", response_model=TownResponse, operation_id="getTown")
 def get_town(request: Request, session: Session):
-    del session
-    _, engine, _ = _services(request)
-    return engine.town_payload()
+    store, engine, _ = _services(request)
+    skills, _timing = store.passport(session["id"])
+    states = {str(skill["skill_id"]): str(skill["state"]) for skill in skills}
+    return engine.town_payload(states)
 
 
 @router.post(

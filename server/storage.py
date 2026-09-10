@@ -12,6 +12,8 @@ from pathlib import Path
 from typing import Any, Iterator
 from uuid import uuid4
 
+from server.core.activity import active_seconds
+
 
 class NotFoundError(LookupError):
     pass
@@ -350,6 +352,26 @@ class Store:
                 "INSERT OR IGNORE INTO activity_events VALUES (?, ?, ?, ?, ?)",
                 (session_id, attempt_id, client_event_id, kind, iso_now()),
             )
+        self.refresh_active_seconds(session_id, attempt_id)
+
+    def refresh_active_seconds(self, session_id: str, attempt_id: str) -> int:
+        """Recompute the attempt's active time from its own activity events."""
+        with self.connect() as db:
+            rows = db.execute(
+                """SELECT kind, created_at FROM activity_events
+                WHERE session_id = ? AND attempt_id = ? ORDER BY created_at""",
+                (session_id, attempt_id),
+            ).fetchall()
+            events = [
+                (str(row["kind"]), datetime.fromisoformat(str(row["created_at"]).replace("Z", "+00:00")))
+                for row in rows
+            ]
+            seconds = active_seconds(events)
+            db.execute(
+                "UPDATE attempts SET active_seconds = ?, updated_at = ? WHERE id = ? AND session_id = ?",
+                (seconds, iso_now(), attempt_id, session_id),
+            )
+        return seconds
 
     def passport(self, session_id: str) -> tuple[list[dict[str, Any]], dict[str, int]]:
         with self.connect() as db:

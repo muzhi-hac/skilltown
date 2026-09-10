@@ -37,6 +37,8 @@ var revision := 0
 var allow_text := false
 var is_complete := false
 var waiting := false
+var _activity_attempt := ""
+var _heartbeat: Timer = null
 
 func _ready() -> void:
 	add_to_group("dialogue_system")
@@ -52,6 +54,10 @@ func _ready() -> void:
 	APIClient.passport_received.connect(_on_passport_received)
 	APIClient.recommendations_received.connect(_on_recommendations_received)
 	APIClient.api_error.connect(_on_api_error)
+	_heartbeat = Timer.new()
+	_heartbeat.wait_time = 15.0
+	_heartbeat.timeout.connect(_on_heartbeat)
+	add_child(_heartbeat)
 	_reset_controls()
 	Config.log_info("对话 UI 初始化完成")
 
@@ -104,15 +110,63 @@ func start_dialogue(npc_name: String) -> void:
 		_set_status("暂无任务")
 		_append_line("[color=gray]这位 NPC 目前没有可用任务。[/color]")
 		return
-	current_scenario_id = str(task.get("scenario_id", ""))
-	var mode := _pick_mode(task)
-	_append_line("[color=gray]任务：%s · 约 %s 分钟 · 模式 %s[/color]" % [
-		str(task.get("title", current_scenario_id)),
+	start_scenario(
+		str(task.get("scenario_id", "")),
+		_pick_mode(task),
+		str(task.get("title", "")),
 		str(task.get("estimated_minutes", "?")),
+	)
+
+# 由 NPC 任务、开场筛查或学习方案共用：只认服务端下发的 scenario_id。
+func start_scenario(scenario_id: String, mode: String, title: String, minutes: String) -> void:
+	if scenario_id.is_empty():
+		_set_status("任务标识缺失")
+		return
+	current_scenario_id = scenario_id
+	attempt_id = ""
+	revision = 0
+	is_complete = false
+	allow_text = false
+	_clear_choices()
+	_append_line("[color=gray]任务：%s · 约 %s 分钟 · 模式 %s[/color]" % [
+		title if not title.is_empty() else scenario_id,
+		minutes,
 		mode,
 	])
 	_set_waiting(true, "正在创建任务…")
-	APIClient.start_attempt(current_scenario_id, mode)
+	APIClient.start_attempt(scenario_id, mode)
+
+# 开场欢迎卡：先摸底还是直接逛，由学习者决定。
+func show_welcome(screening: Dictionary) -> void:
+	current_npc_name = ""
+	current_scenario_id = ""
+	attempt_id = ""
+	is_complete = false
+	allow_text = false
+	npc_name_label.text = "SkillTown"
+	npc_title_label.text = "🛡️ 伦理与合规 · 🌱 个人发展"
+	dialogue_text.clear()
+	_clear_choices()
+	_reset_controls()
+	show_dialogue()
+	_append_line("[color=gray]全部情境都是虚构的培训案例，政策为虚构培训政策，不构成法律结论。你的记录只属于本次访客会话，可以随时清除。[/color]")
+	_append_line("先花约 %s 分钟做 3 道摸底题，还是直接探索小镇？" % str(screening.get("estimated_minutes", "2")))
+	_add_action_button("先试试我会什么（3 题）", _on_welcome_screening.bind(screening))
+	_add_action_button("直接探索小镇", hide_dialogue)
+	_update_text_input()
+
+func _on_welcome_screening(screening: Dictionary) -> void:
+	var modes = screening.get("available_modes", [])
+	var mode := "screening"
+	if typeof(modes) == TYPE_ARRAY and not modes.is_empty():
+		mode = str(modes[0])
+	dialogue_text.clear()
+	start_scenario(
+		str(screening.get("scenario_id", "")),
+		mode,
+		str(screening.get("title", "")),
+		str(screening.get("estimated_minutes", "?")),
+	)
 
 func show_dialogue() -> void:
 	visible = true
@@ -121,6 +175,7 @@ func show_dialogue() -> void:
 		player.set_interacting(true)
 
 func hide_dialogue() -> void:
+	_end_activity()
 	visible = false
 	if current_npc_name != "":
 		var npc = get_npc_by_name(current_npc_name)
@@ -165,11 +220,35 @@ func _on_attempt_received(payload: Dictionary) -> void:
 	attempt_id = str(payload.get("attempt_id", ""))
 	revision = int(payload.get("revision", 0))
 	is_complete = bool(payload.get("is_complete", false))
+	_track_activity()
 	_set_waiting(false, "")
 	_render_feedback(payload.get("feedback"))
 	_render_learning_updates(payload.get("learning_updates", []))
 	_render_node(payload.get("node"))
 	_apply_effect(str(payload.get("effect", "none")), str(payload.get("feedback_mode", "scripted")))
+
+# 学习时长由服务端按活动事件聚合；客户端只上报 start / heartbeat / end。
+func _track_activity() -> void:
+	if attempt_id.is_empty():
+		return
+	if _activity_attempt != attempt_id:
+		_activity_attempt = attempt_id
+		APIClient.record_activity(attempt_id, "start")
+		_heartbeat.start()
+	if is_complete:
+		_end_activity()
+
+func _on_heartbeat() -> void:
+	if visible and not _activity_attempt.is_empty() and not is_complete:
+		APIClient.record_activity(_activity_attempt, "heartbeat")
+
+func _end_activity() -> void:
+	if _activity_attempt.is_empty():
+		return
+	APIClient.record_activity(_activity_attempt, "end")
+	_activity_attempt = ""
+	if _heartbeat != null:
+		_heartbeat.stop()
 
 func _render_feedback(feedback) -> void:
 	if typeof(feedback) != TYPE_DICTIONARY:
@@ -244,6 +323,15 @@ func _add_choice_button(choice_id: String, label: String) -> void:
 	button.set_meta("choice_id", choice_id)
 	button.disabled = waiting or is_complete
 	button.pressed.connect(_on_choice_pressed.bind(choice_id, label))
+	choice_container.add_child(button)
+
+func _add_action_button(label: String, handler: Callable) -> void:
+	var button := Button.new()
+	button.text = label
+	button.clip_text = true
+	button.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	button.custom_minimum_size = Vector2(0, 32)
+	button.pressed.connect(handler)
 	choice_container.add_child(button)
 
 func _clear_choices() -> void:
@@ -355,12 +443,40 @@ func _on_recommendations_received(payload: Dictionary) -> void:
 		var count := 0
 		if typeof(evidence) == TYPE_ARRAY:
 			count = evidence.size()
-		_append_line("[color=gray]去找 %s 做「%s」：%s（依据 %d 条证据）[/color]" % [
-			APIClient.npc_name_by_id(str(item.get("npc_id", ""))),
-			APIClient.task_title(scenario_id),
+		var npc_name := APIClient.npc_name_by_id(str(item.get("npc_id", "")))
+		var title := APIClient.task_title(scenario_id)
+		_append_line("[color=gray]%s：%s（依据 %d 条证据）[/color]" % [
+			title,
 			str(item.get("reason", "")),
 			count,
 		])
+		_add_action_button("去找 %s 做「%s」" % [npc_name, title],
+			_on_plan_pressed.bind(scenario_id, title))
+
+func _on_plan_pressed(scenario_id: String, title: String) -> void:
+	if waiting:
+		return
+	var mode := "practice"
+	var task := _task_by_scenario(scenario_id)
+	if not task.is_empty():
+		mode = _pick_mode(task)
+	dialogue_text.clear()
+	start_scenario(scenario_id, mode, title, str(task.get("estimated_minutes", "?")))
+
+func _task_by_scenario(scenario_id: String) -> Dictionary:
+	var npcs = APIClient.town.get("npcs", [])
+	if typeof(npcs) != TYPE_ARRAY:
+		return {}
+	for npc in npcs:
+		if not npc is Dictionary:
+			continue
+		var tasks = npc.get("tasks", [])
+		if typeof(tasks) != TYPE_ARRAY:
+			continue
+		for task in tasks:
+			if task is Dictionary and str(task.get("scenario_id", "")) == scenario_id:
+				return task
+	return {}
 
 func _on_close_pressed() -> void:
 	hide_dialogue()
@@ -411,8 +527,13 @@ func _set_waiting(value: bool, status: String) -> void:
 
 func _set_controls_enabled(enabled: bool) -> void:
 	for child in choice_container.get_children():
-		if child is Button:
+		if not child is Button:
+			continue
+		if child.has_meta("choice_id"):
 			child.disabled = not enabled or is_complete
+		else:
+			# 动作按钮（去做某个任务、欢迎卡选择）在任务完成后仍然可用。
+			child.disabled = not enabled
 	send_button.disabled = not enabled or not allow_text or is_complete
 	hint_button.disabled = not enabled or attempt_id.is_empty() or is_complete
 	passport_button.disabled = not enabled

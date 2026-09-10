@@ -2,11 +2,13 @@
 extends Node2D
 
 var _reauth_attempted := false
+var _welcome_resolved := false
 
 func _ready() -> void:
 	Config.log_info("SkillTown scene ready")
 	APIClient.session_created.connect(_on_session_created)
 	APIClient.town_received.connect(_on_town_received)
+	APIClient.passport_received.connect(_on_passport_received)
 	APIClient.api_error.connect(_on_api_error)
 	if APIClient.has_session():
 		APIClient.get_town()
@@ -28,6 +30,28 @@ func _on_town_received(payload: Dictionary) -> void:
 		var node := _find_npc(str(entry.get("name", "")))
 		if node and node.has_method("apply_town_data"):
 			node.apply_town_data(entry)
+	if not _welcome_resolved:
+		APIClient.get_passport()
+
+# 只有还没留下任何证据的新访客才看到欢迎卡；老访客直接回到小镇。
+func _on_passport_received(payload: Dictionary) -> void:
+	if _welcome_resolved:
+		return
+	_welcome_resolved = true
+	var skills = payload.get("skills", [])
+	if typeof(skills) == TYPE_ARRAY:
+		for skill in skills:
+			if not skill is Dictionary:
+				continue
+			var evidence = skill.get("evidence", [])
+			if typeof(evidence) == TYPE_ARRAY and evidence.size() > 0:
+				return
+	var screening = APIClient.town.get("screening")
+	if typeof(screening) != TYPE_DICTIONARY:
+		return
+	var ui := get_tree().get_first_node_in_group("dialogue_system")
+	if ui and ui.has_method("show_welcome"):
+		ui.show_welcome(screening)
 
 func _find_npc(npc_name: String) -> Node:
 	if npc_name.is_empty():

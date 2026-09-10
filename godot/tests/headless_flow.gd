@@ -44,6 +44,20 @@ func _press(choice_id: String) -> Dictionary:
 	button.pressed.emit()
 	return await APIClient.attempt_received
 
+func _press_action(fragment: String) -> void:
+	for child in ui.choice_container.get_children():
+		if child is Button and not child.has_meta("choice_id") and child.text.contains(fragment):
+			child.pressed.emit()
+			return
+	_check("找得到动作按钮「%s」" % fragment, false, "按钮未渲染")
+
+func _npc_states(town: Dictionary) -> Dictionary:
+	var states := {}
+	for npc in town.get("npcs", []):
+		if npc is Dictionary:
+			states[str(npc.get("id", ""))] = str(npc.get("recommendation_state", ""))
+	return states
+
 func _node_id(payload: Dictionary) -> String:
 	var node = payload.get("node")
 	return str(node.get("id", "")) if typeof(node) == TYPE_DICTIONARY else ""
@@ -141,9 +155,49 @@ func _run() -> void:
 	var migrated = await _press("accept_documented")
 	_check("说明条件差异后完成", bool(migrated.get("is_complete", false)), _node_id(migrated))
 
+	print("9) 新访客：欢迎卡 → 三题筛查 → 地图按证据标记")
+	ui.hide_dialogue()
+	APIClient.session_token = ""
+	APIClient.create_session("Screening smoke")
+	await APIClient.session_created
+	APIClient.get_town()
+	var fresh_town = await APIClient.town_received
+	var screening = fresh_town.get("screening")
+	_check("服务端下发筛查任务（客户端不硬编码 id）", typeof(screening) == TYPE_DICTIONARY, str(screening))
+	var fresh_states := _npc_states(fresh_town)
+	_check("新访客四名 NPC 都标为 recommended",
+		fresh_states.values().count("recommended") == 4, str(fresh_states))
+	ui.show_welcome(screening)
+	_check("欢迎卡给出两个入口", ui.choice_container.get_child_count() == 2)
+	_press_action("先试试")
+	var q1 = await APIClient.attempt_received
+	_check("第 1 题 screen_clarify", _node_id(q1) == "screen_clarify", _node_id(q1))
+	var q2 = await _press("who_pays_pending")
+	_check("第 2 题 screen_conflict", _node_id(q2) == "screen_conflict", _node_id(q2))
+	var q3 = await _press("small_amount_ok")
+	_check("第 3 题 screen_boundary", _node_id(q3) == "screen_boundary", _node_id(q3))
+	_check("第 3 题标为个人发展分类",
+		str(q3.get("node", {}).get("category", "")) == "personal_development",
+		str(q3.get("node", {}).get("category", "")))
+	var screened = await _press("reason_and_next")
+	_check("三题筛查完成", bool(screened.get("is_complete", false)), _node_id(screened))
+	APIClient.get_town()
+	var marked_town = await APIClient.town_received
+	var marked := _npc_states(marked_town)
+	_check("答错的能力把 Alex 标为 review", str(marked.get("alex", "")) == "review", str(marked))
+	_check("答对的能力让 Jo 不再高亮", str(marked.get("jo", "")) == "none", str(marked))
+
+	print("10) 学习方案可点击")
+	ui.passport_button.pressed.emit()
+	await APIClient.passport_received
+	await APIClient.recommendations_received
+	_press_action("去找")
+	var from_plan = await APIClient.attempt_received
+	_check("方案按钮直接开出对应任务", not _node_id(from_plan).is_empty(), _node_id(from_plan))
+
 	print("")
 	if failures.is_empty():
-		print("HEADLESS SMOKE OK — 点击→选择→后果→倒带→完成→护照→方案→支线→按缺口辅导→迁移反例")
+		print("HEADLESS SMOKE OK — 欢迎卡/筛查/点击/选择/后果/倒带/完成/护照/可点击方案/支线/按缺口辅导/迁移反例/地图标记")
 		get_tree().quit(0)
 	else:
 		print("HEADLESS SMOKE FAILED（%d 项）：" % failures.size())

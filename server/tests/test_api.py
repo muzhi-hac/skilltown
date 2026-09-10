@@ -255,3 +255,107 @@ def test_gift_scenario_teaches_the_counter_example_not_blanket_refusal(tmp_path)
         finished = choice(client, headers, refused, "accept_documented").json()
         assert finished["node"]["id"] == "gift_complete"
         assert finished["is_complete"] is True
+
+
+def test_activity_events_drive_the_reported_active_time(tmp_path):
+    from uuid import uuid4 as _uuid
+
+    app = create_app(tmp_path / "test.sqlite3")
+    with TestClient(app) as client:
+        _, headers = session(client)
+        attempt = create_attempt(client, headers)
+        for kind in ("start", "heartbeat", "end"):
+            recorded = client.post(
+                f"/api/v1/attempts/{attempt['attempt_id']}/activity",
+                headers=headers,
+                json={"client_event_id": str(_uuid()), "kind": kind},
+            )
+            assert recorded.status_code == 204, recorded.text
+        # Real gaps here are milliseconds, so the sum rounds to zero seconds; the
+        # rule itself is covered by test_activity.py. What matters here is that the
+        # events reach the projection instead of leaving it permanently at zero.
+        store = app.state.store
+        passport = client.get("/api/v1/passport", headers=headers).json()
+        assert passport["total_active_seconds"] == 0
+
+        # With crafted timestamps the same path reports real minutes.
+        with store.connect() as db:
+            db.execute(
+                "DELETE FROM activity_events WHERE attempt_id = ?", (attempt["attempt_id"],)
+            )
+            row = db.execute(
+                "SELECT session_id FROM attempts WHERE id = ?", (attempt["attempt_id"],)
+            ).fetchone()
+            owner = row["session_id"]
+            for offset, kind in ((0, "start"), (15, "heartbeat"), (30, "heartbeat")):
+                db.execute(
+                    "INSERT INTO activity_events VALUES (?, ?, ?, ?, ?)",
+                    (
+                        owner,
+                        attempt["attempt_id"],
+                        f"crafted-{offset}",
+                        kind,
+                        f"2026-09-10T12:00:{offset:02d}Z",
+                    ),
+                )
+        assert store.refresh_active_seconds(owner, attempt["attempt_id"]) == 30
+        passport = client.get("/api/v1/passport", headers=headers).json()
+        assert passport["total_active_seconds"] == 30
+
+
+def test_screening_is_offered_by_the_server_and_labels_each_question(tmp_path):
+    with TestClient(create_app(tmp_path / "test.sqlite3")) as client:
+        _, headers = session(client)
+        town = client.get("/api/v1/town", headers=headers).json()
+        assert town["screening"]["scenario_id"] == "screening"
+        assert town["screening"]["available_modes"] == ["screening"]
+
+        attempt = create_attempt(client, headers, "screening", "screening")
+        assert attempt["node"]["id"] == "screen_clarify"
+        assert attempt["node"]["category"] == "ethics_compliance"
+        second = choice(client, headers, attempt, "who_pays_pending").json()
+        assert second["node"]["id"] == "screen_conflict"
+        third = choice(client, headers, second, "small_amount_ok").json()
+        assert third["node"]["id"] == "screen_boundary"
+        # The boundary question belongs to the other category, and says so.
+        assert third["node"]["category"] == "personal_development"
+        done = choice(client, headers, third, "reason_and_next").json()
+        assert done["is_complete"] is True
+
+        skills = {
+            item["skill_id"]: item["state"]
+            for item in client.get("/api/v1/passport", headers=headers).json()["skills"]
+        }
+        assert skills == {
+            "clarify_context": "practiced",
+            "conflict_awareness": "needs_practice",
+            "communicate_boundary": "practiced",
+        }
+
+
+def test_town_marks_npcs_from_the_learners_own_record(tmp_path):
+    with TestClient(create_app(tmp_path / "test.sqlite3")) as client:
+        _, headers = session(client)
+        fresh = {
+            npc["id"]: npc["recommendation_state"]
+            for npc in client.get("/api/v1/town", headers=headers).json()["npcs"]
+        }
+        assert fresh == {
+            "alex": "recommended", "sam": "recommended",
+            "mira": "recommended", "jo": "recommended",
+        }
+
+        attempt = create_attempt(client, headers, "screening", "screening")
+        second = choice(client, headers, attempt, "who_pays_pending").json()
+        third = choice(client, headers, second, "small_amount_ok").json()
+        choice(client, headers, third, "reason_and_next")
+
+        marked = {
+            npc["id"]: npc["recommendation_state"]
+            for npc in client.get("/api/v1/town", headers=headers).json()["npcs"]
+        }
+        # conflict_awareness was answered wrong, so its NPCs need review; Jo's only
+        # skill came out practiced, so Jo is no longer highlighted.
+        assert marked["alex"] == "review"
+        assert marked["sam"] == "review"
+        assert marked["jo"] == "none"

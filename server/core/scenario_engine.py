@@ -92,7 +92,14 @@ class ScenarioEngine:
         self.get_node(scenario_id, target)
         return str(target)
 
-    def town_payload(self) -> dict[str, Any]:
+    def town_payload(self, skill_states: dict[str, str] | None = None) -> dict[str, Any]:
+        """Town map, marked against this learner's own evidence.
+
+        A skill the learner answered wrong marks its NPC as review; a skill with no
+        evidence marks it as a new recommendation. Nothing here decides learning
+        state: it only reflects the projection the server already stored.
+        """
+        states = skill_states or {}
         scenarios = self.content["scenarios"]
         npcs = []
         for npc in self.content["npcs"]:
@@ -107,6 +114,26 @@ class ScenarioEngine:
                 }
                 for scenario_id in npc["scenario_ids"]
             ]
-            item["recommendation_state"] = "none"
+            skills = [
+                skill
+                for scenario_id in npc["scenario_ids"]
+                for skill in scenarios[scenario_id].get("skills", [])
+            ]
+            item["recommendation_state"] = self._recommendation_state(skills, states)
             npcs.append(item)
-        return {"categories": self.content["categories"], "npcs": npcs}
+        payload: dict[str, Any] = {
+            "categories": self.content["categories"],
+            "npcs": npcs,
+        }
+        screening = self.content.get("screening_task")
+        if screening:
+            payload["screening"] = screening
+        return payload
+
+    @staticmethod
+    def _recommendation_state(skills: list[str], states: dict[str, str]) -> str:
+        if any(states.get(skill, "unseen") == "needs_practice" for skill in skills):
+            return "review"
+        if any(states.get(skill, "unseen") == "unseen" for skill in skills):
+            return "recommended"
+        return "none"

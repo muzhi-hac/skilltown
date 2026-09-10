@@ -247,7 +247,11 @@
           "allow_text": false,
           "choices": []
         }
-      }
+      },
+      "skills": [
+        "clarify_context",
+        "conflict_awareness"
+      ]
     },
     "supplier-gift": {
       "version": "1.0.0",
@@ -378,7 +382,11 @@
           "text_rule": "clarify_context",
           "text_pass_node": "gift_complete"
         }
-      }
+      },
+      "skills": [
+        "conflict_awareness",
+        "clarify_context"
+      ]
     },
     "ethics-review": {
       "version": "1.0.0",
@@ -528,7 +536,12 @@
         "clarify_context": "review_clarify",
         "conflict_awareness": "review_conflict",
         "communicate_boundary": "review_boundary"
-      }
+      },
+      "skills": [
+        "clarify_context",
+        "conflict_awareness",
+        "communicate_boundary"
+      ]
     },
     "boundary-response": {
       "version": "1.0.0",
@@ -554,7 +567,214 @@
           "allow_text": false,
           "choices": []
         }
+      },
+      "skills": [
+        "communicate_boundary"
+      ]
+    },
+    "screening": {
+      "version": "1.0.0",
+      "title": "先试试我会什么",
+      "category": "ethics_compliance",
+      "estimated_minutes": 2,
+      "available_modes": [
+        "screening"
+      ],
+      "skills": [
+        "clarify_context",
+        "conflict_awareness",
+        "communicate_boundary"
+      ],
+      "start_node": "screen_clarify",
+      "nodes": {
+        "screen_clarify": {
+          "npc_id": "mira",
+          "category": "ethics_compliance",
+          "text": "第 1 题（共 3 题）。同事说：“客户请我们吃饭，你也一起来吧。”在决定去不去之前，你最需要先弄清哪一项？",
+          "allow_text": true,
+          "choices": [
+            {
+              "id": "who_pays_pending",
+              "label": "谁付款，以及是否涉及你正在审批的事项。"
+            },
+            {
+              "id": "restaurant_level",
+              "label": "餐厅档次和人均消费。"
+            },
+            {
+              "id": "headcount",
+              "label": "一共有多少同事参加。"
+            }
+          ],
+          "branches": {
+            "who_pays_pending": {
+              "next_node": "screen_conflict",
+              "effect": "none",
+              "skill_id": "clarify_context",
+              "state": "pass",
+              "interpretation": "先补齐付款方与待决事项，再做判断。",
+              "feedback": "对：先看付款方和与待决决定的关系。",
+              "policy_clause_ids": [
+                "ETH-03"
+              ]
+            },
+            "restaurant_level": {
+              "next_node": "screen_conflict",
+              "effect": "none",
+              "skill_id": "clarify_context",
+              "state": "needs_practice",
+              "interpretation": "以消费水平作为主要依据。",
+              "feedback": "金额只是因素之一，本培训政策不设通用金额阈值。",
+              "policy_clause_ids": [
+                "ETH-03"
+              ]
+            },
+            "headcount": {
+              "next_node": "screen_conflict",
+              "effect": "none",
+              "skill_id": "clarify_context",
+              "state": "needs_practice",
+              "interpretation": "关注人数而非利益关系。",
+              "feedback": "人数不改变利益关系。要看付款方、待决决定和透明度。",
+              "policy_clause_ids": [
+                "ETH-03"
+              ]
+            }
+          },
+          "text_rule": "clarify_context",
+          "text_pass_node": "screen_conflict"
+        },
+        "screen_conflict": {
+          "npc_id": "mira",
+          "category": "ethics_compliance",
+          "text": "第 2 题。对方补了一句：“这次别走报销流程，免得麻烦。”这句话意味着什么？",
+          "allow_text": true,
+          "choices": [
+            {
+              "id": "just_convenience",
+              "label": "只是想省事，可以照办。"
+            },
+            {
+              "id": "hidden_signal",
+              "label": "要求隐瞒，是需要暂停并按渠道咨询的风险信号。"
+            },
+            {
+              "id": "small_amount_ok",
+              "label": "只要金额不大就没问题。"
+            }
+          ],
+          "branches": {
+            "hidden_signal": {
+              "next_node": "screen_boundary",
+              "effect": "none",
+              "skill_id": "conflict_awareness",
+              "state": "pass",
+              "interpretation": "把隐瞒要求识别为停止信号。",
+              "feedback": "对：要求绕过记录是最强的停止信号之一。",
+              "policy_clause_ids": [
+                "ETH-02"
+              ]
+            },
+            "just_convenience": {
+              "next_node": "screen_boundary",
+              "effect": "none",
+              "skill_id": "conflict_awareness",
+              "state": "needs_practice",
+              "interpretation": "把隐瞒要求当成流程便利。",
+              "feedback": "绕过报销不是省事，而是让这笔安排无法被核对。",
+              "policy_clause_ids": [
+                "ETH-02"
+              ]
+            },
+            "small_amount_ok": {
+              "next_node": "screen_boundary",
+              "effect": "none",
+              "skill_id": "conflict_awareness",
+              "state": "needs_practice",
+              "interpretation": "用金额门槛替代对隐瞒要求的判断。",
+              "feedback": "金额小不能抵消隐瞒；本政策不设通用金额阈值。",
+              "policy_clause_ids": [
+                "ETH-01"
+              ]
+            }
+          },
+          "text_rule": "conflict_awareness",
+          "text_pass_node": "screen_boundary"
+        },
+        "screen_boundary": {
+          "npc_id": "jo",
+          "category": "personal_development",
+          "text": "第 3 题。你决定不接受。哪一句回复既守住边界，又保住合作关系？",
+          "allow_text": true,
+          "choices": [
+            {
+              "id": "blunt",
+              "label": "“这事我不能参与，别再问了。”"
+            },
+            {
+              "id": "reason_and_next",
+              "label": "“谢谢邀请。续约还在我这边审批，我先不参加；流程结束后我们再约，我也会同步给合规同事。”"
+            },
+            {
+              "id": "defer_upward",
+              "label": "“我请示一下领导再说吧。”"
+            }
+          ],
+          "branches": {
+            "reason_and_next": {
+              "next_node": "screen_complete",
+              "effect": "completed",
+              "skill_id": "communicate_boundary",
+              "state": "pass",
+              "interpretation": "同时说明边界、原因和下一步。",
+              "feedback": "对：边界、原因、下一步三件事都说清了。",
+              "policy_clause_ids": [
+                "DEV-01"
+              ]
+            },
+            "blunt": {
+              "next_node": "screen_complete",
+              "effect": "completed",
+              "skill_id": "communicate_boundary",
+              "state": "needs_practice",
+              "interpretation": "只有拒绝，没有原因和下一步。",
+              "feedback": "守住了边界，但没给原因和下一步，合作关系会受影响。",
+              "policy_clause_ids": [
+                "DEV-01"
+              ]
+            },
+            "defer_upward": {
+              "next_node": "screen_complete",
+              "effect": "completed",
+              "skill_id": "communicate_boundary",
+              "state": "needs_practice",
+              "interpretation": "把判断整体外包，没有表达自己的边界与原因。",
+              "feedback": "请示不等于表达边界；先说明你为什么暂不参加，再说下一步。",
+              "policy_clause_ids": [
+                "DEV-01"
+              ]
+            }
+          },
+          "text_rule": "communicate_boundary",
+          "text_pass_node": "screen_complete"
+        },
+        "screen_complete": {
+          "npc_id": "mira",
+          "category": "ethics_compliance",
+          "text": "摸底完成。这只有 3 道题，只能作为起点，不是完整能力测评：结果分为“已有理解证据 / 建议练习 / 尚未验证”。地图上会标出建议先去的 NPC。",
+          "allow_text": false,
+          "choices": []
+        }
       }
     }
+  },
+  "screening_task": {
+    "scenario_id": "screening",
+    "title": "先试试我会什么",
+    "category": "ethics_compliance",
+    "estimated_minutes": 2,
+    "available_modes": [
+      "screening"
+    ]
   }
 }
