@@ -27,11 +27,10 @@ primary_region = "fra"
   # client policy can change at any time.
   SKILLTOWN_MODEL_USER_AGENT = "curl/8.4.0"
   # Every step is now a free-text answer, so the learner waits for one evaluation
-  # per step. Measured on this endpoint: medium effort took ~12s, which is too
-  # long to sit through repeatedly. This is a rubric check against a fixed
-  # schema, the kind of work low effort is meant for; the server-side checks
-  # (clause whitelist, quote grounding) do not change.
-  SKILLTOWN_MODEL_EFFORT = "low"
+  # per step. Opus 5 measured ~12s per answer on this endpoint, which is too long
+  # to sit through repeatedly, so the demo runs Sonnet 5. Effort stays at the
+  # code default; only the model changed.
+  SKILLTOWN_MODEL = "claude-sonnet-5"
 
 [http_service]
   internal_port = 8000
