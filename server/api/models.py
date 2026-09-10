@@ -7,7 +7,7 @@ from enum import StrEnum
 from typing import Annotated, Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class StrictModel(BaseModel):
@@ -67,6 +67,14 @@ class FeedbackMode(StrEnum):
 class HealthResponse(StrictModel):
     status: Literal["ok"] = "ok"
     version: str = "1.0.0"
+
+
+class ReadyResponse(StrictModel):
+    ready: bool
+    retrieval_mode: Literal["hybrid", "sparse", "unavailable"]
+    chunk_count: int = Field(ge=0)
+    model_revision: str
+    reason: str
 
 
 class CreateSessionRequest(StrictModel):
@@ -130,11 +138,16 @@ class PolicyCard(StrictModel):
     clause_id: str
     title: str
     text: str
-    # True only for training-only stand-ins. Passages quoted from the EU corpus
-    # are real references and must not be dressed up as fiction.
     fictional: bool = False
-    # Which document a real passage came from; empty for fictional stand-ins.
     source: str = ""
+
+    @model_validator(mode="after")
+    def provenance_matches_kind(self):
+        if not self.fictional and not self.source.strip():
+            raise ValueError("real policy cards require a source")
+        if self.fictional and self.source:
+            raise ValueError("fictional policy cards must not claim a source")
+        return self
 
 
 class ScenarioNode(StrictModel):
@@ -206,6 +219,7 @@ class AttemptResponse(StrictModel):
     learning_updates: list[LearningUpdate] = Field(default_factory=list)
     is_complete: bool
     feedback_mode: FeedbackMode
+    assessment_status: Literal["assessed", "deferred", "not_requested"] = "not_requested"
     timing: Timing
 
 

@@ -8,20 +8,16 @@ set -euo pipefail
 
 APP="${1:-$(awk -F'"' '/^app =/{print $2}' "$(dirname "$0")/../fly.toml")}"
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-GODOT="${GODOT:-/Applications/Godot.app/Contents/MacOS/Godot}"
 
 if ! command -v flyctl >/dev/null 2>&1; then
   echo "flyctl is missing: brew install flyctl" >&2
   exit 1
 fi
-if [ ! -x "$GODOT" ]; then
-  echo "Godot not found: $GODOT (override with GODOT=...)" >&2
-  exit 1
-fi
-
-echo "==> Building the web client (baked into the image, same origin)"
-"$GODOT" --headless --path "$ROOT/godot" --export-release "Web" web/index.html
-test -f "$ROOT/godot/web/index.html"
+echo "==> Building the React web client (baked into the image, same origin)"
+cd "$ROOT/client"
+npm ci --cache "${NPM_CACHE_DIR:-/tmp/skilltown-npm-cache}"
+npm run build
+test -f "$ROOT/client/dist/index.html"
 
 echo "==> Deploying to Fly app: $APP"
 cd "$ROOT"

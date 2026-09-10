@@ -15,5 +15,6 @@ tools
 cloudflare
 *.sqlite3
 *.md
+!server/content/knowledge/*.md
 .env
 .env.*

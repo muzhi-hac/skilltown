@@ -1,0 +1,42 @@
+[
+  {
+    "case_id": "alex-public-pass",
+    "scenario_id": "dinner-invitation",
+    "node_id": "alex_public_gift",
+    "text": "Because this is a German public official and €26 exceeds the €25 threshold, I will decline or hand it to the employing office and keep the receipt in the register.",
+    "expected_outcome": "pass",
+    "allowed_clause_ids": ["ANNEX-1.1", "ANNEX-1.2", "ANNEX-1.3"]
+  },
+  {
+    "case_id": "alex-public-overgeneralized",
+    "scenario_id": "dinner-invitation",
+    "node_id": "alex_public_gift",
+    "text": "I will refuse every gift in every situation.",
+    "expected_outcome": "overgeneralized",
+    "allowed_clause_ids": ["ANNEX-1.1", "ANNEX-1.2", "ANNEX-1.3"]
+  },
+  {
+    "case_id": "sam-cash-miss",
+    "scenario_id": "supplier-gift",
+    "node_id": "sam_cash_limit",
+    "text": "€10,001 cash is allowed.",
+    "expected_outcome": "miss",
+    "allowed_clause_ids": ["ANNEX-4.1"]
+  },
+  {
+    "case_id": "mira-privacy-pass",
+    "scenario_id": "data-incidents",
+    "node_id": "mira_privacy_clock",
+    "text": "I start from awareness at 10:00 today, notify the authority within 72 hours because there is risk, and notify affected people without undue delay because it is high risk.",
+    "expected_outcome": "pass",
+    "allowed_clause_ids": ["ANNEX-2.1"]
+  },
+  {
+    "case_id": "jo-report-pass",
+    "scenario_id": "boundary-response",
+    "node_id": "jo_report_receipt",
+    "text": "I will acknowledge the report within seven days, keep the process confidential, and provide feedback within three months of acknowledgement.",
+    "expected_outcome": "pass",
+    "allowed_clause_ids": ["ANNEX-6.3"]
+  }
+]

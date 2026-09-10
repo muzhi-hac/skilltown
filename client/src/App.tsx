@@ -28,6 +28,7 @@ export default function App() {
   const [current, setCurrent] = useState("");
   const [phase, setPhase] = useState<VisitorPhase>("outside");
   const [view, setView] = useState<View>("room");
+  const [progressReturnView, setProgressReturnView] = useState<View>("room");
   const [attempt, setAttempt] = useState<Attempt | null>(null);
   const [taskTitle, setTaskTitle] = useState("");
   const [headline, setHeadline] = useState("Getting the room ready…");
@@ -39,6 +40,7 @@ export default function App() {
   const [plan, setPlan] = useState<Recommendation[]>([]);
   const [confirmClear, setConfirmClear] = useState(false);
   const [error, setError] = useState("");
+  const [versionMismatch, setVersionMismatch] = useState(false);
   const firstVisitChecked = useRef(false);
 
   const npcs: TownNpc[] = town?.npcs ?? [];
@@ -70,11 +72,15 @@ export default function App() {
     return [...review, ...fresh, ...rest];
   };
 
-  const refreshTown = useCallback(async () => {
+  const refreshTown = useCallback(async (resetQueue = false) => {
     const next = await api.getTown();
     setTown(next);
     setScreening(next.screening ?? null);
-    setQueue(orderFrom(next.npcs));
+    setQueue((previous) => {
+      const valid = new Set(next.npcs.map((npc) => npc.name));
+      if (resetQueue || previous.length === 0) return orderFrom(next.npcs);
+      return previous.filter((name) => valid.has(name));
+    });
     return next;
   }, []);
 
@@ -114,7 +120,7 @@ export default function App() {
     setHeadline(`${queue[0]} is knocking at the door.`);
   }, [view, phase, town, queue, screeningPending]);
 
-  const openDoor = useCallback(async () => {
+  const openDoor = useCallback(async (selectedTask?: TaskSummary) => {
     if (phase !== "outside" || view !== "room") return;
     if (!current) {
       setHeadline("Asking who is available…");
@@ -125,9 +131,10 @@ export default function App() {
     setHeadline(`${current} is coming in…`);
     window.setTimeout(async () => {
       setPhase("teaching");
-      const task = screeningPending
+      const isScreening = screeningPending;
+      const task = isScreening
         ? screening
-        : (byName.get(current)?.tasks?.[0] ?? null);
+        : (selectedTask ?? byName.get(current)?.tasks?.[0] ?? null);
       setScreeningPending(false);
       if (!task) {
         setHeadline(`${current} has nothing to teach right now.`);
@@ -135,7 +142,7 @@ export default function App() {
         window.setTimeout(() => setPhase("outside"), WALK_MS);
         return;
       }
-      setQueue((rest) => rest.filter((name) => name !== current));
+      if (!isScreening) setQueue((rest) => rest.filter((name) => name !== current));
       setTaskTitle(task.title);
       setView("lesson");
       setBusy(true);
@@ -145,6 +152,7 @@ export default function App() {
           ? "practice"
           : task.available_modes[0];
         setAttempt(await api.startAttempt(task.scenario_id, mode));
+        setVersionMismatch(false);
         setHeadline(`In a lesson with ${current}.`);
         setStatus("");
       } catch (err) {
@@ -188,9 +196,13 @@ export default function App() {
       setStatus("Reading your answer…");
       try {
         setAttempt(await api.answer(attempt.attempt_id, attempt.revision, text));
+        setVersionMismatch(false);
         setStatus("");
       } catch (err) {
-        if (err instanceof api.ApiError && err.code === "revision_conflict") {
+        if (err instanceof api.ApiError && err.code === "scenario_version_mismatch") {
+          setVersionMismatch(true);
+          setStatus("Task content was updated. Start a new attempt to continue.");
+        } else if (err instanceof api.ApiError && err.code === "revision_conflict") {
           setStatus("Progress was out of sync; reloaded the latest state.");
           setAttempt(await api.getAttempt(attempt.attempt_id));
         } else {
@@ -217,6 +229,20 @@ export default function App() {
     }
   }, [attempt]);
 
+  const startUpdatedTask = useCallback(async () => {
+    if (!attempt) return;
+    setBusy(true);
+    try {
+      setAttempt(await api.startAttempt(attempt.scenario_id, attempt.mode));
+      setVersionMismatch(false);
+      setStatus("");
+    } catch (err) {
+      setStatus(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusy(false);
+    }
+  }, [attempt]);
+
   const doRewind = useCallback(async () => {
     if (!attempt) return;
     setBusy(true);
@@ -231,6 +257,7 @@ export default function App() {
   }, [attempt]);
 
   const openProgress = useCallback(async () => {
+    setProgressReturnView(view);
     setView("progress");
     setPassport(null);
     try {
@@ -243,7 +270,7 @@ export default function App() {
     } catch (err) {
       setStatus(err instanceof Error ? err.message : String(err));
     }
-  }, []);
+  }, [view]);
 
   const startTask = useCallback(
     async (scenarioId: string) => {
@@ -252,6 +279,7 @@ export default function App() {
       setTaskTitle(taskTitleById(scenarioId));
       try {
         setAttempt(await api.startAttempt(scenarioId, "practice"));
+        setVersionMismatch(false);
       } catch (err) {
         setStatus(err instanceof Error ? err.message : String(err));
       } finally {
@@ -278,7 +306,7 @@ export default function App() {
       setPassport(null);
       setPlan([]);
       await api.createSession();
-      const next = await refreshTown();
+      const next = await refreshTown(true);
       setScreeningPending(Boolean(next.screening));
       setHeadline("Record cleared. Fresh guest session started.");
     } catch (err) {
@@ -298,6 +326,7 @@ export default function App() {
   }, [view, attempt?.attempt_id]);
 
   const teacher = byName.get(current);
+  const availableTasks = screeningPending ? [] : (teacher?.tasks ?? []);
   const waiting = queue.filter((name) => name !== current);
 
   return (
@@ -332,9 +361,19 @@ export default function App() {
           {view === "room" && phase === "outside" && (
             <div className="door-cta">
               {current && <p className="knock">* knock knock *</p>}
-              <button className="door" onClick={openDoor}>
+              <button className="door" onClick={() => void openDoor()}>
                 {current ? "Open the door  (E)" : "Invite the next teacher  (E)"}
               </button>
+              {availableTasks.length > 1 && (
+                <div className="task-chooser" aria-label={`${current} tasks`}>
+                  <span>Choose a task:</span>
+                  {availableTasks.map((task) => (
+                    <button key={task.scenario_id} className="ghost" onClick={() => void openDoor(task)}>
+                      {task.title}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -352,7 +391,9 @@ export default function App() {
           onAnswer={send}
           onHint={hint}
           onRewind={doRewind}
-            onClose={closeLesson}
+          onClose={closeLesson}
+          versionMismatch={versionMismatch}
+          onStartUpdated={startUpdatedTask}
           />
         )}
 
@@ -363,7 +404,7 @@ export default function App() {
           npcNameById={npcNameById}
           taskTitleById={taskTitleById}
           onStart={startTask}
-            onClose={() => setView("room")}
+            onClose={() => setView(progressReturnView)}
           />
         )}
       </div>

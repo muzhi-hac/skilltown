@@ -15,7 +15,7 @@
     {
       "id": "alex",
       "name": "Alex",
-      "title": "Business Partner",
+      "title": "Gifts and hospitality guide",
       "category": "ethics_compliance",
       "position": {
         "x": 310,
@@ -28,7 +28,7 @@
     {
       "id": "sam",
       "name": "Sam",
-      "title": "Supplier",
+      "title": "Customer checks guide",
       "category": "ethics_compliance",
       "position": {
         "x": 760,
@@ -41,20 +41,21 @@
     {
       "id": "mira",
       "name": "Mira",
-      "title": "Ethics Coach",
+      "title": "Privacy and review coach",
       "category": "ethics_compliance",
       "position": {
         "x": 610,
         "y": 465
       },
       "scenario_ids": [
+        "data-incidents",
         "ethics-review"
       ]
     },
     {
       "id": "jo",
       "name": "Jo",
-      "title": "Communication Coach",
+      "title": "Speaking-up and working-time coach",
       "category": "personal_development",
       "position": {
         "x": 965,
@@ -66,462 +67,11 @@
     }
   ],
   "scenarios": {
-    "dinner-invitation": {
-      "version": "1.0.0",
-      "title": "Celebration Dinner Invitation",
-      "category": "ethics_compliance",
-      "estimated_minutes": 4,
-      "available_modes": [
-        "screening",
-        "practice",
-        "verification"
-      ],
-      "start_node": "dinner_invite",
-      "nodes": {
-        "dinner_invite": {
-          "npc_id": "alex",
-          "text": "The project went great today. Let's go out for lobster to celebrate. I'll set it up!",
-          "allow_text": true,
-          "choices": [],
-          "branches": {
-            "accept_now": {
-              "next_node": "dinner_consequence",
-              "effect": "consequence_preview",
-              "skill_id": "clarify_context",
-              "state": "needs_practice",
-              "interpretation": "Accepted the invitation outright while key information was still missing.",
-              "feedback": "Don't rush the judgment. Who pays, who attends, the business decisions involved, and transparency all affect the next step.",
-              "policy_clause_ids": [
-                "ETH-03"
-              ]
-            },
-            "ask_context": {
-              "next_node": "dinner_risk",
-              "effect": "none",
-              "skill_id": "clarify_context",
-              "state": "practiced",
-              "interpretation": "Proactively gathered the key context needed to judge.",
-              "feedback": "Good. You didn't decide based on a single meal. You gathered the facts first.",
-              "policy_clause_ids": [
-                "ETH-03"
-              ]
-            },
-            "reject_everything": {
-              "next_node": "dinner_overgeneralized",
-              "effect": "none",
-              "skill_id": "clarify_context",
-              "state": "needs_practice",
-              "interpretation": "Judged every business meal as a violation across the board.",
-              "feedback": "Caution is good, but the meal by itself doesn't complete the judgment. Say which facts you'd need to consider.",
-              "policy_clause_ids": [
-                "ETH-03"
-              ]
-            }
-          },
-          "text_rule": "clarify_context",
-          "text_pass_node": "dinner_risk",
-          "text_branches": {
-            "pass": "ask_context",
-            "miss": "accept_now",
-            "overgeneralized": "reject_everything"
-          }
-        },
-        "dinner_overgeneralized": {
-          "npc_id": "mira",
-          "text": "Look at it another way: for an ordinary internal team celebration that's transparently recorded with no pending decisions, what else would you need to know before judging?",
-          "allow_text": true,
-          "choices": [],
-          "branches": {
-            "ask_context": {
-              "next_node": "dinner_risk",
-              "effect": "none",
-              "skill_id": "clarify_context",
-              "state": "practiced",
-              "interpretation": "After the counter-example, recognized that the judgment depends on context.",
-              "feedback": "Right. A compliance judgment has to combine the facts. It's neither blind acceptance nor mechanical refusal.",
-              "policy_clause_ids": [
-                "ETH-03"
-              ]
-            },
-            "reject_everything": {
-              "next_node": "dinner_overgeneralized",
-              "effect": "none",
-              "skill_id": "clarify_context",
-              "state": "needs_practice",
-              "interpretation": "Still treats different situations as identical.",
-              "feedback": "Compare the provider, who pays, pending decisions, and whether it's transparent, rather than just the name of the event.",
-              "policy_clause_ids": [
-                "ETH-03"
-              ]
-            }
-          },
-          "text_rule": "clarify_context",
-          "text_pass_node": "dinner_risk",
-          "text_branches": {
-            "pass": "ask_context",
-            "miss": "reject_everything",
-            "overgeneralized": "reject_everything"
-          }
-        },
-        "dinner_risk": {
-          "npc_id": "alex",
-          "text": "Our company pays. Also, you're about to approve our renewal soon; let's skip the expense report this time so it stays simple.",
-          "allow_text": true,
-          "choices": [],
-          "branches": {
-            "accept_hidden": {
-              "next_node": "dinner_consequence",
-              "effect": "consequence_preview",
-              "skill_id": "conflict_awareness",
-              "state": "needs_practice",
-              "interpretation": "Ignored the pending approval relationship and the request to hide it.",
-              "feedback": "A pending approval relationship and a request to hide it appear together, so you should pause the arrangement and consult per policy.",
-              "policy_clause_ids": [
-                "ETH-01",
-                "ETH-02"
-              ]
-            },
-            "pause_consult": {
-              "next_node": "dinner_complete",
-              "effect": "completed",
-              "skill_id": "conflict_awareness",
-              "state": "pass",
-              "interpretation": "Recognized the pending approval relationship and the request to hide it, and proposed an appropriate next step.",
-              "feedback": "You spotted two concrete risk signals and chose to pause and consult, instead of only looking at the bill.",
-              "policy_clause_ids": [
-                "ETH-01",
-                "ETH-02"
-              ]
-            },
-            "split_bill": {
-              "next_node": "dinner_consequence",
-              "effect": "consequence_preview",
-              "skill_id": "conflict_awareness",
-              "state": "needs_practice",
-              "interpretation": "Focused only on splitting the cost, missing the business decision and the request to hide it.",
-              "feedback": "Paying your own share doesn't automatically remove the pending approval relationship or the request to hide it.",
-              "policy_clause_ids": [
-                "ETH-01",
-                "ETH-02"
-              ]
-            }
-          },
-          "text_rule": "conflict_awareness",
-          "text_pass_node": "dinner_complete",
-          "text_branches": {
-            "pass": "pause_consult",
-            "miss": "accept_hidden"
-          }
-        },
-        "dinner_consequence": {
-          "npc_id": "mira",
-          "text": "Consequence preview: your project eligibility is suspended. This is a fictional teaching outcome, not a real penalty. After reviewing the risk points, you can rewind and choose again.",
-          "allow_text": false,
-          "choices": [],
-          "rewind_to": "dinner_invite"
-        },
-        "dinner_complete": {
-          "npc_id": "mira",
-          "text": "This round is complete. Next, head to the gift shop and verify with a different situation whether you've really mastered the approach.",
-          "allow_text": false,
-          "choices": []
-        }
-      },
-      "skills": [
-        "clarify_context",
-        "conflict_awareness"
-      ]
-    },
-    "supplier-gift": {
-      "version": "1.0.0",
-      "title": "Supplier Gift",
-      "category": "ethics_compliance",
-      "estimated_minutes": 3,
-      "available_modes": [
-        "practice",
-        "verification"
-      ],
-      "start_node": "gift_intro",
-      "nodes": {
-        "gift_intro": {
-          "npc_id": "sam",
-          "text": "This gift isn't worth much, but our bid results are announced tomorrow. How would you handle it?",
-          "allow_text": true,
-          "choices": [],
-          "branches": {
-            "accept_low_value": {
-              "next_node": "gift_intro",
-              "effect": "none",
-              "skill_id": "conflict_awareness",
-              "state": "needs_practice",
-              "interpretation": "Judged by value alone, missing the pending procurement relationship.",
-              "feedback": "Value is only one factor; what matters more here is the bid result announced tomorrow.",
-              "policy_clause_ids": [
-                "ETH-01"
-              ]
-            },
-            "pause_gift": {
-              "next_node": "gift_benign",
-              "effect": "none",
-              "skill_id": "conflict_awareness",
-              "state": "pass",
-              "interpretation": "Brought the pending procurement relationship into the judgment and chose to check the policy.",
-              "feedback": "You transferred the approach to a different situation.",
-              "policy_clause_ids": [
-                "ETH-01"
-              ]
-            },
-            "reject_all_gifts": {
-              "next_node": "gift_benign",
-              "effect": "none",
-              "skill_id": "clarify_context",
-              "state": "needs_practice",
-              "interpretation": "Replaced conditional judgment with a blanket refusal.",
-              "feedback": "A blanket refusal trains the wrong rule and also harms normal collaboration. What matters is whether there's a pending decision, who pays, and whether it's recorded.",
-              "policy_clause_ids": [
-                "ETH-03"
-              ]
-            }
-          },
-          "text_rule": "conflict_awareness",
-          "text_pass_node": "gift_benign",
-          "text_branches": {
-            "pass": "pause_gift",
-            "miss": "accept_low_value",
-            "overgeneralized": "reject_all_gifts"
-          }
-        },
-        "gift_complete": {
-          "npc_id": "sam",
-          "text": "The two situations had different conditions, so the judgments differ too. Your learning passport has been updated.",
-          "allow_text": false,
-          "choices": []
-        },
-        "gift_benign": {
-          "npc_id": "sam",
-          "text": "Different case: last week's bid was already awarded and closed. The team wants a small-budget internal celebration, the cost goes through normal expense reporting, and the guest list and amount are recorded in the internal system. How do you judge this one?",
-          "allow_text": true,
-          "choices": [],
-          "branches": {
-            "accept_documented": {
-              "next_node": "gift_complete",
-              "effect": "completed",
-              "skill_id": "clarify_context",
-              "state": "pass",
-              "interpretation": "Noted the pending decision has ended and payment and records are transparent, so the judgment changes with the conditions.",
-              "feedback": "Right: what changes the judgment is the pending decision and transparency, not the name of the occasion.",
-              "policy_clause_ids": [
-                "ETH-03"
-              ]
-            },
-            "refuse_anyway": {
-              "next_node": "gift_benign",
-              "effect": "none",
-              "skill_id": "clarify_context",
-              "state": "needs_practice",
-              "interpretation": "Still refuses across the board in a situation with no risk conditions.",
-              "feedback": "There's no pending decision here and the cost is recorded. A blanket refusal isn't safer; it just swaps the method for a slogan.",
-              "policy_clause_ids": [
-                "ETH-03"
-              ]
-            },
-            "report_violation": {
-              "next_node": "gift_benign",
-              "effect": "none",
-              "skill_id": "clarify_context",
-              "state": "needs_practice",
-              "interpretation": "Judged a normal, process-compliant activity as a violation.",
-              "feedback": "Reporting a compliant activity as a violation has costs too. First check the conditions: is there a pending decision, who pays, and is it recorded.",
-              "policy_clause_ids": [
-                "ETH-03"
-              ]
-            }
-          },
-          "text_rule": "clarify_context",
-          "text_pass_node": "gift_complete",
-          "text_branches": {
-            "pass": "accept_documented",
-            "miss": "report_violation",
-            "overgeneralized": "refuse_anyway"
-          }
-        }
-      },
-      "skills": [
-        "conflict_awareness",
-        "clarify_context"
-      ]
-    },
-    "ethics-review": {
-      "version": "1.0.0",
-      "title": "Ethics Review",
-      "category": "ethics_compliance",
-      "estimated_minutes": 3,
-      "available_modes": [
-        "practice"
-      ],
-      "start_node": "review_no_evidence",
-      "nodes": {
-        "review_no_evidence": {
-          "npc_id": "mira",
-          "text": "You haven't left any answer evidence yet, so I can't walk through your gaps. Go to the restaurant first and complete a Celebration Dinner Invitation task, then come back.",
-          "allow_text": false,
-          "choices": []
-        },
-        "review_clarify": {
-          "npc_id": "mira",
-          "text": "Your record shows you decided before confirming who pays or whether a pending approval was involved. Against clause ETH-03, answer one question: which of the following most changes whether 'this meal is acceptable'?",
-          "allow_text": true,
-          "choices": [],
-          "branches": {
-            "pending_decision": {
-              "next_node": "review_complete",
-              "effect": "completed",
-              "skill_id": "clarify_context",
-              "state": "pass",
-              "interpretation": "Identified the pending business relationship as the key condition that changes the judgment.",
-              "feedback": "Right: look at the relationship to the pending decision first, then the other factors.",
-              "policy_clause_ids": [
-                "ETH-03"
-              ]
-            },
-            "amount": {
-              "next_node": "review_clarify",
-              "effect": "none",
-              "skill_id": "clarify_context",
-              "state": "needs_practice",
-              "interpretation": "Treated the amount as the main basis for judgment.",
-              "feedback": "Amount is only one factor; this training policy sets no universal monetary threshold.",
-              "policy_clause_ids": [
-                "ETH-03"
-              ]
-            },
-            "weekday": {
-              "next_node": "review_clarify",
-              "effect": "none",
-              "skill_id": "clarify_context",
-              "state": "needs_practice",
-              "interpretation": "Chose a condition unrelated to the conflict of interest.",
-              "feedback": "The scheduling doesn't change the conflict of interest. What matters is the pending decision, who pays, and transparency.",
-              "policy_clause_ids": [
-                "ETH-03"
-              ]
-            }
-          },
-          "text_rule": "clarify_context",
-          "text_pass_node": "review_complete",
-          "text_branches": {
-            "pass": "pending_decision",
-            "miss": "amount"
-          }
-        },
-        "review_conflict": {
-          "npc_id": "mira",
-          "text": "Your record shows that when 'the other company pays + you're about to approve their renewal + they asked to skip the expense report' all appeared together, you accepted the arrangement. Against clauses ETH-01 and ETH-02, which of these three conditions should make you stop immediately?",
-          "allow_text": true,
-          "choices": [],
-          "branches": {
-            "hide_record": {
-              "next_node": "review_complete",
-              "effect": "completed",
-              "skill_id": "conflict_awareness",
-              "state": "pass",
-              "interpretation": "Identified the request to hide it as the signal that requires a pause.",
-              "feedback": "Right: a request to hide it and bypass the record is the signal to pause and consult through the proper channel.",
-              "policy_clause_ids": [
-                "ETH-02"
-              ]
-            },
-            "who_pays": {
-              "next_node": "review_conflict",
-              "effect": "none",
-              "skill_id": "conflict_awareness",
-              "state": "needs_practice",
-              "interpretation": "Fixated on who pays and overlooked the request to hide it.",
-              "feedback": "Who pays is one fact, but the request to hide it is the strongest stop signal.",
-              "policy_clause_ids": [
-                "ETH-02"
-              ]
-            },
-            "celebration": {
-              "next_node": "review_conflict",
-              "effect": "none",
-              "skill_id": "conflict_awareness",
-              "state": "needs_practice",
-              "interpretation": "Focused on the pretext rather than the conflict of interest and transparency.",
-              "feedback": "The pretext doesn't change the substance. Look at the pending decision and whether it's recorded.",
-              "policy_clause_ids": [
-                "ETH-01"
-              ]
-            }
-          },
-          "text_rule": "conflict_awareness",
-          "text_pass_node": "review_complete",
-          "text_branches": {
-            "pass": "hide_record",
-            "miss": "who_pays"
-          }
-        },
-        "review_boundary": {
-          "npc_id": "mira",
-          "text": "Your reply doesn't yet state all three things clearly. Against clause DEV-01, write one reply that includes the boundary, the reason, and the next step together.",
-          "allow_text": true,
-          "choices": [],
-          "text_rule": "communicate_boundary",
-          "text_pass_node": "review_complete"
-        },
-        "review_complete": {
-          "npc_id": "mira",
-          "text": "That gap is covered. Next, verify independently with a new case you haven't seen; that shows you've mastered the approach better than redoing the original question.",
-          "allow_text": false,
-          "choices": []
-        }
-      },
-      "start_node_selector": "weakest_skill",
-      "coaching_nodes": {
-        "clarify_context": "review_clarify",
-        "conflict_awareness": "review_conflict",
-        "communicate_boundary": "review_boundary"
-      },
-      "skills": [
-        "clarify_context",
-        "conflict_awareness",
-        "communicate_boundary"
-      ]
-    },
-    "boundary-response": {
-      "version": "1.0.0",
-      "title": "Setting a Compliance Boundary",
-      "category": "personal_development",
-      "estimated_minutes": 2,
-      "available_modes": [
-        "practice"
-      ],
-      "start_node": "boundary_intro",
-      "nodes": {
-        "boundary_intro": {
-          "npc_id": "jo",
-          "text": "Write one reply: state that you're holding off on the arrangement, the reason you need to confirm first, and an appropriate next step.",
-          "allow_text": true,
-          "choices": [],
-          "text_rule": "communicate_boundary",
-          "text_pass_node": "boundary_complete"
-        },
-        "boundary_complete": {
-          "npc_id": "jo",
-          "text": "Your reply expressed the boundary, the reason, and the next step all at once. You can view the evidence in your learning passport.",
-          "allow_text": false,
-          "choices": []
-        }
-      },
-      "skills": [
-        "communicate_boundary"
-      ]
-    },
     "screening": {
-      "version": "1.0.0",
-      "title": "Quick Skill Check",
+      "version": "2.0.0",
+      "title": "Three-question starting check",
       "category": "ethics_compliance",
-      "estimated_minutes": 2,
+      "estimated_minutes": 3,
       "available_modes": [
         "screening"
       ],
@@ -533,164 +83,4017 @@
       "start_node": "screen_clarify",
       "nodes": {
         "screen_clarify": {
-          "npc_id": "mira",
+          "npc_id": "alex",
           "category": "ethics_compliance",
-          "text": "Question 1 of 3. A colleague says: 'A client is taking us to dinner, you should come too.' Before deciding whether to go, what do you most need to figure out first?",
+          "text": "Before deciding on a €26 gift from a German public official, what three facts or rules do you name?",
           "allow_text": true,
           "choices": [],
+          "knowledge": [
+            "ANNEX-1.1",
+            "ANNEX-1.2"
+          ],
+          "facts": {
+            "domain": "screening",
+            "scope": "Starting check: facts before judging a public-official gift",
+            "reference_date": "2026-09-10"
+          },
+          "rubric": {
+            "question": "Does the answer apply the stated facts and cited reference?",
+            "required": [
+              "recipient_role",
+              "applicable_rule",
+              "amount"
+            ],
+            "criteria": {
+              "recipient_role": "Identify the public-official role.",
+              "applicable_rule": "Name the applicable Germany-specific rule.",
+              "amount": "Use the €26 amount against the threshold."
+            },
+            "forbidden_claims": [],
+            "reference_answers": [
+              {
+                "text": "I first confirm the public-official role, the applicable Germany-specific rule and how €26 compares with its threshold.",
+                "outcome": "pass"
+              },
+              {
+                "text": "€26 is fine without checking anything.",
+                "outcome": "miss"
+              },
+              {
+                "text": "I refuse all gifts without checking context.",
+                "outcome": "overgeneralized"
+              }
+            ]
+          },
+          "hint": {
+            "text": "Name the role, the applicable rule and the amount before making the decision.",
+            "clause_id": "ANNEX-1.1"
+          },
+          "counterexample": false,
           "branches": {
-            "who_pays_pending": {
+            "pass": {
               "next_node": "screen_conflict",
               "effect": "none",
               "skill_id": "clarify_context",
               "state": "pass",
-              "interpretation": "Gathered who pays and pending matters first, then judged.",
-              "feedback": "Right: look at who pays and the relationship to a pending decision first.",
+              "interpretation": "Applied the cited conditions to this case.",
+              "feedback": "You used the stated facts and the relevant reference conditions.",
               "policy_clause_ids": [
-                "ETH-03"
+                "ANNEX-1.1",
+                "ANNEX-1.2"
               ]
             },
-            "restaurant_level": {
+            "miss": {
               "next_node": "screen_conflict",
               "effect": "none",
               "skill_id": "clarify_context",
               "state": "needs_practice",
-              "interpretation": "Used the spending level as the main basis.",
-              "feedback": "Amount is only one factor; this training policy sets no universal monetary threshold.",
+              "interpretation": "The response missed a required condition in the cited reference.",
+              "feedback": "Review the facts and the source card, then rewind to try the decision again.",
               "policy_clause_ids": [
-                "ETH-03"
+                "ANNEX-1.1",
+                "ANNEX-1.2"
               ]
             },
-            "headcount": {
+            "overgeneralized": {
               "next_node": "screen_conflict",
               "effect": "none",
               "skill_id": "clarify_context",
               "state": "needs_practice",
-              "interpretation": "Focused on the headcount rather than the conflict of interest.",
-              "feedback": "The headcount doesn't change the conflict of interest. Look at who pays, the pending decision, and transparency.",
+              "interpretation": "The response replaced conditional judgment with a blanket rule.",
+              "feedback": "The reference requires a judgment based on the stated conditions, not a blanket rule.",
               "policy_clause_ids": [
-                "ETH-03"
+                "ANNEX-1.1",
+                "ANNEX-1.2"
               ]
             }
           },
           "text_rule": "clarify_context",
-          "text_pass_node": "screen_conflict",
           "text_branches": {
-            "pass": "who_pays_pending",
-            "miss": "restaurant_level"
+            "pass": "pass",
+            "miss": "miss",
+            "overgeneralized": "overgeneralized"
           }
         },
         "screen_conflict": {
-          "npc_id": "mira",
+          "npc_id": "sam",
           "category": "ethics_compliance",
-          "text": "Question 2. They add: 'Let's skip the expense report this time so it stays simple.' What does that mean?",
+          "text": "A €12,000 commercial transaction is presented as four linked €3,000 cash payments. What risk and next step do you identify?",
           "allow_text": true,
           "choices": [],
+          "knowledge": [
+            "ANNEX-4.1",
+            "ANNEX-4.3"
+          ],
+          "facts": {
+            "domain": "screening",
+            "scope": "Starting check: linked commercial cash payments",
+            "reference_date": "2026-09-10"
+          },
+          "rubric": {
+            "question": "Does the answer apply the stated facts and cited reference?",
+            "required": [
+              "linked_total",
+              "evasion_risk",
+              "process_step"
+            ],
+            "criteria": {
+              "linked_total": "Aggregate the payments.",
+              "evasion_risk": "Identify the splitting/evasion concern.",
+              "process_step": "State decline or escalation."
+            },
+            "forbidden_claims": [],
+            "reference_answers": [
+              {
+                "text": "The linked payments total €12,000, splitting does not avoid the cash limit, and I will decline or escalate through the required process.",
+                "outcome": "pass"
+              },
+              {
+                "text": "Each €3,000 payment is separate.",
+                "outcome": "miss"
+              },
+              {
+                "text": "Every payment must be reported as criminal.",
+                "outcome": "overgeneralized"
+              }
+            ]
+          },
+          "hint": {
+            "text": "Calculate the linked total, identify the splitting risk and name the process step.",
+            "clause_id": "ANNEX-4.1"
+          },
+          "counterexample": false,
           "branches": {
-            "hidden_signal": {
+            "pass": {
               "next_node": "screen_boundary",
               "effect": "none",
               "skill_id": "conflict_awareness",
               "state": "pass",
-              "interpretation": "Recognized the request to hide it as a stop signal.",
-              "feedback": "Right: a request to bypass the record is one of the strongest stop signals.",
+              "interpretation": "Applied the cited conditions to this case.",
+              "feedback": "You used the stated facts and the relevant reference conditions.",
               "policy_clause_ids": [
-                "ETH-02"
+                "ANNEX-4.1",
+                "ANNEX-4.3"
               ]
             },
-            "just_convenience": {
+            "miss": {
               "next_node": "screen_boundary",
               "effect": "none",
               "skill_id": "conflict_awareness",
               "state": "needs_practice",
-              "interpretation": "Treated the request to hide it as mere process convenience.",
-              "feedback": "Bypassing the expense report isn't saving hassle; it makes the arrangement impossible to verify.",
+              "interpretation": "The response missed a required condition in the cited reference.",
+              "feedback": "Review the facts and the source card, then rewind to try the decision again.",
               "policy_clause_ids": [
-                "ETH-02"
+                "ANNEX-4.1",
+                "ANNEX-4.3"
               ]
             },
-            "small_amount_ok": {
+            "overgeneralized": {
               "next_node": "screen_boundary",
               "effect": "none",
               "skill_id": "conflict_awareness",
               "state": "needs_practice",
-              "interpretation": "Substituted an amount threshold for judging the request to hide it.",
-              "feedback": "A small amount can't offset hiding it; this policy sets no universal monetary threshold.",
+              "interpretation": "The response replaced conditional judgment with a blanket rule.",
+              "feedback": "The reference requires a judgment based on the stated conditions, not a blanket rule.",
               "policy_clause_ids": [
-                "ETH-01"
+                "ANNEX-4.1",
+                "ANNEX-4.3"
               ]
             }
           },
           "text_rule": "conflict_awareness",
-          "text_pass_node": "screen_boundary",
           "text_branches": {
-            "pass": "hidden_signal",
-            "miss": "just_convenience"
+            "pass": "pass",
+            "miss": "miss",
+            "overgeneralized": "overgeneralized"
           }
         },
         "screen_boundary": {
-          "npc_id": "jo",
+          "npc_id": "mira",
           "category": "personal_development",
-          "text": "Question 3. You decide not to accept. Which reply both holds the boundary and preserves the working relationship?",
+          "text": "Write one work reply for a high-risk breach known at 10:00 today: state the action, the reason and the next step.",
           "allow_text": true,
           "choices": [],
+          "knowledge": [
+            "ANNEX-2.1"
+          ],
+          "facts": {
+            "domain": "screening",
+            "scope": "Starting check: communicate a high-risk breach response",
+            "reference_date": "2026-09-10"
+          },
+          "rubric": {
+            "question": "Does the answer apply the stated facts and cited reference?",
+            "required": [
+              "action",
+              "reason",
+              "next_step"
+            ],
+            "criteria": {
+              "action": "State the authority and individual-notice action.",
+              "reason": "State awareness and high-risk reasoning.",
+              "next_step": "State the immediate follow-up step."
+            },
+            "forbidden_claims": [],
+            "reference_answers": [
+              {
+                "text": "We became aware at 10:00 today and the breach is high risk, so I will notify the authority within 72 hours and affected people without undue delay; I will document and coordinate the next steps now.",
+                "outcome": "pass"
+              },
+              {
+                "text": "We can wait a month before acting.",
+                "outcome": "miss"
+              },
+              {
+                "text": "We always tell everyone about every incident.",
+                "outcome": "overgeneralized"
+              }
+            ]
+          },
+          "hint": {
+            "text": "Use a three-part reply: action, awareness/high-risk reason and a concrete next step.",
+            "clause_id": "ANNEX-2.1"
+          },
+          "counterexample": false,
           "branches": {
-            "reason_and_next": {
+            "pass": {
               "next_node": "screen_complete",
               "effect": "completed",
               "skill_id": "communicate_boundary",
               "state": "pass",
-              "interpretation": "States the boundary, the reason, and the next step together.",
-              "feedback": "Right: boundary, reason, and next step are all stated clearly.",
+              "interpretation": "Applied the cited conditions to this case.",
+              "feedback": "You used the stated facts and the relevant reference conditions.",
               "policy_clause_ids": [
-                "DEV-01"
+                "ANNEX-2.1"
               ]
             },
-            "blunt": {
+            "miss": {
               "next_node": "screen_complete",
               "effect": "completed",
               "skill_id": "communicate_boundary",
               "state": "needs_practice",
-              "interpretation": "Only a refusal, with no reason or next step.",
-              "feedback": "You held the boundary, but gave no reason or next step, so the working relationship suffers.",
+              "interpretation": "The response missed a required condition in the cited reference.",
+              "feedback": "Review the facts and the source card, then rewind to try the decision again.",
               "policy_clause_ids": [
-                "DEV-01"
+                "ANNEX-2.1"
               ]
             },
-            "defer_upward": {
+            "overgeneralized": {
               "next_node": "screen_complete",
               "effect": "completed",
               "skill_id": "communicate_boundary",
               "state": "needs_practice",
-              "interpretation": "Outsourced the whole judgment without expressing your own boundary or reason.",
-              "feedback": "Checking with a manager isn't the same as setting a boundary; first say why you're sitting out, then give the next step.",
+              "interpretation": "The response replaced conditional judgment with a blanket rule.",
+              "feedback": "The reference requires a judgment based on the stated conditions, not a blanket rule.",
               "policy_clause_ids": [
-                "DEV-01"
+                "ANNEX-2.1"
               ]
             }
           },
           "text_rule": "communicate_boundary",
-          "text_pass_node": "screen_complete",
           "text_branches": {
-            "pass": "reason_and_next",
-            "miss": "blunt"
+            "pass": "pass",
+            "miss": "miss",
+            "overgeneralized": "overgeneralized"
           }
         },
         "screen_complete": {
           "npc_id": "mira",
           "category": "ethics_compliance",
-          "text": "Skill check complete. These are only 3 questions, so treat it as a starting point, not a full assessment: results are grouped as 'evidence of understanding / practice suggested / not yet verified.' The map will mark which NPC to visit first.",
+          "text": "This was a starting check. The map contains independent grounded practice tasks.",
           "allow_text": false,
-          "choices": []
+          "choices": [],
+          "knowledge": []
         }
+      }
+    },
+    "dinner-invitation": {
+      "version": "2.0.0",
+      "title": "Gifts and hospitality",
+      "category": "ethics_compliance",
+      "estimated_minutes": 6,
+      "available_modes": [
+        "screening",
+        "practice",
+        "verification"
+      ],
+      "skills": [
+        "clarify_context",
+        "conflict_awareness"
+      ],
+      "start_node": "alex_public_gift",
+      "nodes": {
+        "alex_public_gift": {
+          "npc_id": "alex",
+          "category": "ethics_compliance",
+          "text": "A German public official offers you a €26 thank-you gift after a meeting. The cited Germany-specific threshold is €25. What do you do?",
+          "allow_text": true,
+          "choices": [],
+          "knowledge": [
+            "ANNEX-1.1",
+            "ANNEX-1.2",
+            "ANNEX-1.3"
+          ],
+          "facts": {
+            "domain": "gifts_hospitality",
+            "scope": "Germany-specific public-official gift threshold",
+            "reference_date": "2026-09-10"
+          },
+          "rubric": {
+            "question": "Does the answer apply the stated facts and cited reference?",
+            "required": [
+              "recipient_role",
+              "applicable_limit",
+              "decline_or_surrender",
+              "record"
+            ],
+            "criteria": {
+              "recipient_role": "Identify the recipient as a public official.",
+              "applicable_limit": "Apply the €25 Germany-specific threshold.",
+              "decline_or_surrender": "Decline or hand over the over-limit gift.",
+              "record": "State the record or receipt step."
+            },
+            "forbidden_claims": [],
+            "reference_answers": [
+              {
+                "text": "Because this is a German public official and €26 exceeds the €25 threshold, I will decline or hand it to the employing office and keep the receipt in the register.",
+                "outcome": "pass"
+              },
+              {
+                "text": "€26 is a small gift, so I will accept it.",
+                "outcome": "miss"
+              },
+              {
+                "text": "I will refuse every gift in every situation.",
+                "outcome": "overgeneralized"
+              }
+            ]
+          },
+          "hint": {
+            "text": "Start with the recipient role, then compare the amount with the cited threshold and record requirement.",
+            "clause_id": "ANNEX-1.1"
+          },
+          "counterexample": false,
+          "branches": {
+            "pass": {
+              "next_node": "alex_private_gift",
+              "effect": "none",
+              "skill_id": "clarify_context",
+              "state": "pass",
+              "interpretation": "Applied the cited conditions to this case.",
+              "feedback": "You used the stated facts and the relevant reference conditions.",
+              "policy_clause_ids": [
+                "ANNEX-1.1",
+                "ANNEX-1.2",
+                "ANNEX-1.3"
+              ]
+            },
+            "miss": {
+              "next_node": "alex_public_gift_consequence",
+              "effect": "consequence_preview",
+              "skill_id": "clarify_context",
+              "state": "needs_practice",
+              "interpretation": "The response missed a required condition in the cited reference.",
+              "feedback": "Review the facts and the source card, then rewind to try the decision again.",
+              "policy_clause_ids": [
+                "ANNEX-1.1",
+                "ANNEX-1.2",
+                "ANNEX-1.3"
+              ]
+            },
+            "overgeneralized": {
+              "next_node": "alex_public_gift",
+              "effect": "none",
+              "skill_id": "clarify_context",
+              "state": "needs_practice",
+              "interpretation": "The response replaced conditional judgment with a blanket rule.",
+              "feedback": "The reference requires a judgment based on the stated conditions, not a blanket rule.",
+              "policy_clause_ids": [
+                "ANNEX-1.1",
+                "ANNEX-1.2",
+                "ANNEX-1.3"
+              ]
+            }
+          },
+          "text_rule": "clarify_context",
+          "text_branches": {
+            "pass": "pass",
+            "miss": "miss",
+            "overgeneralized": "overgeneralized"
+          }
+        },
+        "alex_public_gift_consequence": {
+          "npc_id": "mira",
+          "category": "ethics_compliance",
+          "text": "Review the cited conditions before deciding again. You can rewind to the decision point.",
+          "allow_text": false,
+          "choices": [],
+          "knowledge": [
+            "ANNEX-1.1",
+            "ANNEX-1.2",
+            "ANNEX-1.3"
+          ],
+          "rewind_to": "alex_public_gift"
+        },
+        "alex_private_gift": {
+          "npc_id": "alex",
+          "category": "ethics_compliance",
+          "text": "A private-sector counterpart gives a €30 customary gift. There is no pending business decision and you have disclosed it. Is the €30 benchmark a blanket safe harbour?",
+          "allow_text": true,
+          "choices": [],
+          "knowledge": [
+            "ANNEX-1.1",
+            "ANNEX-1.2"
+          ],
+          "facts": {
+            "domain": "gifts_hospitality",
+            "scope": "Private-sector gift benchmark and contextual factors",
+            "reference_date": "2026-09-10"
+          },
+          "rubric": {
+            "question": "Does the answer apply the stated facts and cited reference?",
+            "required": [
+              "benchmark_not_safe_harbour",
+              "context",
+              "register"
+            ],
+            "criteria": {
+              "benchmark_not_safe_harbour": "Explain that the benchmark is not a blanket safe harbour.",
+              "context": "Consider role, intent, frequency and transparency.",
+              "register": "Record the disclosed gift."
+            },
+            "forbidden_claims": [],
+            "reference_answers": [
+              {
+                "text": "€30 is a private-sector benchmark, not an automatic safe harbour; I will check intent and context and record the disclosed gift.",
+                "outcome": "pass"
+              },
+              {
+                "text": "€30 always makes a gift safe.",
+                "outcome": "miss"
+              },
+              {
+                "text": "All private-sector gifts must always be refused.",
+                "outcome": "overgeneralized"
+              }
+            ]
+          },
+          "hint": {
+            "text": "A benchmark guides the decision; it does not remove the contextual factors.",
+            "clause_id": "ANNEX-1.1"
+          },
+          "counterexample": false,
+          "branches": {
+            "pass": {
+              "next_node": "alex_business_meal",
+              "effect": "none",
+              "skill_id": "clarify_context",
+              "state": "pass",
+              "interpretation": "Applied the cited conditions to this case.",
+              "feedback": "You used the stated facts and the relevant reference conditions.",
+              "policy_clause_ids": [
+                "ANNEX-1.1",
+                "ANNEX-1.2"
+              ]
+            },
+            "miss": {
+              "next_node": "alex_private_gift_consequence",
+              "effect": "consequence_preview",
+              "skill_id": "clarify_context",
+              "state": "needs_practice",
+              "interpretation": "The response missed a required condition in the cited reference.",
+              "feedback": "Review the facts and the source card, then rewind to try the decision again.",
+              "policy_clause_ids": [
+                "ANNEX-1.1",
+                "ANNEX-1.2"
+              ]
+            },
+            "overgeneralized": {
+              "next_node": "alex_private_gift",
+              "effect": "none",
+              "skill_id": "clarify_context",
+              "state": "needs_practice",
+              "interpretation": "The response replaced conditional judgment with a blanket rule.",
+              "feedback": "The reference requires a judgment based on the stated conditions, not a blanket rule.",
+              "policy_clause_ids": [
+                "ANNEX-1.1",
+                "ANNEX-1.2"
+              ]
+            }
+          },
+          "text_rule": "clarify_context",
+          "text_branches": {
+            "pass": "pass",
+            "miss": "miss",
+            "overgeneralized": "overgeneralized"
+          }
+        },
+        "alex_private_gift_consequence": {
+          "npc_id": "mira",
+          "category": "ethics_compliance",
+          "text": "Review the cited conditions before deciding again. You can rewind to the decision point.",
+          "allow_text": false,
+          "choices": [],
+          "knowledge": [
+            "ANNEX-1.1",
+            "ANNEX-1.2"
+          ],
+          "rewind_to": "alex_private_gift"
+        },
+        "alex_business_meal": {
+          "npc_id": "alex",
+          "category": "ethics_compliance",
+          "text": "A private-sector business meal costs €100 per person. The case states a legitimate business purpose, no active tender and approval is pending under company policy. What conditions govern the decision?",
+          "allow_text": true,
+          "choices": [],
+          "knowledge": [
+            "ANNEX-1.2",
+            "ANNEX-1.3"
+          ],
+          "facts": {
+            "domain": "gifts_hospitality",
+            "scope": "Private-sector meal threshold with approval and records",
+            "reference_date": "2026-09-10"
+          },
+          "rubric": {
+            "question": "Does the answer apply the stated facts and cited reference?",
+            "required": [
+              "per_person",
+              "business_purpose",
+              "approval_and_record"
+            ],
+            "criteria": {
+              "per_person": "Apply the per-person amount.",
+              "business_purpose": "Confirm a legitimate business purpose and no active tender.",
+              "approval_and_record": "Use the stated approval and documentation process."
+            },
+            "forbidden_claims": [],
+            "reference_answers": [
+              {
+                "text": "At €100 per person I will confirm the legitimate business purpose and no active tender, then obtain the stated approval and document attendees and amount.",
+                "outcome": "pass"
+              },
+              {
+                "text": "The meal is €100 so no other checks matter.",
+                "outcome": "miss"
+              },
+              {
+                "text": "Every business meal is prohibited.",
+                "outcome": "overgeneralized"
+              }
+            ]
+          },
+          "hint": {
+            "text": "The amount is one condition; combine it with purpose, tender timing, approval and documentation.",
+            "clause_id": "ANNEX-1.2"
+          },
+          "counterexample": false,
+          "branches": {
+            "pass": {
+              "next_node": "alex_cash_gift",
+              "effect": "none",
+              "skill_id": "conflict_awareness",
+              "state": "pass",
+              "interpretation": "Applied the cited conditions to this case.",
+              "feedback": "You used the stated facts and the relevant reference conditions.",
+              "policy_clause_ids": [
+                "ANNEX-1.2",
+                "ANNEX-1.3"
+              ]
+            },
+            "miss": {
+              "next_node": "alex_business_meal_consequence",
+              "effect": "consequence_preview",
+              "skill_id": "conflict_awareness",
+              "state": "needs_practice",
+              "interpretation": "The response missed a required condition in the cited reference.",
+              "feedback": "Review the facts and the source card, then rewind to try the decision again.",
+              "policy_clause_ids": [
+                "ANNEX-1.2",
+                "ANNEX-1.3"
+              ]
+            },
+            "overgeneralized": {
+              "next_node": "alex_business_meal",
+              "effect": "none",
+              "skill_id": "conflict_awareness",
+              "state": "needs_practice",
+              "interpretation": "The response replaced conditional judgment with a blanket rule.",
+              "feedback": "The reference requires a judgment based on the stated conditions, not a blanket rule.",
+              "policy_clause_ids": [
+                "ANNEX-1.2",
+                "ANNEX-1.3"
+              ]
+            }
+          },
+          "text_rule": "conflict_awareness",
+          "text_branches": {
+            "pass": "pass",
+            "miss": "miss",
+            "overgeneralized": "overgeneralized"
+          }
+        },
+        "alex_business_meal_consequence": {
+          "npc_id": "mira",
+          "category": "ethics_compliance",
+          "text": "Review the cited conditions before deciding again. You can rewind to the decision point.",
+          "allow_text": false,
+          "choices": [],
+          "knowledge": [
+            "ANNEX-1.2",
+            "ANNEX-1.3"
+          ],
+          "rewind_to": "alex_business_meal"
+        },
+        "alex_cash_gift": {
+          "npc_id": "alex",
+          "category": "ethics_compliance",
+          "text": "A counterpart offers a €5 cash gift. The amount is low, but the cited card distinguishes cash from ordinary hospitality. What is your next step?",
+          "allow_text": true,
+          "choices": [],
+          "knowledge": [
+            "ANNEX-1.1"
+          ],
+          "facts": {
+            "domain": "gifts_hospitality",
+            "scope": "Cash-gift distinction",
+            "reference_date": "2026-09-10"
+          },
+          "rubric": {
+            "question": "Does the answer apply the stated facts and cited reference?",
+            "required": [
+              "cash_gift_distinction",
+              "prohibited_action",
+              "next_step"
+            ],
+            "criteria": {
+              "cash_gift_distinction": "Identify that cash is treated differently.",
+              "prohibited_action": "Do not accept the cash gift.",
+              "next_step": "Use the policy or compliance process."
+            },
+            "forbidden_claims": [],
+            "reference_answers": [
+              {
+                "text": "Even at €5 this is cash, which is treated differently; I will not accept it and will use the policy process for the next step.",
+                "outcome": "pass"
+              },
+              {
+                "text": "It is only €5, so cash is fine.",
+                "outcome": "miss"
+              },
+              {
+                "text": "I will never speak to any counterpart again.",
+                "outcome": "overgeneralized"
+              }
+            ]
+          },
+          "hint": {
+            "text": "Look for whether the item is cash, not only its amount.",
+            "clause_id": "ANNEX-1.1"
+          },
+          "counterexample": false,
+          "branches": {
+            "pass": {
+              "next_node": "alex_permitted_meal",
+              "effect": "none",
+              "skill_id": "conflict_awareness",
+              "state": "pass",
+              "interpretation": "Applied the cited conditions to this case.",
+              "feedback": "You used the stated facts and the relevant reference conditions.",
+              "policy_clause_ids": [
+                "ANNEX-1.1"
+              ]
+            },
+            "miss": {
+              "next_node": "alex_cash_gift_consequence",
+              "effect": "consequence_preview",
+              "skill_id": "conflict_awareness",
+              "state": "needs_practice",
+              "interpretation": "The response missed a required condition in the cited reference.",
+              "feedback": "Review the facts and the source card, then rewind to try the decision again.",
+              "policy_clause_ids": [
+                "ANNEX-1.1"
+              ]
+            },
+            "overgeneralized": {
+              "next_node": "alex_cash_gift",
+              "effect": "none",
+              "skill_id": "conflict_awareness",
+              "state": "needs_practice",
+              "interpretation": "The response replaced conditional judgment with a blanket rule.",
+              "feedback": "The reference requires a judgment based on the stated conditions, not a blanket rule.",
+              "policy_clause_ids": [
+                "ANNEX-1.1"
+              ]
+            }
+          },
+          "text_rule": "conflict_awareness",
+          "text_branches": {
+            "pass": "pass",
+            "miss": "miss",
+            "overgeneralized": "overgeneralized"
+          }
+        },
+        "alex_cash_gift_consequence": {
+          "npc_id": "mira",
+          "category": "ethics_compliance",
+          "text": "Review the cited conditions before deciding again. You can rewind to the decision point.",
+          "allow_text": false,
+          "choices": [],
+          "knowledge": [
+            "ANNEX-1.1"
+          ],
+          "rewind_to": "alex_cash_gift"
+        },
+        "alex_permitted_meal": {
+          "npc_id": "alex",
+          "category": "ethics_compliance",
+          "text": "A low-value private-sector meal has a legitimate business purpose. The related decision is closed and approval plus a complete register entry are already in place. How do you decide?",
+          "allow_text": true,
+          "choices": [],
+          "knowledge": [
+            "ANNEX-1.1",
+            "ANNEX-1.2",
+            "ANNEX-1.3"
+          ],
+          "facts": {
+            "domain": "gifts_hospitality",
+            "scope": "Permitted low-value private-sector meal with documented conditions",
+            "reference_date": "2026-09-10"
+          },
+          "rubric": {
+            "question": "Does the answer apply the stated facts and cited reference?",
+            "required": [
+              "allow_with_conditions",
+              "no_pending_decision",
+              "record"
+            ],
+            "criteria": {
+              "allow_with_conditions": "Allow only under the stated conditions.",
+              "no_pending_decision": "Recognise that the related decision is closed.",
+              "record": "Confirm the completed approval and record."
+            },
+            "forbidden_claims": [],
+            "reference_answers": [
+              {
+                "text": "I can allow this meal under the stated conditions because the decision is closed and the approval and register entry are complete.",
+                "outcome": "pass"
+              },
+              {
+                "text": "A meal is always a violation.",
+                "outcome": "miss"
+              },
+              {
+                "text": "Every meal from a private counterpart is always forbidden.",
+                "outcome": "overgeneralized"
+              }
+            ]
+          },
+          "hint": {
+            "text": "This is a conditional allow case: check the closed decision and the record.",
+            "clause_id": "ANNEX-1.1"
+          },
+          "counterexample": true,
+          "branches": {
+            "pass": {
+              "next_node": "alex_complete",
+              "effect": "completed",
+              "skill_id": "clarify_context",
+              "state": "pass",
+              "interpretation": "Applied the cited conditions to this case.",
+              "feedback": "You used the stated facts and the relevant reference conditions.",
+              "policy_clause_ids": [
+                "ANNEX-1.1",
+                "ANNEX-1.2",
+                "ANNEX-1.3"
+              ]
+            },
+            "miss": {
+              "next_node": "alex_permitted_meal_consequence",
+              "effect": "consequence_preview",
+              "skill_id": "clarify_context",
+              "state": "needs_practice",
+              "interpretation": "The response missed a required condition in the cited reference.",
+              "feedback": "Review the facts and the source card, then rewind to try the decision again.",
+              "policy_clause_ids": [
+                "ANNEX-1.1",
+                "ANNEX-1.2",
+                "ANNEX-1.3"
+              ]
+            },
+            "overgeneralized": {
+              "next_node": "alex_permitted_meal",
+              "effect": "none",
+              "skill_id": "clarify_context",
+              "state": "needs_practice",
+              "interpretation": "The response replaced conditional judgment with a blanket rule.",
+              "feedback": "The reference requires a judgment based on the stated conditions, not a blanket rule.",
+              "policy_clause_ids": [
+                "ANNEX-1.1",
+                "ANNEX-1.2",
+                "ANNEX-1.3"
+              ]
+            }
+          },
+          "text_rule": "clarify_context",
+          "text_branches": {
+            "pass": "pass",
+            "miss": "miss",
+            "overgeneralized": "overgeneralized"
+          }
+        },
+        "alex_permitted_meal_consequence": {
+          "npc_id": "mira",
+          "category": "ethics_compliance",
+          "text": "Review the cited conditions before deciding again. You can rewind to the decision point.",
+          "allow_text": false,
+          "choices": [],
+          "knowledge": [
+            "ANNEX-1.1",
+            "ANNEX-1.2",
+            "ANNEX-1.3"
+          ],
+          "rewind_to": "alex_permitted_meal"
+        },
+        "alex_complete": {
+          "npc_id": "alex",
+          "category": "ethics_compliance",
+          "text": "You completed the grounded gifts and hospitality path.",
+          "allow_text": false,
+          "choices": [],
+          "knowledge": []
+        }
+      }
+    },
+    "supplier-gift": {
+      "version": "2.0.0",
+      "title": "Cash and customer checks",
+      "category": "ethics_compliance",
+      "estimated_minutes": 6,
+      "available_modes": [
+        "practice",
+        "verification"
+      ],
+      "skills": [
+        "clarify_context",
+        "conflict_awareness"
+      ],
+      "start_node": "sam_cash_limit",
+      "nodes": {
+        "sam_cash_limit": {
+          "npc_id": "sam",
+          "category": "ethics_compliance",
+          "text": "From July 2027, a commercial customer offers one €10,001 cash payment. What must happen under the cited AMLR threshold?",
+          "allow_text": true,
+          "choices": [],
+          "knowledge": [
+            "ANNEX-4.1"
+          ],
+          "facts": {
+            "domain": "aml",
+            "scope": "Commercial cash limit from July 2027",
+            "reference_date": "2026-09-10"
+          },
+          "rubric": {
+            "question": "Does the answer apply the stated facts and cited reference?",
+            "required": [
+              "scope_and_date",
+              "over_limit",
+              "non_cash_next_step"
+            ],
+            "criteria": {
+              "scope_and_date": "State the commercial scope and July 2027 date.",
+              "over_limit": "Recognise that €10,001 is over €10,000.",
+              "non_cash_next_step": "Decline cash and use an allowed non-cash process."
+            },
+            "forbidden_claims": [],
+            "reference_answers": [
+              {
+                "text": "For a commercial transaction from July 2027, €10,001 is over the €10,000 cash limit, so I will decline cash and move to an allowed non-cash process.",
+                "outcome": "pass"
+              },
+              {
+                "text": "€10,001 cash is allowed.",
+                "outcome": "miss"
+              },
+              {
+                "text": "All payments of every kind are forbidden.",
+                "outcome": "overgeneralized"
+              }
+            ]
+          },
+          "hint": {
+            "text": "State the transaction scope and date before applying the > €10,000 threshold.",
+            "clause_id": "ANNEX-4.1"
+          },
+          "counterexample": false,
+          "branches": {
+            "pass": {
+              "next_node": "sam_kyc_boundary",
+              "effect": "none",
+              "skill_id": "conflict_awareness",
+              "state": "pass",
+              "interpretation": "Applied the cited conditions to this case.",
+              "feedback": "You used the stated facts and the relevant reference conditions.",
+              "policy_clause_ids": [
+                "ANNEX-4.1"
+              ]
+            },
+            "miss": {
+              "next_node": "sam_cash_limit_consequence",
+              "effect": "consequence_preview",
+              "skill_id": "conflict_awareness",
+              "state": "needs_practice",
+              "interpretation": "The response missed a required condition in the cited reference.",
+              "feedback": "Review the facts and the source card, then rewind to try the decision again.",
+              "policy_clause_ids": [
+                "ANNEX-4.1"
+              ]
+            },
+            "overgeneralized": {
+              "next_node": "sam_cash_limit",
+              "effect": "none",
+              "skill_id": "conflict_awareness",
+              "state": "needs_practice",
+              "interpretation": "The response replaced conditional judgment with a blanket rule.",
+              "feedback": "The reference requires a judgment based on the stated conditions, not a blanket rule.",
+              "policy_clause_ids": [
+                "ANNEX-4.1"
+              ]
+            }
+          },
+          "text_rule": "conflict_awareness",
+          "text_branches": {
+            "pass": "pass",
+            "miss": "miss",
+            "overgeneralized": "overgeneralized"
+          }
+        },
+        "sam_cash_limit_consequence": {
+          "npc_id": "mira",
+          "category": "ethics_compliance",
+          "text": "Review the cited conditions before deciding again. You can rewind to the decision point.",
+          "allow_text": false,
+          "choices": [],
+          "knowledge": [
+            "ANNEX-4.1"
+          ],
+          "rewind_to": "sam_cash_limit"
+        },
+        "sam_kyc_boundary": {
+          "npc_id": "sam",
+          "category": "ethics_compliance",
+          "text": "A commercial customer offers €3,000 cash and has not been identity-verified. What is required at this threshold, and what does it not mean?",
+          "allow_text": true,
+          "choices": [],
+          "knowledge": [
+            "ANNEX-4.1"
+          ],
+          "facts": {
+            "domain": "aml",
+            "scope": "Commercial cash KYC threshold",
+            "reference_date": "2026-09-10"
+          },
+          "rubric": {
+            "question": "Does the answer apply the stated facts and cited reference?",
+            "required": [
+              "at_threshold",
+              "identify_before_acceptance",
+              "not_cash_ban"
+            ],
+            "criteria": {
+              "at_threshold": "Identify the ≥ €3,000 threshold.",
+              "identify_before_acceptance": "Require customer identity verification.",
+              "not_cash_ban": "Distinguish KYC from the > €10,000 cash prohibition."
+            },
+            "forbidden_claims": [],
+            "reference_answers": [
+              {
+                "text": "At €3,000 in a commercial cash transaction I must verify the customer identity before acceptance; this is KYC, not the over-€10,000 cash ban.",
+                "outcome": "pass"
+              },
+              {
+                "text": "€3,000 cash is automatically prohibited.",
+                "outcome": "miss"
+              },
+              {
+                "text": "Cash is never allowed in any circumstance.",
+                "outcome": "overgeneralized"
+              }
+            ]
+          },
+          "hint": {
+            "text": "Separate the ≥ €3,000 KYC obligation from the higher cash prohibition.",
+            "clause_id": "ANNEX-4.1"
+          },
+          "counterexample": false,
+          "branches": {
+            "pass": {
+              "next_node": "sam_linked_payments",
+              "effect": "none",
+              "skill_id": "clarify_context",
+              "state": "pass",
+              "interpretation": "Applied the cited conditions to this case.",
+              "feedback": "You used the stated facts and the relevant reference conditions.",
+              "policy_clause_ids": [
+                "ANNEX-4.1"
+              ]
+            },
+            "miss": {
+              "next_node": "sam_kyc_boundary_consequence",
+              "effect": "consequence_preview",
+              "skill_id": "clarify_context",
+              "state": "needs_practice",
+              "interpretation": "The response missed a required condition in the cited reference.",
+              "feedback": "Review the facts and the source card, then rewind to try the decision again.",
+              "policy_clause_ids": [
+                "ANNEX-4.1"
+              ]
+            },
+            "overgeneralized": {
+              "next_node": "sam_kyc_boundary",
+              "effect": "none",
+              "skill_id": "clarify_context",
+              "state": "needs_practice",
+              "interpretation": "The response replaced conditional judgment with a blanket rule.",
+              "feedback": "The reference requires a judgment based on the stated conditions, not a blanket rule.",
+              "policy_clause_ids": [
+                "ANNEX-4.1"
+              ]
+            }
+          },
+          "text_rule": "clarify_context",
+          "text_branches": {
+            "pass": "pass",
+            "miss": "miss",
+            "overgeneralized": "overgeneralized"
+          }
+        },
+        "sam_kyc_boundary_consequence": {
+          "npc_id": "mira",
+          "category": "ethics_compliance",
+          "text": "Review the cited conditions before deciding again. You can rewind to the decision point.",
+          "allow_text": false,
+          "choices": [],
+          "knowledge": [
+            "ANNEX-4.1"
+          ],
+          "rewind_to": "sam_kyc_boundary"
+        },
+        "sam_linked_payments": {
+          "npc_id": "sam",
+          "category": "ethics_compliance",
+          "text": "One commercial transaction is split into four linked €3,000 cash payments. How should the amounts and apparent splitting be handled?",
+          "allow_text": true,
+          "choices": [],
+          "knowledge": [
+            "ANNEX-4.1",
+            "ANNEX-4.3"
+          ],
+          "facts": {
+            "domain": "aml",
+            "scope": "Linked commercial cash payments",
+            "reference_date": "2026-09-10"
+          },
+          "rubric": {
+            "question": "Does the answer apply the stated facts and cited reference?",
+            "required": [
+              "aggregate_12000",
+              "no_splitting_evasion",
+              "escalate_process"
+            ],
+            "criteria": {
+              "aggregate_12000": "Aggregate the linked payments to €12,000.",
+              "no_splitting_evasion": "Do not treat splitting as a way around the threshold.",
+              "escalate_process": "Decline/escalate through the required process."
+            },
+            "forbidden_claims": [],
+            "reference_answers": [
+              {
+                "text": "The four linked payments aggregate to €12,000, so splitting does not avoid the commercial cash limit; I will decline or escalate through the required process.",
+                "outcome": "pass"
+              },
+              {
+                "text": "Each €3,000 payment is separate, so I will accept all four.",
+                "outcome": "miss"
+              },
+              {
+                "text": "I will report every customer payment as criminal without checking facts.",
+                "outcome": "overgeneralized"
+              }
+            ]
+          },
+          "hint": {
+            "text": "Add the linked payments before applying the threshold, then address the attempted evasion.",
+            "clause_id": "ANNEX-4.1"
+          },
+          "counterexample": false,
+          "branches": {
+            "pass": {
+              "next_node": "sam_beneficial_owner",
+              "effect": "none",
+              "skill_id": "conflict_awareness",
+              "state": "pass",
+              "interpretation": "Applied the cited conditions to this case.",
+              "feedback": "You used the stated facts and the relevant reference conditions.",
+              "policy_clause_ids": [
+                "ANNEX-4.1",
+                "ANNEX-4.3"
+              ]
+            },
+            "miss": {
+              "next_node": "sam_linked_payments_consequence",
+              "effect": "consequence_preview",
+              "skill_id": "conflict_awareness",
+              "state": "needs_practice",
+              "interpretation": "The response missed a required condition in the cited reference.",
+              "feedback": "Review the facts and the source card, then rewind to try the decision again.",
+              "policy_clause_ids": [
+                "ANNEX-4.1",
+                "ANNEX-4.3"
+              ]
+            },
+            "overgeneralized": {
+              "next_node": "sam_linked_payments",
+              "effect": "none",
+              "skill_id": "conflict_awareness",
+              "state": "needs_practice",
+              "interpretation": "The response replaced conditional judgment with a blanket rule.",
+              "feedback": "The reference requires a judgment based on the stated conditions, not a blanket rule.",
+              "policy_clause_ids": [
+                "ANNEX-4.1",
+                "ANNEX-4.3"
+              ]
+            }
+          },
+          "text_rule": "conflict_awareness",
+          "text_branches": {
+            "pass": "pass",
+            "miss": "miss",
+            "overgeneralized": "overgeneralized"
+          }
+        },
+        "sam_linked_payments_consequence": {
+          "npc_id": "mira",
+          "category": "ethics_compliance",
+          "text": "Review the cited conditions before deciding again. You can rewind to the decision point.",
+          "allow_text": false,
+          "choices": [],
+          "knowledge": [
+            "ANNEX-4.1",
+            "ANNEX-4.3"
+          ],
+          "rewind_to": "sam_linked_payments"
+        },
+        "sam_beneficial_owner": {
+          "npc_id": "sam",
+          "category": "ethics_compliance",
+          "text": "A standard ownership structure has a person holding 25% of voting rights; a separate high-risk structure uses the stated 15% trigger. What must the assessment distinguish?",
+          "allow_text": true,
+          "choices": [],
+          "knowledge": [
+            "ANNEX-4.2"
+          ],
+          "facts": {
+            "domain": "aml",
+            "scope": "Beneficial-ownership thresholds by risk scope",
+            "reference_date": "2026-09-10"
+          },
+          "rubric": {
+            "question": "Does the answer apply the stated facts and cited reference?",
+            "required": [
+              "ownership_and_control",
+              "applicable_threshold",
+              "risk_scope"
+            ],
+            "criteria": {
+              "ownership_and_control": "Assess ownership or voting control.",
+              "applicable_threshold": "Apply the stated threshold.",
+              "risk_scope": "Distinguish the standard and high-risk structures."
+            },
+            "forbidden_claims": [],
+            "reference_answers": [
+              {
+                "text": "I will assess ownership or voting control, apply the ≥25% standard trigger, and use the stated ≥15% trigger only for the high-risk structure.",
+                "outcome": "pass"
+              },
+              {
+                "text": "Only a 50% owner can be beneficial.",
+                "outcome": "miss"
+              },
+              {
+                "text": "Every shareholder is always a beneficial owner.",
+                "outcome": "overgeneralized"
+              }
+            ]
+          },
+          "hint": {
+            "text": "The threshold depends on the ownership/control facts and whether the stated high-risk scope applies.",
+            "clause_id": "ANNEX-4.2"
+          },
+          "counterexample": false,
+          "branches": {
+            "pass": {
+              "next_node": "sam_permitted_cash",
+              "effect": "none",
+              "skill_id": "clarify_context",
+              "state": "pass",
+              "interpretation": "Applied the cited conditions to this case.",
+              "feedback": "You used the stated facts and the relevant reference conditions.",
+              "policy_clause_ids": [
+                "ANNEX-4.2"
+              ]
+            },
+            "miss": {
+              "next_node": "sam_beneficial_owner_consequence",
+              "effect": "consequence_preview",
+              "skill_id": "clarify_context",
+              "state": "needs_practice",
+              "interpretation": "The response missed a required condition in the cited reference.",
+              "feedback": "Review the facts and the source card, then rewind to try the decision again.",
+              "policy_clause_ids": [
+                "ANNEX-4.2"
+              ]
+            },
+            "overgeneralized": {
+              "next_node": "sam_beneficial_owner",
+              "effect": "none",
+              "skill_id": "clarify_context",
+              "state": "needs_practice",
+              "interpretation": "The response replaced conditional judgment with a blanket rule.",
+              "feedback": "The reference requires a judgment based on the stated conditions, not a blanket rule.",
+              "policy_clause_ids": [
+                "ANNEX-4.2"
+              ]
+            }
+          },
+          "text_rule": "clarify_context",
+          "text_branches": {
+            "pass": "pass",
+            "miss": "miss",
+            "overgeneralized": "overgeneralized"
+          }
+        },
+        "sam_beneficial_owner_consequence": {
+          "npc_id": "mira",
+          "category": "ethics_compliance",
+          "text": "Review the cited conditions before deciding again. You can rewind to the decision point.",
+          "allow_text": false,
+          "choices": [],
+          "knowledge": [
+            "ANNEX-4.2"
+          ],
+          "rewind_to": "sam_beneficial_owner"
+        },
+        "sam_permitted_cash": {
+          "npc_id": "sam",
+          "category": "ethics_compliance",
+          "text": "A commercial €2,500 cash payment has completed KYC and no linked or suspicious factors. What is the conditional outcome?",
+          "allow_text": true,
+          "choices": [],
+          "knowledge": [
+            "ANNEX-4.1"
+          ],
+          "facts": {
+            "domain": "aml",
+            "scope": "Conditional commercial cash acceptance below KYC threshold",
+            "reference_date": "2026-09-10"
+          },
+          "rubric": {
+            "question": "Does the answer apply the stated facts and cited reference?",
+            "required": [
+              "allow_with_conditions",
+              "no_linked_payments",
+              "retain_record"
+            ],
+            "criteria": {
+              "allow_with_conditions": "Allow only subject to the stated facts.",
+              "no_linked_payments": "Confirm no linked payment changes the total.",
+              "retain_record": "Retain the required record."
+            },
+            "forbidden_claims": [],
+            "reference_answers": [
+              {
+                "text": "With completed KYC, no linked payments and no suspicious factors, €2,500 can proceed subject to retaining the required record.",
+                "outcome": "pass"
+              },
+              {
+                "text": "€2,500 cash is always prohibited.",
+                "outcome": "miss"
+              },
+              {
+                "text": "Every cash payment must be rejected regardless of conditions.",
+                "outcome": "overgeneralized"
+              }
+            ]
+          },
+          "hint": {
+            "text": "This is a conditional allow case; verify the total, KYC status and record.",
+            "clause_id": "ANNEX-4.1"
+          },
+          "counterexample": true,
+          "branches": {
+            "pass": {
+              "next_node": "sam_complete",
+              "effect": "completed",
+              "skill_id": "clarify_context",
+              "state": "pass",
+              "interpretation": "Applied the cited conditions to this case.",
+              "feedback": "You used the stated facts and the relevant reference conditions.",
+              "policy_clause_ids": [
+                "ANNEX-4.1"
+              ]
+            },
+            "miss": {
+              "next_node": "sam_permitted_cash_consequence",
+              "effect": "consequence_preview",
+              "skill_id": "clarify_context",
+              "state": "needs_practice",
+              "interpretation": "The response missed a required condition in the cited reference.",
+              "feedback": "Review the facts and the source card, then rewind to try the decision again.",
+              "policy_clause_ids": [
+                "ANNEX-4.1"
+              ]
+            },
+            "overgeneralized": {
+              "next_node": "sam_permitted_cash",
+              "effect": "none",
+              "skill_id": "clarify_context",
+              "state": "needs_practice",
+              "interpretation": "The response replaced conditional judgment with a blanket rule.",
+              "feedback": "The reference requires a judgment based on the stated conditions, not a blanket rule.",
+              "policy_clause_ids": [
+                "ANNEX-4.1"
+              ]
+            }
+          },
+          "text_rule": "clarify_context",
+          "text_branches": {
+            "pass": "pass",
+            "miss": "miss",
+            "overgeneralized": "overgeneralized"
+          }
+        },
+        "sam_permitted_cash_consequence": {
+          "npc_id": "mira",
+          "category": "ethics_compliance",
+          "text": "Review the cited conditions before deciding again. You can rewind to the decision point.",
+          "allow_text": false,
+          "choices": [],
+          "knowledge": [
+            "ANNEX-4.1"
+          ],
+          "rewind_to": "sam_permitted_cash"
+        },
+        "sam_complete": {
+          "npc_id": "sam",
+          "category": "ethics_compliance",
+          "text": "You completed the grounded cash and customer-check path.",
+          "allow_text": false,
+          "choices": [],
+          "knowledge": []
+        }
+      }
+    },
+    "data-incidents": {
+      "version": "2.0.0",
+      "title": "Privacy and incident response",
+      "category": "ethics_compliance",
+      "estimated_minutes": 5,
+      "available_modes": [
+        "practice",
+        "verification"
+      ],
+      "skills": [
+        "clarify_context",
+        "conflict_awareness",
+        "communicate_boundary"
+      ],
+      "start_node": "mira_privacy_clock",
+      "nodes": {
+        "mira_privacy_clock": {
+          "npc_id": "mira",
+          "category": "ethics_compliance",
+          "text": "A breach occurred yesterday, but the organisation became aware at 10:00 today. It is likely to create high risk to individuals. State the timing and recipients. ",
+          "allow_text": true,
+          "choices": [],
+          "knowledge": [
+            "ANNEX-2.1"
+          ],
+          "facts": {
+            "domain": "data_incidents",
+            "scope": "GDPR breach timing and high-risk communication",
+            "reference_date": "2026-09-10"
+          },
+          "rubric": {
+            "question": "Does the answer apply the stated facts and cited reference?",
+            "required": [
+              "awareness_clock",
+              "authority_window",
+              "individual_notice"
+            ],
+            "criteria": {
+              "awareness_clock": "Start the clock at awareness, not incident time.",
+              "authority_window": "State the 72-hour authority window for risk.",
+              "individual_notice": "State the high-risk notice to individuals without undue delay."
+            },
+            "forbidden_claims": [],
+            "reference_answers": [
+              {
+                "text": "I start from awareness at 10:00 today, notify the authority within 72 hours because there is risk, and notify affected people without undue delay because it is high risk.",
+                "outcome": "pass"
+              },
+              {
+                "text": "The clock starts when the incident happened and every person is notified for every breach.",
+                "outcome": "miss"
+              },
+              {
+                "text": "Every technical incident always requires notifying everyone.",
+                "outcome": "overgeneralized"
+              }
+            ]
+          },
+          "hint": {
+            "text": "Separate awareness from the incident time, then distinguish authority risk from high-risk individual notice.",
+            "clause_id": "ANNEX-2.1"
+          },
+          "counterexample": false,
+          "branches": {
+            "pass": {
+              "next_node": "mira_nis2_stages",
+              "effect": "none",
+              "skill_id": "communicate_boundary",
+              "state": "pass",
+              "interpretation": "Applied the cited conditions to this case.",
+              "feedback": "You used the stated facts and the relevant reference conditions.",
+              "policy_clause_ids": [
+                "ANNEX-2.1"
+              ]
+            },
+            "miss": {
+              "next_node": "mira_privacy_clock_consequence",
+              "effect": "consequence_preview",
+              "skill_id": "communicate_boundary",
+              "state": "needs_practice",
+              "interpretation": "The response missed a required condition in the cited reference.",
+              "feedback": "Review the facts and the source card, then rewind to try the decision again.",
+              "policy_clause_ids": [
+                "ANNEX-2.1"
+              ]
+            },
+            "overgeneralized": {
+              "next_node": "mira_privacy_clock",
+              "effect": "none",
+              "skill_id": "communicate_boundary",
+              "state": "needs_practice",
+              "interpretation": "The response replaced conditional judgment with a blanket rule.",
+              "feedback": "The reference requires a judgment based on the stated conditions, not a blanket rule.",
+              "policy_clause_ids": [
+                "ANNEX-2.1"
+              ]
+            }
+          },
+          "text_rule": "communicate_boundary",
+          "text_branches": {
+            "pass": "pass",
+            "miss": "miss",
+            "overgeneralized": "overgeneralized"
+          }
+        },
+        "mira_privacy_clock_consequence": {
+          "npc_id": "mira",
+          "category": "ethics_compliance",
+          "text": "Review the cited conditions before deciding again. You can rewind to the decision point.",
+          "allow_text": false,
+          "choices": [],
+          "knowledge": [
+            "ANNEX-2.1"
+          ],
+          "rewind_to": "mira_privacy_clock"
+        },
+        "mira_nis2_stages": {
+          "npc_id": "mira",
+          "category": "ethics_compliance",
+          "text": "A NIS2 in-scope entity has a significant incident and becomes aware today. What are the early warning, notification and final-report stages?",
+          "allow_text": true,
+          "choices": [],
+          "knowledge": [
+            "ANNEX-5.1"
+          ],
+          "facts": {
+            "domain": "data_incidents",
+            "scope": "NIS2 three-stage significant-incident reporting",
+            "reference_date": "2026-09-10"
+          },
+          "rubric": {
+            "question": "Does the answer apply the stated facts and cited reference?",
+            "required": [
+              "warning_24h",
+              "notification_72h",
+              "final_from_notification"
+            ],
+            "criteria": {
+              "warning_24h": "State the 24-hour early warning from awareness.",
+              "notification_72h": "State the 72-hour incident notification from awareness.",
+              "final_from_notification": "Start the one-month final-report period from notification."
+            },
+            "forbidden_claims": [],
+            "reference_answers": [
+              {
+                "text": "For the NIS2 entity, I issue the early warning within 24 hours of awareness, the incident notification within 72 hours of awareness, and the final report within one month of notification.",
+                "outcome": "pass"
+              },
+              {
+                "text": "I wait one month before any report.",
+                "outcome": "miss"
+              },
+              {
+                "text": "Every event must be reported under every regime at once.",
+                "outcome": "overgeneralized"
+              }
+            ]
+          },
+          "hint": {
+            "text": "Keep the two awareness-based deadlines separate from the final report's notification-based deadline.",
+            "clause_id": "ANNEX-5.1"
+          },
+          "counterexample": false,
+          "branches": {
+            "pass": {
+              "next_node": "mira_encrypted_backup",
+              "effect": "none",
+              "skill_id": "conflict_awareness",
+              "state": "pass",
+              "interpretation": "Applied the cited conditions to this case.",
+              "feedback": "You used the stated facts and the relevant reference conditions.",
+              "policy_clause_ids": [
+                "ANNEX-5.1"
+              ]
+            },
+            "miss": {
+              "next_node": "mira_nis2_stages_consequence",
+              "effect": "consequence_preview",
+              "skill_id": "conflict_awareness",
+              "state": "needs_practice",
+              "interpretation": "The response missed a required condition in the cited reference.",
+              "feedback": "Review the facts and the source card, then rewind to try the decision again.",
+              "policy_clause_ids": [
+                "ANNEX-5.1"
+              ]
+            },
+            "overgeneralized": {
+              "next_node": "mira_nis2_stages",
+              "effect": "none",
+              "skill_id": "conflict_awareness",
+              "state": "needs_practice",
+              "interpretation": "The response replaced conditional judgment with a blanket rule.",
+              "feedback": "The reference requires a judgment based on the stated conditions, not a blanket rule.",
+              "policy_clause_ids": [
+                "ANNEX-5.1"
+              ]
+            }
+          },
+          "text_rule": "conflict_awareness",
+          "text_branches": {
+            "pass": "pass",
+            "miss": "miss",
+            "overgeneralized": "overgeneralized"
+          }
+        },
+        "mira_nis2_stages_consequence": {
+          "npc_id": "mira",
+          "category": "ethics_compliance",
+          "text": "Review the cited conditions before deciding again. You can rewind to the decision point.",
+          "allow_text": false,
+          "choices": [],
+          "knowledge": [
+            "ANNEX-5.1"
+          ],
+          "rewind_to": "mira_nis2_stages"
+        },
+        "mira_encrypted_backup": {
+          "npc_id": "mira",
+          "category": "ethics_compliance",
+          "text": "An encrypted backup was exposed, but encryption is effective, keys remain intact and the risk assessment says harm is unlikely. What still happens, and what is not automatic?",
+          "allow_text": true,
+          "choices": [],
+          "knowledge": [
+            "ANNEX-2.1",
+            "ANNEX-5.3"
+          ],
+          "facts": {
+            "domain": "data_incidents",
+            "scope": "Encrypted-backup breach risk assessment",
+            "reference_date": "2026-09-10"
+          },
+          "rubric": {
+            "question": "Does the answer apply the stated facts and cited reference?",
+            "required": [
+              "risk_assessment",
+              "internal_record",
+              "no_automatic_external_notice"
+            ],
+            "criteria": {
+              "risk_assessment": "Use the documented risk assessment.",
+              "internal_record": "Record the incident internally.",
+              "no_automatic_external_notice": "Do not assume external notices are automatic when risk is unlikely."
+            },
+            "forbidden_claims": [],
+            "reference_answers": [
+              {
+                "text": "I will retain the risk assessment and document the incident internally; with effective encryption and unlikely risk, external notification is not automatic.",
+                "outcome": "pass"
+              },
+              {
+                "text": "Encryption means there is nothing to document.",
+                "outcome": "miss"
+              },
+              {
+                "text": "Every encrypted incident must always be publicly announced.",
+                "outcome": "overgeneralized"
+              }
+            ]
+          },
+          "hint": {
+            "text": "The assessment and internal record remain important even where the facts do not automatically trigger external notice.",
+            "clause_id": "ANNEX-2.1"
+          },
+          "counterexample": true,
+          "branches": {
+            "pass": {
+              "next_node": "mira_complete",
+              "effect": "completed",
+              "skill_id": "clarify_context",
+              "state": "pass",
+              "interpretation": "Applied the cited conditions to this case.",
+              "feedback": "You used the stated facts and the relevant reference conditions.",
+              "policy_clause_ids": [
+                "ANNEX-2.1",
+                "ANNEX-5.3"
+              ]
+            },
+            "miss": {
+              "next_node": "mira_encrypted_backup_consequence",
+              "effect": "consequence_preview",
+              "skill_id": "clarify_context",
+              "state": "needs_practice",
+              "interpretation": "The response missed a required condition in the cited reference.",
+              "feedback": "Review the facts and the source card, then rewind to try the decision again.",
+              "policy_clause_ids": [
+                "ANNEX-2.1",
+                "ANNEX-5.3"
+              ]
+            },
+            "overgeneralized": {
+              "next_node": "mira_encrypted_backup",
+              "effect": "none",
+              "skill_id": "clarify_context",
+              "state": "needs_practice",
+              "interpretation": "The response replaced conditional judgment with a blanket rule.",
+              "feedback": "The reference requires a judgment based on the stated conditions, not a blanket rule.",
+              "policy_clause_ids": [
+                "ANNEX-2.1",
+                "ANNEX-5.3"
+              ]
+            }
+          },
+          "text_rule": "clarify_context",
+          "text_branches": {
+            "pass": "pass",
+            "miss": "miss",
+            "overgeneralized": "overgeneralized"
+          }
+        },
+        "mira_encrypted_backup_consequence": {
+          "npc_id": "mira",
+          "category": "ethics_compliance",
+          "text": "Review the cited conditions before deciding again. You can rewind to the decision point.",
+          "allow_text": false,
+          "choices": [],
+          "knowledge": [
+            "ANNEX-2.1",
+            "ANNEX-5.3"
+          ],
+          "rewind_to": "mira_encrypted_backup"
+        },
+        "mira_complete": {
+          "npc_id": "mira",
+          "category": "ethics_compliance",
+          "text": "You completed the grounded privacy and incident-response path.",
+          "allow_text": false,
+          "choices": [],
+          "knowledge": []
+        }
+      }
+    },
+    "boundary-response": {
+      "version": "2.0.0",
+      "title": "Speaking up and working time",
+      "category": "personal_development",
+      "estimated_minutes": 5,
+      "available_modes": [
+        "practice",
+        "verification"
+      ],
+      "skills": [
+        "communicate_boundary"
+      ],
+      "start_node": "jo_report_receipt",
+      "nodes": {
+        "jo_report_receipt": {
+          "npc_id": "jo",
+          "category": "personal_development",
+          "text": "A report arrived through the internal channel. What are the acknowledgement, feedback and confidentiality steps under the cited reference?",
+          "allow_text": true,
+          "choices": [],
+          "knowledge": [
+            "ANNEX-6.3"
+          ],
+          "facts": {
+            "domain": "workplace",
+            "scope": "Whistleblower report receipt process",
+            "reference_date": "2026-09-10"
+          },
+          "rubric": {
+            "question": "Does the answer apply the stated facts and cited reference?",
+            "required": [
+              "acknowledgement_window",
+              "feedback_window_and_start",
+              "confidential_process"
+            ],
+            "criteria": {
+              "acknowledgement_window": "Acknowledge within seven days.",
+              "feedback_window_and_start": "Give feedback within three months of acknowledgement.",
+              "confidential_process": "Use the confidential reporting process."
+            },
+            "forbidden_claims": [],
+            "reference_answers": [
+              {
+                "text": "I will acknowledge the report within seven days, keep the process confidential, and provide feedback within three months of acknowledgement.",
+                "outcome": "pass"
+              },
+              {
+                "text": "I will wait six months before acknowledging the report.",
+                "outcome": "miss"
+              },
+              {
+                "text": "I will publish every report to the whole company immediately.",
+                "outcome": "overgeneralized"
+              }
+            ]
+          },
+          "hint": {
+            "text": "Separate the seven-day acknowledgement from the three-month feedback window and keep the process confidential.",
+            "clause_id": "ANNEX-6.3"
+          },
+          "counterexample": false,
+          "branches": {
+            "pass": {
+              "next_node": "jo_no_retaliation",
+              "effect": "none",
+              "skill_id": "communicate_boundary",
+              "state": "pass",
+              "interpretation": "Applied the cited conditions to this case.",
+              "feedback": "You used the stated facts and the relevant reference conditions.",
+              "policy_clause_ids": [
+                "ANNEX-6.3"
+              ]
+            },
+            "miss": {
+              "next_node": "jo_report_receipt_consequence",
+              "effect": "consequence_preview",
+              "skill_id": "communicate_boundary",
+              "state": "needs_practice",
+              "interpretation": "The response missed a required condition in the cited reference.",
+              "feedback": "Review the facts and the source card, then rewind to try the decision again.",
+              "policy_clause_ids": [
+                "ANNEX-6.3"
+              ]
+            },
+            "overgeneralized": {
+              "next_node": "jo_report_receipt",
+              "effect": "none",
+              "skill_id": "communicate_boundary",
+              "state": "needs_practice",
+              "interpretation": "The response replaced conditional judgment with a blanket rule.",
+              "feedback": "The reference requires a judgment based on the stated conditions, not a blanket rule.",
+              "policy_clause_ids": [
+                "ANNEX-6.3"
+              ]
+            }
+          },
+          "text_rule": "communicate_boundary",
+          "text_branches": {
+            "pass": "pass",
+            "miss": "miss",
+            "overgeneralized": "overgeneralized"
+          }
+        },
+        "jo_report_receipt_consequence": {
+          "npc_id": "mira",
+          "category": "personal_development",
+          "text": "Review the cited conditions before deciding again. You can rewind to the decision point.",
+          "allow_text": false,
+          "choices": [],
+          "knowledge": [
+            "ANNEX-6.3"
+          ],
+          "rewind_to": "jo_report_receipt"
+        },
+        "jo_no_retaliation": {
+          "npc_id": "jo",
+          "category": "personal_development",
+          "text": "A manager threatens an employee with punitive shifts after a report. How do you identify and address this?",
+          "allow_text": true,
+          "choices": [],
+          "knowledge": [
+            "ANNEX-6.3"
+          ],
+          "facts": {
+            "domain": "workplace",
+            "scope": "Whistleblower anti-retaliation protection",
+            "reference_date": "2026-09-10"
+          },
+          "rubric": {
+            "question": "Does the answer apply the stated facts and cited reference?",
+            "required": [
+              "identify_retaliation",
+              "protect_reporter",
+              "report_internal_concern"
+            ],
+            "criteria": {
+              "identify_retaliation": "Identify the threatened punitive shift as retaliation.",
+              "protect_reporter": "State protection for the reporter.",
+              "report_internal_concern": "Escalate through the internal concern process."
+            },
+            "forbidden_claims": [],
+            "reference_answers": [
+              {
+                "text": "Threatening punitive shifts after a report is retaliation; I will protect the reporter and raise the concern through the internal process.",
+                "outcome": "pass"
+              },
+              {
+                "text": "The manager can punish the reporter for disruption.",
+                "outcome": "miss"
+              },
+              {
+                "text": "Every scheduling change is automatically retaliation.",
+                "outcome": "overgeneralized"
+              }
+            ]
+          },
+          "hint": {
+            "text": "Connect the adverse treatment to the report, then name protection and the reporting process.",
+            "clause_id": "ANNEX-6.3"
+          },
+          "counterexample": false,
+          "branches": {
+            "pass": {
+              "next_node": "jo_rest_hours",
+              "effect": "none",
+              "skill_id": "communicate_boundary",
+              "state": "pass",
+              "interpretation": "Applied the cited conditions to this case.",
+              "feedback": "You used the stated facts and the relevant reference conditions.",
+              "policy_clause_ids": [
+                "ANNEX-6.3"
+              ]
+            },
+            "miss": {
+              "next_node": "jo_no_retaliation_consequence",
+              "effect": "consequence_preview",
+              "skill_id": "communicate_boundary",
+              "state": "needs_practice",
+              "interpretation": "The response missed a required condition in the cited reference.",
+              "feedback": "Review the facts and the source card, then rewind to try the decision again.",
+              "policy_clause_ids": [
+                "ANNEX-6.3"
+              ]
+            },
+            "overgeneralized": {
+              "next_node": "jo_no_retaliation",
+              "effect": "none",
+              "skill_id": "communicate_boundary",
+              "state": "needs_practice",
+              "interpretation": "The response replaced conditional judgment with a blanket rule.",
+              "feedback": "The reference requires a judgment based on the stated conditions, not a blanket rule.",
+              "policy_clause_ids": [
+                "ANNEX-6.3"
+              ]
+            }
+          },
+          "text_rule": "communicate_boundary",
+          "text_branches": {
+            "pass": "pass",
+            "miss": "miss",
+            "overgeneralized": "overgeneralized"
+          }
+        },
+        "jo_no_retaliation_consequence": {
+          "npc_id": "mira",
+          "category": "personal_development",
+          "text": "Review the cited conditions before deciding again. You can rewind to the decision point.",
+          "allow_text": false,
+          "choices": [],
+          "knowledge": [
+            "ANNEX-6.3"
+          ],
+          "rewind_to": "jo_no_retaliation"
+        },
+        "jo_rest_hours": {
+          "npc_id": "jo",
+          "category": "personal_development",
+          "text": "A proposed schedule leaves only 10 consecutive hours of daily rest, and the case states that no exception applies. What do you communicate?",
+          "allow_text": true,
+          "choices": [],
+          "knowledge": [
+            "ANNEX-6.1"
+          ],
+          "facts": {
+            "domain": "workplace",
+            "scope": "Daily-rest requirement without an applicable exception",
+            "reference_date": "2026-09-10"
+          },
+          "rubric": {
+            "question": "Does the answer apply the stated facts and cited reference?",
+            "required": [
+              "daily_rest",
+              "adjust_schedule",
+              "not_just_weekly_total"
+            ],
+            "criteria": {
+              "daily_rest": "State the 11-hour daily-rest rule.",
+              "adjust_schedule": "Require a schedule adjustment.",
+              "not_just_weekly_total": "Do not treat weekly total as a replacement for daily rest."
+            },
+            "forbidden_claims": [],
+            "reference_answers": [
+              {
+                "text": "This schedule gives only 10 hours rather than the required 11 consecutive hours, so I will adjust it; a weekly total does not replace daily rest.",
+                "outcome": "pass"
+              },
+              {
+                "text": "The weekly total is fine, so ten hours of daily rest is fine.",
+                "outcome": "miss"
+              },
+              {
+                "text": "No employee may ever work overtime.",
+                "outcome": "overgeneralized"
+              }
+            ]
+          },
+          "hint": {
+            "text": "Use the daily-rest number and the concrete schedule adjustment; do not substitute a weekly total.",
+            "clause_id": "ANNEX-6.1"
+          },
+          "counterexample": false,
+          "branches": {
+            "pass": {
+              "next_node": "jo_average_hours",
+              "effect": "none",
+              "skill_id": "communicate_boundary",
+              "state": "pass",
+              "interpretation": "Applied the cited conditions to this case.",
+              "feedback": "You used the stated facts and the relevant reference conditions.",
+              "policy_clause_ids": [
+                "ANNEX-6.1"
+              ]
+            },
+            "miss": {
+              "next_node": "jo_rest_hours_consequence",
+              "effect": "consequence_preview",
+              "skill_id": "communicate_boundary",
+              "state": "needs_practice",
+              "interpretation": "The response missed a required condition in the cited reference.",
+              "feedback": "Review the facts and the source card, then rewind to try the decision again.",
+              "policy_clause_ids": [
+                "ANNEX-6.1"
+              ]
+            },
+            "overgeneralized": {
+              "next_node": "jo_rest_hours",
+              "effect": "none",
+              "skill_id": "communicate_boundary",
+              "state": "needs_practice",
+              "interpretation": "The response replaced conditional judgment with a blanket rule.",
+              "feedback": "The reference requires a judgment based on the stated conditions, not a blanket rule.",
+              "policy_clause_ids": [
+                "ANNEX-6.1"
+              ]
+            }
+          },
+          "text_rule": "communicate_boundary",
+          "text_branches": {
+            "pass": "pass",
+            "miss": "miss",
+            "overgeneralized": "overgeneralized"
+          }
+        },
+        "jo_rest_hours_consequence": {
+          "npc_id": "mira",
+          "category": "personal_development",
+          "text": "Review the cited conditions before deciding again. You can rewind to the decision point.",
+          "allow_text": false,
+          "choices": [],
+          "knowledge": [
+            "ANNEX-6.1"
+          ],
+          "rewind_to": "jo_rest_hours"
+        },
+        "jo_average_hours": {
+          "npc_id": "jo",
+          "category": "personal_development",
+          "text": "One week exceeds 48 hours, but the stated reference period average is below 48 hours, daily rest is satisfied and no other violation is present. What is the conditional decision?",
+          "allow_text": true,
+          "choices": [],
+          "knowledge": [
+            "ANNEX-6.1"
+          ],
+          "facts": {
+            "domain": "workplace",
+            "scope": "Average weekly working-time limit with satisfied daily rest",
+            "reference_date": "2026-09-10"
+          },
+          "rubric": {
+            "question": "Does the answer apply the stated facts and cited reference?",
+            "required": [
+              "average_not_single_week",
+              "reference_period",
+              "allow_with_conditions"
+            ],
+            "criteria": {
+              "average_not_single_week": "Explain that the limit is averaged, not a single-week rule.",
+              "reference_period": "Use the stated reference period.",
+              "allow_with_conditions": "Allow only with the stated rest and compliance conditions."
+            },
+            "forbidden_claims": [],
+            "reference_answers": [
+              {
+                "text": "One week above 48 hours is not alone decisive because the reference-period average is below 48 and daily rest is satisfied, so this can proceed under those conditions.",
+                "outcome": "pass"
+              },
+              {
+                "text": "Any single week above 48 hours is automatically illegal.",
+                "outcome": "miss"
+              },
+              {
+                "text": "All hours above 40 must always be prohibited.",
+                "outcome": "overgeneralized"
+              }
+            ]
+          },
+          "hint": {
+            "text": "Use the stated averaging period and preserve the daily-rest condition.",
+            "clause_id": "ANNEX-6.1"
+          },
+          "counterexample": true,
+          "branches": {
+            "pass": {
+              "next_node": "jo_complete",
+              "effect": "completed",
+              "skill_id": "communicate_boundary",
+              "state": "pass",
+              "interpretation": "Applied the cited conditions to this case.",
+              "feedback": "You used the stated facts and the relevant reference conditions.",
+              "policy_clause_ids": [
+                "ANNEX-6.1"
+              ]
+            },
+            "miss": {
+              "next_node": "jo_average_hours_consequence",
+              "effect": "consequence_preview",
+              "skill_id": "communicate_boundary",
+              "state": "needs_practice",
+              "interpretation": "The response missed a required condition in the cited reference.",
+              "feedback": "Review the facts and the source card, then rewind to try the decision again.",
+              "policy_clause_ids": [
+                "ANNEX-6.1"
+              ]
+            },
+            "overgeneralized": {
+              "next_node": "jo_average_hours",
+              "effect": "none",
+              "skill_id": "communicate_boundary",
+              "state": "needs_practice",
+              "interpretation": "The response replaced conditional judgment with a blanket rule.",
+              "feedback": "The reference requires a judgment based on the stated conditions, not a blanket rule.",
+              "policy_clause_ids": [
+                "ANNEX-6.1"
+              ]
+            }
+          },
+          "text_rule": "communicate_boundary",
+          "text_branches": {
+            "pass": "pass",
+            "miss": "miss",
+            "overgeneralized": "overgeneralized"
+          }
+        },
+        "jo_average_hours_consequence": {
+          "npc_id": "mira",
+          "category": "personal_development",
+          "text": "Review the cited conditions before deciding again. You can rewind to the decision point.",
+          "allow_text": false,
+          "choices": [],
+          "knowledge": [
+            "ANNEX-6.1"
+          ],
+          "rewind_to": "jo_average_hours"
+        },
+        "jo_complete": {
+          "npc_id": "jo",
+          "category": "personal_development",
+          "text": "You completed the grounded speaking-up and working-time path.",
+          "allow_text": false,
+          "choices": [],
+          "knowledge": []
+        }
+      }
+    },
+    "ethics-review": {
+      "version": "2.0.0",
+      "title": "Review a case from your record",
+      "category": "ethics_compliance",
+      "estimated_minutes": 4,
+      "available_modes": [
+        "practice"
+      ],
+      "skills": [
+        "clarify_context",
+        "conflict_awareness",
+        "communicate_boundary"
+      ],
+      "start_node": "review_no_evidence",
+      "start_node_selector": "weakest_skill",
+      "nodes": {
+        "review_no_evidence": {
+          "npc_id": "mira",
+          "category": "ethics_compliance",
+          "text": "There is no compatible answer record to review yet. Complete one grounded task first.",
+          "allow_text": false,
+          "choices": [],
+          "knowledge": []
+        },
+        "review_complete": {
+          "npc_id": "mira",
+          "category": "ethics_compliance",
+          "text": "You reviewed a case from your own record.",
+          "allow_text": false,
+          "choices": [],
+          "knowledge": []
+        },
+        "coach__dinner-invitation__alex_public_gift": {
+          "npc_id": "mira",
+          "category": "ethics_compliance",
+          "text": "Review this case from your record. A German public official offers you a €26 thank-you gift after a meeting. The cited Germany-specific threshold is €25. What do you do?",
+          "allow_text": true,
+          "choices": [],
+          "knowledge": [
+            "ANNEX-1.1",
+            "ANNEX-1.2",
+            "ANNEX-1.3"
+          ],
+          "facts": {
+            "domain": "gifts_hospitality",
+            "scope": "Germany-specific public-official gift threshold",
+            "reference_date": "2026-09-10"
+          },
+          "rubric": {
+            "question": "Does the answer apply the stated facts and cited reference?",
+            "required": [
+              "recipient_role",
+              "applicable_limit",
+              "decline_or_surrender",
+              "record"
+            ],
+            "criteria": {
+              "recipient_role": "Identify the recipient as a public official.",
+              "applicable_limit": "Apply the €25 Germany-specific threshold.",
+              "decline_or_surrender": "Decline or hand over the over-limit gift.",
+              "record": "State the record or receipt step."
+            },
+            "forbidden_claims": [],
+            "reference_answers": [
+              {
+                "text": "Because this is a German public official and €26 exceeds the €25 threshold, I will decline or hand it to the employing office and keep the receipt in the register.",
+                "outcome": "pass"
+              },
+              {
+                "text": "€26 is a small gift, so I will accept it.",
+                "outcome": "miss"
+              },
+              {
+                "text": "I will refuse every gift in every situation.",
+                "outcome": "overgeneralized"
+              }
+            ]
+          },
+          "hint": {
+            "text": "Start with the recipient role, then compare the amount with the cited threshold and record requirement.",
+            "clause_id": "ANNEX-1.1"
+          },
+          "counterexample": false,
+          "branches": {
+            "pass": {
+              "next_node": "review_complete",
+              "effect": "completed",
+              "skill_id": "clarify_context",
+              "state": "pass",
+              "interpretation": "Applied the cited conditions in a record-based review.",
+              "feedback": "You applied the grounded conditions to this reviewed case.",
+              "policy_clause_ids": [
+                "ANNEX-1.1",
+                "ANNEX-1.2",
+                "ANNEX-1.3"
+              ]
+            },
+            "miss": {
+              "next_node": "coach__dinner-invitation__alex_public_gift",
+              "effect": "none",
+              "skill_id": "clarify_context",
+              "state": "needs_practice",
+              "interpretation": "The reviewed answer missed a cited condition.",
+              "feedback": "Review the cited source and try this case again.",
+              "policy_clause_ids": [
+                "ANNEX-1.1",
+                "ANNEX-1.2",
+                "ANNEX-1.3"
+              ]
+            },
+            "overgeneralized": {
+              "next_node": "coach__dinner-invitation__alex_public_gift",
+              "effect": "none",
+              "skill_id": "clarify_context",
+              "state": "needs_practice",
+              "interpretation": "The reviewed answer used a blanket rule.",
+              "feedback": "Use the case facts and cited conditions rather than a blanket rule.",
+              "policy_clause_ids": [
+                "ANNEX-1.1",
+                "ANNEX-1.2",
+                "ANNEX-1.3"
+              ]
+            }
+          },
+          "text_rule": "clarify_context",
+          "text_branches": {
+            "pass": "pass",
+            "miss": "miss",
+            "overgeneralized": "overgeneralized"
+          }
+        },
+        "coach__dinner-invitation__alex_private_gift": {
+          "npc_id": "mira",
+          "category": "ethics_compliance",
+          "text": "Review this case from your record. A private-sector counterpart gives a €30 customary gift. There is no pending business decision and you have disclosed it. Is the €30 benchmark a blanket safe harbour?",
+          "allow_text": true,
+          "choices": [],
+          "knowledge": [
+            "ANNEX-1.1",
+            "ANNEX-1.2"
+          ],
+          "facts": {
+            "domain": "gifts_hospitality",
+            "scope": "Private-sector gift benchmark and contextual factors",
+            "reference_date": "2026-09-10"
+          },
+          "rubric": {
+            "question": "Does the answer apply the stated facts and cited reference?",
+            "required": [
+              "benchmark_not_safe_harbour",
+              "context",
+              "register"
+            ],
+            "criteria": {
+              "benchmark_not_safe_harbour": "Explain that the benchmark is not a blanket safe harbour.",
+              "context": "Consider role, intent, frequency and transparency.",
+              "register": "Record the disclosed gift."
+            },
+            "forbidden_claims": [],
+            "reference_answers": [
+              {
+                "text": "€30 is a private-sector benchmark, not an automatic safe harbour; I will check intent and context and record the disclosed gift.",
+                "outcome": "pass"
+              },
+              {
+                "text": "€30 always makes a gift safe.",
+                "outcome": "miss"
+              },
+              {
+                "text": "All private-sector gifts must always be refused.",
+                "outcome": "overgeneralized"
+              }
+            ]
+          },
+          "hint": {
+            "text": "A benchmark guides the decision; it does not remove the contextual factors.",
+            "clause_id": "ANNEX-1.1"
+          },
+          "counterexample": false,
+          "branches": {
+            "pass": {
+              "next_node": "review_complete",
+              "effect": "completed",
+              "skill_id": "clarify_context",
+              "state": "pass",
+              "interpretation": "Applied the cited conditions in a record-based review.",
+              "feedback": "You applied the grounded conditions to this reviewed case.",
+              "policy_clause_ids": [
+                "ANNEX-1.1",
+                "ANNEX-1.2"
+              ]
+            },
+            "miss": {
+              "next_node": "coach__dinner-invitation__alex_private_gift",
+              "effect": "none",
+              "skill_id": "clarify_context",
+              "state": "needs_practice",
+              "interpretation": "The reviewed answer missed a cited condition.",
+              "feedback": "Review the cited source and try this case again.",
+              "policy_clause_ids": [
+                "ANNEX-1.1",
+                "ANNEX-1.2"
+              ]
+            },
+            "overgeneralized": {
+              "next_node": "coach__dinner-invitation__alex_private_gift",
+              "effect": "none",
+              "skill_id": "clarify_context",
+              "state": "needs_practice",
+              "interpretation": "The reviewed answer used a blanket rule.",
+              "feedback": "Use the case facts and cited conditions rather than a blanket rule.",
+              "policy_clause_ids": [
+                "ANNEX-1.1",
+                "ANNEX-1.2"
+              ]
+            }
+          },
+          "text_rule": "clarify_context",
+          "text_branches": {
+            "pass": "pass",
+            "miss": "miss",
+            "overgeneralized": "overgeneralized"
+          }
+        },
+        "coach__dinner-invitation__alex_business_meal": {
+          "npc_id": "mira",
+          "category": "ethics_compliance",
+          "text": "Review this case from your record. A private-sector business meal costs €100 per person. The case states a legitimate business purpose, no active tender and approval is pending under company policy. What conditions govern the decision?",
+          "allow_text": true,
+          "choices": [],
+          "knowledge": [
+            "ANNEX-1.2",
+            "ANNEX-1.3"
+          ],
+          "facts": {
+            "domain": "gifts_hospitality",
+            "scope": "Private-sector meal threshold with approval and records",
+            "reference_date": "2026-09-10"
+          },
+          "rubric": {
+            "question": "Does the answer apply the stated facts and cited reference?",
+            "required": [
+              "per_person",
+              "business_purpose",
+              "approval_and_record"
+            ],
+            "criteria": {
+              "per_person": "Apply the per-person amount.",
+              "business_purpose": "Confirm a legitimate business purpose and no active tender.",
+              "approval_and_record": "Use the stated approval and documentation process."
+            },
+            "forbidden_claims": [],
+            "reference_answers": [
+              {
+                "text": "At €100 per person I will confirm the legitimate business purpose and no active tender, then obtain the stated approval and document attendees and amount.",
+                "outcome": "pass"
+              },
+              {
+                "text": "The meal is €100 so no other checks matter.",
+                "outcome": "miss"
+              },
+              {
+                "text": "Every business meal is prohibited.",
+                "outcome": "overgeneralized"
+              }
+            ]
+          },
+          "hint": {
+            "text": "The amount is one condition; combine it with purpose, tender timing, approval and documentation.",
+            "clause_id": "ANNEX-1.2"
+          },
+          "counterexample": false,
+          "branches": {
+            "pass": {
+              "next_node": "review_complete",
+              "effect": "completed",
+              "skill_id": "conflict_awareness",
+              "state": "pass",
+              "interpretation": "Applied the cited conditions in a record-based review.",
+              "feedback": "You applied the grounded conditions to this reviewed case.",
+              "policy_clause_ids": [
+                "ANNEX-1.2",
+                "ANNEX-1.3"
+              ]
+            },
+            "miss": {
+              "next_node": "coach__dinner-invitation__alex_business_meal",
+              "effect": "none",
+              "skill_id": "conflict_awareness",
+              "state": "needs_practice",
+              "interpretation": "The reviewed answer missed a cited condition.",
+              "feedback": "Review the cited source and try this case again.",
+              "policy_clause_ids": [
+                "ANNEX-1.2",
+                "ANNEX-1.3"
+              ]
+            },
+            "overgeneralized": {
+              "next_node": "coach__dinner-invitation__alex_business_meal",
+              "effect": "none",
+              "skill_id": "conflict_awareness",
+              "state": "needs_practice",
+              "interpretation": "The reviewed answer used a blanket rule.",
+              "feedback": "Use the case facts and cited conditions rather than a blanket rule.",
+              "policy_clause_ids": [
+                "ANNEX-1.2",
+                "ANNEX-1.3"
+              ]
+            }
+          },
+          "text_rule": "conflict_awareness",
+          "text_branches": {
+            "pass": "pass",
+            "miss": "miss",
+            "overgeneralized": "overgeneralized"
+          }
+        },
+        "coach__dinner-invitation__alex_cash_gift": {
+          "npc_id": "mira",
+          "category": "ethics_compliance",
+          "text": "Review this case from your record. A counterpart offers a €5 cash gift. The amount is low, but the cited card distinguishes cash from ordinary hospitality. What is your next step?",
+          "allow_text": true,
+          "choices": [],
+          "knowledge": [
+            "ANNEX-1.1"
+          ],
+          "facts": {
+            "domain": "gifts_hospitality",
+            "scope": "Cash-gift distinction",
+            "reference_date": "2026-09-10"
+          },
+          "rubric": {
+            "question": "Does the answer apply the stated facts and cited reference?",
+            "required": [
+              "cash_gift_distinction",
+              "prohibited_action",
+              "next_step"
+            ],
+            "criteria": {
+              "cash_gift_distinction": "Identify that cash is treated differently.",
+              "prohibited_action": "Do not accept the cash gift.",
+              "next_step": "Use the policy or compliance process."
+            },
+            "forbidden_claims": [],
+            "reference_answers": [
+              {
+                "text": "Even at €5 this is cash, which is treated differently; I will not accept it and will use the policy process for the next step.",
+                "outcome": "pass"
+              },
+              {
+                "text": "It is only €5, so cash is fine.",
+                "outcome": "miss"
+              },
+              {
+                "text": "I will never speak to any counterpart again.",
+                "outcome": "overgeneralized"
+              }
+            ]
+          },
+          "hint": {
+            "text": "Look for whether the item is cash, not only its amount.",
+            "clause_id": "ANNEX-1.1"
+          },
+          "counterexample": false,
+          "branches": {
+            "pass": {
+              "next_node": "review_complete",
+              "effect": "completed",
+              "skill_id": "conflict_awareness",
+              "state": "pass",
+              "interpretation": "Applied the cited conditions in a record-based review.",
+              "feedback": "You applied the grounded conditions to this reviewed case.",
+              "policy_clause_ids": [
+                "ANNEX-1.1"
+              ]
+            },
+            "miss": {
+              "next_node": "coach__dinner-invitation__alex_cash_gift",
+              "effect": "none",
+              "skill_id": "conflict_awareness",
+              "state": "needs_practice",
+              "interpretation": "The reviewed answer missed a cited condition.",
+              "feedback": "Review the cited source and try this case again.",
+              "policy_clause_ids": [
+                "ANNEX-1.1"
+              ]
+            },
+            "overgeneralized": {
+              "next_node": "coach__dinner-invitation__alex_cash_gift",
+              "effect": "none",
+              "skill_id": "conflict_awareness",
+              "state": "needs_practice",
+              "interpretation": "The reviewed answer used a blanket rule.",
+              "feedback": "Use the case facts and cited conditions rather than a blanket rule.",
+              "policy_clause_ids": [
+                "ANNEX-1.1"
+              ]
+            }
+          },
+          "text_rule": "conflict_awareness",
+          "text_branches": {
+            "pass": "pass",
+            "miss": "miss",
+            "overgeneralized": "overgeneralized"
+          }
+        },
+        "coach__dinner-invitation__alex_permitted_meal": {
+          "npc_id": "mira",
+          "category": "ethics_compliance",
+          "text": "Review this case from your record. A low-value private-sector meal has a legitimate business purpose. The related decision is closed and approval plus a complete register entry are already in place. How do you decide?",
+          "allow_text": true,
+          "choices": [],
+          "knowledge": [
+            "ANNEX-1.1",
+            "ANNEX-1.2",
+            "ANNEX-1.3"
+          ],
+          "facts": {
+            "domain": "gifts_hospitality",
+            "scope": "Permitted low-value private-sector meal with documented conditions",
+            "reference_date": "2026-09-10"
+          },
+          "rubric": {
+            "question": "Does the answer apply the stated facts and cited reference?",
+            "required": [
+              "allow_with_conditions",
+              "no_pending_decision",
+              "record"
+            ],
+            "criteria": {
+              "allow_with_conditions": "Allow only under the stated conditions.",
+              "no_pending_decision": "Recognise that the related decision is closed.",
+              "record": "Confirm the completed approval and record."
+            },
+            "forbidden_claims": [],
+            "reference_answers": [
+              {
+                "text": "I can allow this meal under the stated conditions because the decision is closed and the approval and register entry are complete.",
+                "outcome": "pass"
+              },
+              {
+                "text": "A meal is always a violation.",
+                "outcome": "miss"
+              },
+              {
+                "text": "Every meal from a private counterpart is always forbidden.",
+                "outcome": "overgeneralized"
+              }
+            ]
+          },
+          "hint": {
+            "text": "This is a conditional allow case: check the closed decision and the record.",
+            "clause_id": "ANNEX-1.1"
+          },
+          "counterexample": false,
+          "branches": {
+            "pass": {
+              "next_node": "review_complete",
+              "effect": "completed",
+              "skill_id": "clarify_context",
+              "state": "pass",
+              "interpretation": "Applied the cited conditions in a record-based review.",
+              "feedback": "You applied the grounded conditions to this reviewed case.",
+              "policy_clause_ids": [
+                "ANNEX-1.1",
+                "ANNEX-1.2",
+                "ANNEX-1.3"
+              ]
+            },
+            "miss": {
+              "next_node": "coach__dinner-invitation__alex_permitted_meal",
+              "effect": "none",
+              "skill_id": "clarify_context",
+              "state": "needs_practice",
+              "interpretation": "The reviewed answer missed a cited condition.",
+              "feedback": "Review the cited source and try this case again.",
+              "policy_clause_ids": [
+                "ANNEX-1.1",
+                "ANNEX-1.2",
+                "ANNEX-1.3"
+              ]
+            },
+            "overgeneralized": {
+              "next_node": "coach__dinner-invitation__alex_permitted_meal",
+              "effect": "none",
+              "skill_id": "clarify_context",
+              "state": "needs_practice",
+              "interpretation": "The reviewed answer used a blanket rule.",
+              "feedback": "Use the case facts and cited conditions rather than a blanket rule.",
+              "policy_clause_ids": [
+                "ANNEX-1.1",
+                "ANNEX-1.2",
+                "ANNEX-1.3"
+              ]
+            }
+          },
+          "text_rule": "clarify_context",
+          "text_branches": {
+            "pass": "pass",
+            "miss": "miss",
+            "overgeneralized": "overgeneralized"
+          }
+        },
+        "coach__supplier-gift__sam_cash_limit": {
+          "npc_id": "mira",
+          "category": "ethics_compliance",
+          "text": "Review this case from your record. From July 2027, a commercial customer offers one €10,001 cash payment. What must happen under the cited AMLR threshold?",
+          "allow_text": true,
+          "choices": [],
+          "knowledge": [
+            "ANNEX-4.1"
+          ],
+          "facts": {
+            "domain": "aml",
+            "scope": "Commercial cash limit from July 2027",
+            "reference_date": "2026-09-10"
+          },
+          "rubric": {
+            "question": "Does the answer apply the stated facts and cited reference?",
+            "required": [
+              "scope_and_date",
+              "over_limit",
+              "non_cash_next_step"
+            ],
+            "criteria": {
+              "scope_and_date": "State the commercial scope and July 2027 date.",
+              "over_limit": "Recognise that €10,001 is over €10,000.",
+              "non_cash_next_step": "Decline cash and use an allowed non-cash process."
+            },
+            "forbidden_claims": [],
+            "reference_answers": [
+              {
+                "text": "For a commercial transaction from July 2027, €10,001 is over the €10,000 cash limit, so I will decline cash and move to an allowed non-cash process.",
+                "outcome": "pass"
+              },
+              {
+                "text": "€10,001 cash is allowed.",
+                "outcome": "miss"
+              },
+              {
+                "text": "All payments of every kind are forbidden.",
+                "outcome": "overgeneralized"
+              }
+            ]
+          },
+          "hint": {
+            "text": "State the transaction scope and date before applying the > €10,000 threshold.",
+            "clause_id": "ANNEX-4.1"
+          },
+          "counterexample": false,
+          "branches": {
+            "pass": {
+              "next_node": "review_complete",
+              "effect": "completed",
+              "skill_id": "conflict_awareness",
+              "state": "pass",
+              "interpretation": "Applied the cited conditions in a record-based review.",
+              "feedback": "You applied the grounded conditions to this reviewed case.",
+              "policy_clause_ids": [
+                "ANNEX-4.1"
+              ]
+            },
+            "miss": {
+              "next_node": "coach__supplier-gift__sam_cash_limit",
+              "effect": "none",
+              "skill_id": "conflict_awareness",
+              "state": "needs_practice",
+              "interpretation": "The reviewed answer missed a cited condition.",
+              "feedback": "Review the cited source and try this case again.",
+              "policy_clause_ids": [
+                "ANNEX-4.1"
+              ]
+            },
+            "overgeneralized": {
+              "next_node": "coach__supplier-gift__sam_cash_limit",
+              "effect": "none",
+              "skill_id": "conflict_awareness",
+              "state": "needs_practice",
+              "interpretation": "The reviewed answer used a blanket rule.",
+              "feedback": "Use the case facts and cited conditions rather than a blanket rule.",
+              "policy_clause_ids": [
+                "ANNEX-4.1"
+              ]
+            }
+          },
+          "text_rule": "conflict_awareness",
+          "text_branches": {
+            "pass": "pass",
+            "miss": "miss",
+            "overgeneralized": "overgeneralized"
+          }
+        },
+        "coach__supplier-gift__sam_kyc_boundary": {
+          "npc_id": "mira",
+          "category": "ethics_compliance",
+          "text": "Review this case from your record. A commercial customer offers €3,000 cash and has not been identity-verified. What is required at this threshold, and what does it not mean?",
+          "allow_text": true,
+          "choices": [],
+          "knowledge": [
+            "ANNEX-4.1"
+          ],
+          "facts": {
+            "domain": "aml",
+            "scope": "Commercial cash KYC threshold",
+            "reference_date": "2026-09-10"
+          },
+          "rubric": {
+            "question": "Does the answer apply the stated facts and cited reference?",
+            "required": [
+              "at_threshold",
+              "identify_before_acceptance",
+              "not_cash_ban"
+            ],
+            "criteria": {
+              "at_threshold": "Identify the ≥ €3,000 threshold.",
+              "identify_before_acceptance": "Require customer identity verification.",
+              "not_cash_ban": "Distinguish KYC from the > €10,000 cash prohibition."
+            },
+            "forbidden_claims": [],
+            "reference_answers": [
+              {
+                "text": "At €3,000 in a commercial cash transaction I must verify the customer identity before acceptance; this is KYC, not the over-€10,000 cash ban.",
+                "outcome": "pass"
+              },
+              {
+                "text": "€3,000 cash is automatically prohibited.",
+                "outcome": "miss"
+              },
+              {
+                "text": "Cash is never allowed in any circumstance.",
+                "outcome": "overgeneralized"
+              }
+            ]
+          },
+          "hint": {
+            "text": "Separate the ≥ €3,000 KYC obligation from the higher cash prohibition.",
+            "clause_id": "ANNEX-4.1"
+          },
+          "counterexample": false,
+          "branches": {
+            "pass": {
+              "next_node": "review_complete",
+              "effect": "completed",
+              "skill_id": "clarify_context",
+              "state": "pass",
+              "interpretation": "Applied the cited conditions in a record-based review.",
+              "feedback": "You applied the grounded conditions to this reviewed case.",
+              "policy_clause_ids": [
+                "ANNEX-4.1"
+              ]
+            },
+            "miss": {
+              "next_node": "coach__supplier-gift__sam_kyc_boundary",
+              "effect": "none",
+              "skill_id": "clarify_context",
+              "state": "needs_practice",
+              "interpretation": "The reviewed answer missed a cited condition.",
+              "feedback": "Review the cited source and try this case again.",
+              "policy_clause_ids": [
+                "ANNEX-4.1"
+              ]
+            },
+            "overgeneralized": {
+              "next_node": "coach__supplier-gift__sam_kyc_boundary",
+              "effect": "none",
+              "skill_id": "clarify_context",
+              "state": "needs_practice",
+              "interpretation": "The reviewed answer used a blanket rule.",
+              "feedback": "Use the case facts and cited conditions rather than a blanket rule.",
+              "policy_clause_ids": [
+                "ANNEX-4.1"
+              ]
+            }
+          },
+          "text_rule": "clarify_context",
+          "text_branches": {
+            "pass": "pass",
+            "miss": "miss",
+            "overgeneralized": "overgeneralized"
+          }
+        },
+        "coach__supplier-gift__sam_linked_payments": {
+          "npc_id": "mira",
+          "category": "ethics_compliance",
+          "text": "Review this case from your record. One commercial transaction is split into four linked €3,000 cash payments. How should the amounts and apparent splitting be handled?",
+          "allow_text": true,
+          "choices": [],
+          "knowledge": [
+            "ANNEX-4.1",
+            "ANNEX-4.3"
+          ],
+          "facts": {
+            "domain": "aml",
+            "scope": "Linked commercial cash payments",
+            "reference_date": "2026-09-10"
+          },
+          "rubric": {
+            "question": "Does the answer apply the stated facts and cited reference?",
+            "required": [
+              "aggregate_12000",
+              "no_splitting_evasion",
+              "escalate_process"
+            ],
+            "criteria": {
+              "aggregate_12000": "Aggregate the linked payments to €12,000.",
+              "no_splitting_evasion": "Do not treat splitting as a way around the threshold.",
+              "escalate_process": "Decline/escalate through the required process."
+            },
+            "forbidden_claims": [],
+            "reference_answers": [
+              {
+                "text": "The four linked payments aggregate to €12,000, so splitting does not avoid the commercial cash limit; I will decline or escalate through the required process.",
+                "outcome": "pass"
+              },
+              {
+                "text": "Each €3,000 payment is separate, so I will accept all four.",
+                "outcome": "miss"
+              },
+              {
+                "text": "I will report every customer payment as criminal without checking facts.",
+                "outcome": "overgeneralized"
+              }
+            ]
+          },
+          "hint": {
+            "text": "Add the linked payments before applying the threshold, then address the attempted evasion.",
+            "clause_id": "ANNEX-4.1"
+          },
+          "counterexample": false,
+          "branches": {
+            "pass": {
+              "next_node": "review_complete",
+              "effect": "completed",
+              "skill_id": "conflict_awareness",
+              "state": "pass",
+              "interpretation": "Applied the cited conditions in a record-based review.",
+              "feedback": "You applied the grounded conditions to this reviewed case.",
+              "policy_clause_ids": [
+                "ANNEX-4.1",
+                "ANNEX-4.3"
+              ]
+            },
+            "miss": {
+              "next_node": "coach__supplier-gift__sam_linked_payments",
+              "effect": "none",
+              "skill_id": "conflict_awareness",
+              "state": "needs_practice",
+              "interpretation": "The reviewed answer missed a cited condition.",
+              "feedback": "Review the cited source and try this case again.",
+              "policy_clause_ids": [
+                "ANNEX-4.1",
+                "ANNEX-4.3"
+              ]
+            },
+            "overgeneralized": {
+              "next_node": "coach__supplier-gift__sam_linked_payments",
+              "effect": "none",
+              "skill_id": "conflict_awareness",
+              "state": "needs_practice",
+              "interpretation": "The reviewed answer used a blanket rule.",
+              "feedback": "Use the case facts and cited conditions rather than a blanket rule.",
+              "policy_clause_ids": [
+                "ANNEX-4.1",
+                "ANNEX-4.3"
+              ]
+            }
+          },
+          "text_rule": "conflict_awareness",
+          "text_branches": {
+            "pass": "pass",
+            "miss": "miss",
+            "overgeneralized": "overgeneralized"
+          }
+        },
+        "coach__supplier-gift__sam_beneficial_owner": {
+          "npc_id": "mira",
+          "category": "ethics_compliance",
+          "text": "Review this case from your record. A standard ownership structure has a person holding 25% of voting rights; a separate high-risk structure uses the stated 15% trigger. What must the assessment distinguish?",
+          "allow_text": true,
+          "choices": [],
+          "knowledge": [
+            "ANNEX-4.2"
+          ],
+          "facts": {
+            "domain": "aml",
+            "scope": "Beneficial-ownership thresholds by risk scope",
+            "reference_date": "2026-09-10"
+          },
+          "rubric": {
+            "question": "Does the answer apply the stated facts and cited reference?",
+            "required": [
+              "ownership_and_control",
+              "applicable_threshold",
+              "risk_scope"
+            ],
+            "criteria": {
+              "ownership_and_control": "Assess ownership or voting control.",
+              "applicable_threshold": "Apply the stated threshold.",
+              "risk_scope": "Distinguish the standard and high-risk structures."
+            },
+            "forbidden_claims": [],
+            "reference_answers": [
+              {
+                "text": "I will assess ownership or voting control, apply the ≥25% standard trigger, and use the stated ≥15% trigger only for the high-risk structure.",
+                "outcome": "pass"
+              },
+              {
+                "text": "Only a 50% owner can be beneficial.",
+                "outcome": "miss"
+              },
+              {
+                "text": "Every shareholder is always a beneficial owner.",
+                "outcome": "overgeneralized"
+              }
+            ]
+          },
+          "hint": {
+            "text": "The threshold depends on the ownership/control facts and whether the stated high-risk scope applies.",
+            "clause_id": "ANNEX-4.2"
+          },
+          "counterexample": false,
+          "branches": {
+            "pass": {
+              "next_node": "review_complete",
+              "effect": "completed",
+              "skill_id": "clarify_context",
+              "state": "pass",
+              "interpretation": "Applied the cited conditions in a record-based review.",
+              "feedback": "You applied the grounded conditions to this reviewed case.",
+              "policy_clause_ids": [
+                "ANNEX-4.2"
+              ]
+            },
+            "miss": {
+              "next_node": "coach__supplier-gift__sam_beneficial_owner",
+              "effect": "none",
+              "skill_id": "clarify_context",
+              "state": "needs_practice",
+              "interpretation": "The reviewed answer missed a cited condition.",
+              "feedback": "Review the cited source and try this case again.",
+              "policy_clause_ids": [
+                "ANNEX-4.2"
+              ]
+            },
+            "overgeneralized": {
+              "next_node": "coach__supplier-gift__sam_beneficial_owner",
+              "effect": "none",
+              "skill_id": "clarify_context",
+              "state": "needs_practice",
+              "interpretation": "The reviewed answer used a blanket rule.",
+              "feedback": "Use the case facts and cited conditions rather than a blanket rule.",
+              "policy_clause_ids": [
+                "ANNEX-4.2"
+              ]
+            }
+          },
+          "text_rule": "clarify_context",
+          "text_branches": {
+            "pass": "pass",
+            "miss": "miss",
+            "overgeneralized": "overgeneralized"
+          }
+        },
+        "coach__supplier-gift__sam_permitted_cash": {
+          "npc_id": "mira",
+          "category": "ethics_compliance",
+          "text": "Review this case from your record. A commercial €2,500 cash payment has completed KYC and no linked or suspicious factors. What is the conditional outcome?",
+          "allow_text": true,
+          "choices": [],
+          "knowledge": [
+            "ANNEX-4.1"
+          ],
+          "facts": {
+            "domain": "aml",
+            "scope": "Conditional commercial cash acceptance below KYC threshold",
+            "reference_date": "2026-09-10"
+          },
+          "rubric": {
+            "question": "Does the answer apply the stated facts and cited reference?",
+            "required": [
+              "allow_with_conditions",
+              "no_linked_payments",
+              "retain_record"
+            ],
+            "criteria": {
+              "allow_with_conditions": "Allow only subject to the stated facts.",
+              "no_linked_payments": "Confirm no linked payment changes the total.",
+              "retain_record": "Retain the required record."
+            },
+            "forbidden_claims": [],
+            "reference_answers": [
+              {
+                "text": "With completed KYC, no linked payments and no suspicious factors, €2,500 can proceed subject to retaining the required record.",
+                "outcome": "pass"
+              },
+              {
+                "text": "€2,500 cash is always prohibited.",
+                "outcome": "miss"
+              },
+              {
+                "text": "Every cash payment must be rejected regardless of conditions.",
+                "outcome": "overgeneralized"
+              }
+            ]
+          },
+          "hint": {
+            "text": "This is a conditional allow case; verify the total, KYC status and record.",
+            "clause_id": "ANNEX-4.1"
+          },
+          "counterexample": false,
+          "branches": {
+            "pass": {
+              "next_node": "review_complete",
+              "effect": "completed",
+              "skill_id": "clarify_context",
+              "state": "pass",
+              "interpretation": "Applied the cited conditions in a record-based review.",
+              "feedback": "You applied the grounded conditions to this reviewed case.",
+              "policy_clause_ids": [
+                "ANNEX-4.1"
+              ]
+            },
+            "miss": {
+              "next_node": "coach__supplier-gift__sam_permitted_cash",
+              "effect": "none",
+              "skill_id": "clarify_context",
+              "state": "needs_practice",
+              "interpretation": "The reviewed answer missed a cited condition.",
+              "feedback": "Review the cited source and try this case again.",
+              "policy_clause_ids": [
+                "ANNEX-4.1"
+              ]
+            },
+            "overgeneralized": {
+              "next_node": "coach__supplier-gift__sam_permitted_cash",
+              "effect": "none",
+              "skill_id": "clarify_context",
+              "state": "needs_practice",
+              "interpretation": "The reviewed answer used a blanket rule.",
+              "feedback": "Use the case facts and cited conditions rather than a blanket rule.",
+              "policy_clause_ids": [
+                "ANNEX-4.1"
+              ]
+            }
+          },
+          "text_rule": "clarify_context",
+          "text_branches": {
+            "pass": "pass",
+            "miss": "miss",
+            "overgeneralized": "overgeneralized"
+          }
+        },
+        "coach__data-incidents__mira_privacy_clock": {
+          "npc_id": "mira",
+          "category": "ethics_compliance",
+          "text": "Review this case from your record. A breach occurred yesterday, but the organisation became aware at 10:00 today. It is likely to create high risk to individuals. State the timing and recipients. ",
+          "allow_text": true,
+          "choices": [],
+          "knowledge": [
+            "ANNEX-2.1"
+          ],
+          "facts": {
+            "domain": "data_incidents",
+            "scope": "GDPR breach timing and high-risk communication",
+            "reference_date": "2026-09-10"
+          },
+          "rubric": {
+            "question": "Does the answer apply the stated facts and cited reference?",
+            "required": [
+              "awareness_clock",
+              "authority_window",
+              "individual_notice"
+            ],
+            "criteria": {
+              "awareness_clock": "Start the clock at awareness, not incident time.",
+              "authority_window": "State the 72-hour authority window for risk.",
+              "individual_notice": "State the high-risk notice to individuals without undue delay."
+            },
+            "forbidden_claims": [],
+            "reference_answers": [
+              {
+                "text": "I start from awareness at 10:00 today, notify the authority within 72 hours because there is risk, and notify affected people without undue delay because it is high risk.",
+                "outcome": "pass"
+              },
+              {
+                "text": "The clock starts when the incident happened and every person is notified for every breach.",
+                "outcome": "miss"
+              },
+              {
+                "text": "Every technical incident always requires notifying everyone.",
+                "outcome": "overgeneralized"
+              }
+            ]
+          },
+          "hint": {
+            "text": "Separate awareness from the incident time, then distinguish authority risk from high-risk individual notice.",
+            "clause_id": "ANNEX-2.1"
+          },
+          "counterexample": false,
+          "branches": {
+            "pass": {
+              "next_node": "review_complete",
+              "effect": "completed",
+              "skill_id": "communicate_boundary",
+              "state": "pass",
+              "interpretation": "Applied the cited conditions in a record-based review.",
+              "feedback": "You applied the grounded conditions to this reviewed case.",
+              "policy_clause_ids": [
+                "ANNEX-2.1"
+              ]
+            },
+            "miss": {
+              "next_node": "coach__data-incidents__mira_privacy_clock",
+              "effect": "none",
+              "skill_id": "communicate_boundary",
+              "state": "needs_practice",
+              "interpretation": "The reviewed answer missed a cited condition.",
+              "feedback": "Review the cited source and try this case again.",
+              "policy_clause_ids": [
+                "ANNEX-2.1"
+              ]
+            },
+            "overgeneralized": {
+              "next_node": "coach__data-incidents__mira_privacy_clock",
+              "effect": "none",
+              "skill_id": "communicate_boundary",
+              "state": "needs_practice",
+              "interpretation": "The reviewed answer used a blanket rule.",
+              "feedback": "Use the case facts and cited conditions rather than a blanket rule.",
+              "policy_clause_ids": [
+                "ANNEX-2.1"
+              ]
+            }
+          },
+          "text_rule": "communicate_boundary",
+          "text_branches": {
+            "pass": "pass",
+            "miss": "miss",
+            "overgeneralized": "overgeneralized"
+          }
+        },
+        "coach__data-incidents__mira_nis2_stages": {
+          "npc_id": "mira",
+          "category": "ethics_compliance",
+          "text": "Review this case from your record. A NIS2 in-scope entity has a significant incident and becomes aware today. What are the early warning, notification and final-report stages?",
+          "allow_text": true,
+          "choices": [],
+          "knowledge": [
+            "ANNEX-5.1"
+          ],
+          "facts": {
+            "domain": "data_incidents",
+            "scope": "NIS2 three-stage significant-incident reporting",
+            "reference_date": "2026-09-10"
+          },
+          "rubric": {
+            "question": "Does the answer apply the stated facts and cited reference?",
+            "required": [
+              "warning_24h",
+              "notification_72h",
+              "final_from_notification"
+            ],
+            "criteria": {
+              "warning_24h": "State the 24-hour early warning from awareness.",
+              "notification_72h": "State the 72-hour incident notification from awareness.",
+              "final_from_notification": "Start the one-month final-report period from notification."
+            },
+            "forbidden_claims": [],
+            "reference_answers": [
+              {
+                "text": "For the NIS2 entity, I issue the early warning within 24 hours of awareness, the incident notification within 72 hours of awareness, and the final report within one month of notification.",
+                "outcome": "pass"
+              },
+              {
+                "text": "I wait one month before any report.",
+                "outcome": "miss"
+              },
+              {
+                "text": "Every event must be reported under every regime at once.",
+                "outcome": "overgeneralized"
+              }
+            ]
+          },
+          "hint": {
+            "text": "Keep the two awareness-based deadlines separate from the final report's notification-based deadline.",
+            "clause_id": "ANNEX-5.1"
+          },
+          "counterexample": false,
+          "branches": {
+            "pass": {
+              "next_node": "review_complete",
+              "effect": "completed",
+              "skill_id": "conflict_awareness",
+              "state": "pass",
+              "interpretation": "Applied the cited conditions in a record-based review.",
+              "feedback": "You applied the grounded conditions to this reviewed case.",
+              "policy_clause_ids": [
+                "ANNEX-5.1"
+              ]
+            },
+            "miss": {
+              "next_node": "coach__data-incidents__mira_nis2_stages",
+              "effect": "none",
+              "skill_id": "conflict_awareness",
+              "state": "needs_practice",
+              "interpretation": "The reviewed answer missed a cited condition.",
+              "feedback": "Review the cited source and try this case again.",
+              "policy_clause_ids": [
+                "ANNEX-5.1"
+              ]
+            },
+            "overgeneralized": {
+              "next_node": "coach__data-incidents__mira_nis2_stages",
+              "effect": "none",
+              "skill_id": "conflict_awareness",
+              "state": "needs_practice",
+              "interpretation": "The reviewed answer used a blanket rule.",
+              "feedback": "Use the case facts and cited conditions rather than a blanket rule.",
+              "policy_clause_ids": [
+                "ANNEX-5.1"
+              ]
+            }
+          },
+          "text_rule": "conflict_awareness",
+          "text_branches": {
+            "pass": "pass",
+            "miss": "miss",
+            "overgeneralized": "overgeneralized"
+          }
+        },
+        "coach__data-incidents__mira_encrypted_backup": {
+          "npc_id": "mira",
+          "category": "ethics_compliance",
+          "text": "Review this case from your record. An encrypted backup was exposed, but encryption is effective, keys remain intact and the risk assessment says harm is unlikely. What still happens, and what is not automatic?",
+          "allow_text": true,
+          "choices": [],
+          "knowledge": [
+            "ANNEX-2.1",
+            "ANNEX-5.3"
+          ],
+          "facts": {
+            "domain": "data_incidents",
+            "scope": "Encrypted-backup breach risk assessment",
+            "reference_date": "2026-09-10"
+          },
+          "rubric": {
+            "question": "Does the answer apply the stated facts and cited reference?",
+            "required": [
+              "risk_assessment",
+              "internal_record",
+              "no_automatic_external_notice"
+            ],
+            "criteria": {
+              "risk_assessment": "Use the documented risk assessment.",
+              "internal_record": "Record the incident internally.",
+              "no_automatic_external_notice": "Do not assume external notices are automatic when risk is unlikely."
+            },
+            "forbidden_claims": [],
+            "reference_answers": [
+              {
+                "text": "I will retain the risk assessment and document the incident internally; with effective encryption and unlikely risk, external notification is not automatic.",
+                "outcome": "pass"
+              },
+              {
+                "text": "Encryption means there is nothing to document.",
+                "outcome": "miss"
+              },
+              {
+                "text": "Every encrypted incident must always be publicly announced.",
+                "outcome": "overgeneralized"
+              }
+            ]
+          },
+          "hint": {
+            "text": "The assessment and internal record remain important even where the facts do not automatically trigger external notice.",
+            "clause_id": "ANNEX-2.1"
+          },
+          "counterexample": false,
+          "branches": {
+            "pass": {
+              "next_node": "review_complete",
+              "effect": "completed",
+              "skill_id": "clarify_context",
+              "state": "pass",
+              "interpretation": "Applied the cited conditions in a record-based review.",
+              "feedback": "You applied the grounded conditions to this reviewed case.",
+              "policy_clause_ids": [
+                "ANNEX-2.1",
+                "ANNEX-5.3"
+              ]
+            },
+            "miss": {
+              "next_node": "coach__data-incidents__mira_encrypted_backup",
+              "effect": "none",
+              "skill_id": "clarify_context",
+              "state": "needs_practice",
+              "interpretation": "The reviewed answer missed a cited condition.",
+              "feedback": "Review the cited source and try this case again.",
+              "policy_clause_ids": [
+                "ANNEX-2.1",
+                "ANNEX-5.3"
+              ]
+            },
+            "overgeneralized": {
+              "next_node": "coach__data-incidents__mira_encrypted_backup",
+              "effect": "none",
+              "skill_id": "clarify_context",
+              "state": "needs_practice",
+              "interpretation": "The reviewed answer used a blanket rule.",
+              "feedback": "Use the case facts and cited conditions rather than a blanket rule.",
+              "policy_clause_ids": [
+                "ANNEX-2.1",
+                "ANNEX-5.3"
+              ]
+            }
+          },
+          "text_rule": "clarify_context",
+          "text_branches": {
+            "pass": "pass",
+            "miss": "miss",
+            "overgeneralized": "overgeneralized"
+          }
+        },
+        "coach__boundary-response__jo_report_receipt": {
+          "npc_id": "mira",
+          "category": "ethics_compliance",
+          "text": "Review this case from your record. A report arrived through the internal channel. What are the acknowledgement, feedback and confidentiality steps under the cited reference?",
+          "allow_text": true,
+          "choices": [],
+          "knowledge": [
+            "ANNEX-6.3"
+          ],
+          "facts": {
+            "domain": "workplace",
+            "scope": "Whistleblower report receipt process",
+            "reference_date": "2026-09-10"
+          },
+          "rubric": {
+            "question": "Does the answer apply the stated facts and cited reference?",
+            "required": [
+              "acknowledgement_window",
+              "feedback_window_and_start",
+              "confidential_process"
+            ],
+            "criteria": {
+              "acknowledgement_window": "Acknowledge within seven days.",
+              "feedback_window_and_start": "Give feedback within three months of acknowledgement.",
+              "confidential_process": "Use the confidential reporting process."
+            },
+            "forbidden_claims": [],
+            "reference_answers": [
+              {
+                "text": "I will acknowledge the report within seven days, keep the process confidential, and provide feedback within three months of acknowledgement.",
+                "outcome": "pass"
+              },
+              {
+                "text": "I will wait six months before acknowledging the report.",
+                "outcome": "miss"
+              },
+              {
+                "text": "I will publish every report to the whole company immediately.",
+                "outcome": "overgeneralized"
+              }
+            ]
+          },
+          "hint": {
+            "text": "Separate the seven-day acknowledgement from the three-month feedback window and keep the process confidential.",
+            "clause_id": "ANNEX-6.3"
+          },
+          "counterexample": false,
+          "branches": {
+            "pass": {
+              "next_node": "review_complete",
+              "effect": "completed",
+              "skill_id": "communicate_boundary",
+              "state": "pass",
+              "interpretation": "Applied the cited conditions in a record-based review.",
+              "feedback": "You applied the grounded conditions to this reviewed case.",
+              "policy_clause_ids": [
+                "ANNEX-6.3"
+              ]
+            },
+            "miss": {
+              "next_node": "coach__boundary-response__jo_report_receipt",
+              "effect": "none",
+              "skill_id": "communicate_boundary",
+              "state": "needs_practice",
+              "interpretation": "The reviewed answer missed a cited condition.",
+              "feedback": "Review the cited source and try this case again.",
+              "policy_clause_ids": [
+                "ANNEX-6.3"
+              ]
+            },
+            "overgeneralized": {
+              "next_node": "coach__boundary-response__jo_report_receipt",
+              "effect": "none",
+              "skill_id": "communicate_boundary",
+              "state": "needs_practice",
+              "interpretation": "The reviewed answer used a blanket rule.",
+              "feedback": "Use the case facts and cited conditions rather than a blanket rule.",
+              "policy_clause_ids": [
+                "ANNEX-6.3"
+              ]
+            }
+          },
+          "text_rule": "communicate_boundary",
+          "text_branches": {
+            "pass": "pass",
+            "miss": "miss",
+            "overgeneralized": "overgeneralized"
+          }
+        },
+        "coach__boundary-response__jo_no_retaliation": {
+          "npc_id": "mira",
+          "category": "ethics_compliance",
+          "text": "Review this case from your record. A manager threatens an employee with punitive shifts after a report. How do you identify and address this?",
+          "allow_text": true,
+          "choices": [],
+          "knowledge": [
+            "ANNEX-6.3"
+          ],
+          "facts": {
+            "domain": "workplace",
+            "scope": "Whistleblower anti-retaliation protection",
+            "reference_date": "2026-09-10"
+          },
+          "rubric": {
+            "question": "Does the answer apply the stated facts and cited reference?",
+            "required": [
+              "identify_retaliation",
+              "protect_reporter",
+              "report_internal_concern"
+            ],
+            "criteria": {
+              "identify_retaliation": "Identify the threatened punitive shift as retaliation.",
+              "protect_reporter": "State protection for the reporter.",
+              "report_internal_concern": "Escalate through the internal concern process."
+            },
+            "forbidden_claims": [],
+            "reference_answers": [
+              {
+                "text": "Threatening punitive shifts after a report is retaliation; I will protect the reporter and raise the concern through the internal process.",
+                "outcome": "pass"
+              },
+              {
+                "text": "The manager can punish the reporter for disruption.",
+                "outcome": "miss"
+              },
+              {
+                "text": "Every scheduling change is automatically retaliation.",
+                "outcome": "overgeneralized"
+              }
+            ]
+          },
+          "hint": {
+            "text": "Connect the adverse treatment to the report, then name protection and the reporting process.",
+            "clause_id": "ANNEX-6.3"
+          },
+          "counterexample": false,
+          "branches": {
+            "pass": {
+              "next_node": "review_complete",
+              "effect": "completed",
+              "skill_id": "communicate_boundary",
+              "state": "pass",
+              "interpretation": "Applied the cited conditions in a record-based review.",
+              "feedback": "You applied the grounded conditions to this reviewed case.",
+              "policy_clause_ids": [
+                "ANNEX-6.3"
+              ]
+            },
+            "miss": {
+              "next_node": "coach__boundary-response__jo_no_retaliation",
+              "effect": "none",
+              "skill_id": "communicate_boundary",
+              "state": "needs_practice",
+              "interpretation": "The reviewed answer missed a cited condition.",
+              "feedback": "Review the cited source and try this case again.",
+              "policy_clause_ids": [
+                "ANNEX-6.3"
+              ]
+            },
+            "overgeneralized": {
+              "next_node": "coach__boundary-response__jo_no_retaliation",
+              "effect": "none",
+              "skill_id": "communicate_boundary",
+              "state": "needs_practice",
+              "interpretation": "The reviewed answer used a blanket rule.",
+              "feedback": "Use the case facts and cited conditions rather than a blanket rule.",
+              "policy_clause_ids": [
+                "ANNEX-6.3"
+              ]
+            }
+          },
+          "text_rule": "communicate_boundary",
+          "text_branches": {
+            "pass": "pass",
+            "miss": "miss",
+            "overgeneralized": "overgeneralized"
+          }
+        },
+        "coach__boundary-response__jo_rest_hours": {
+          "npc_id": "mira",
+          "category": "ethics_compliance",
+          "text": "Review this case from your record. A proposed schedule leaves only 10 consecutive hours of daily rest, and the case states that no exception applies. What do you communicate?",
+          "allow_text": true,
+          "choices": [],
+          "knowledge": [
+            "ANNEX-6.1"
+          ],
+          "facts": {
+            "domain": "workplace",
+            "scope": "Daily-rest requirement without an applicable exception",
+            "reference_date": "2026-09-10"
+          },
+          "rubric": {
+            "question": "Does the answer apply the stated facts and cited reference?",
+            "required": [
+              "daily_rest",
+              "adjust_schedule",
+              "not_just_weekly_total"
+            ],
+            "criteria": {
+              "daily_rest": "State the 11-hour daily-rest rule.",
+              "adjust_schedule": "Require a schedule adjustment.",
+              "not_just_weekly_total": "Do not treat weekly total as a replacement for daily rest."
+            },
+            "forbidden_claims": [],
+            "reference_answers": [
+              {
+                "text": "This schedule gives only 10 hours rather than the required 11 consecutive hours, so I will adjust it; a weekly total does not replace daily rest.",
+                "outcome": "pass"
+              },
+              {
+                "text": "The weekly total is fine, so ten hours of daily rest is fine.",
+                "outcome": "miss"
+              },
+              {
+                "text": "No employee may ever work overtime.",
+                "outcome": "overgeneralized"
+              }
+            ]
+          },
+          "hint": {
+            "text": "Use the daily-rest number and the concrete schedule adjustment; do not substitute a weekly total.",
+            "clause_id": "ANNEX-6.1"
+          },
+          "counterexample": false,
+          "branches": {
+            "pass": {
+              "next_node": "review_complete",
+              "effect": "completed",
+              "skill_id": "communicate_boundary",
+              "state": "pass",
+              "interpretation": "Applied the cited conditions in a record-based review.",
+              "feedback": "You applied the grounded conditions to this reviewed case.",
+              "policy_clause_ids": [
+                "ANNEX-6.1"
+              ]
+            },
+            "miss": {
+              "next_node": "coach__boundary-response__jo_rest_hours",
+              "effect": "none",
+              "skill_id": "communicate_boundary",
+              "state": "needs_practice",
+              "interpretation": "The reviewed answer missed a cited condition.",
+              "feedback": "Review the cited source and try this case again.",
+              "policy_clause_ids": [
+                "ANNEX-6.1"
+              ]
+            },
+            "overgeneralized": {
+              "next_node": "coach__boundary-response__jo_rest_hours",
+              "effect": "none",
+              "skill_id": "communicate_boundary",
+              "state": "needs_practice",
+              "interpretation": "The reviewed answer used a blanket rule.",
+              "feedback": "Use the case facts and cited conditions rather than a blanket rule.",
+              "policy_clause_ids": [
+                "ANNEX-6.1"
+              ]
+            }
+          },
+          "text_rule": "communicate_boundary",
+          "text_branches": {
+            "pass": "pass",
+            "miss": "miss",
+            "overgeneralized": "overgeneralized"
+          }
+        },
+        "coach__boundary-response__jo_average_hours": {
+          "npc_id": "mira",
+          "category": "ethics_compliance",
+          "text": "Review this case from your record. One week exceeds 48 hours, but the stated reference period average is below 48 hours, daily rest is satisfied and no other violation is present. What is the conditional decision?",
+          "allow_text": true,
+          "choices": [],
+          "knowledge": [
+            "ANNEX-6.1"
+          ],
+          "facts": {
+            "domain": "workplace",
+            "scope": "Average weekly working-time limit with satisfied daily rest",
+            "reference_date": "2026-09-10"
+          },
+          "rubric": {
+            "question": "Does the answer apply the stated facts and cited reference?",
+            "required": [
+              "average_not_single_week",
+              "reference_period",
+              "allow_with_conditions"
+            ],
+            "criteria": {
+              "average_not_single_week": "Explain that the limit is averaged, not a single-week rule.",
+              "reference_period": "Use the stated reference period.",
+              "allow_with_conditions": "Allow only with the stated rest and compliance conditions."
+            },
+            "forbidden_claims": [],
+            "reference_answers": [
+              {
+                "text": "One week above 48 hours is not alone decisive because the reference-period average is below 48 and daily rest is satisfied, so this can proceed under those conditions.",
+                "outcome": "pass"
+              },
+              {
+                "text": "Any single week above 48 hours is automatically illegal.",
+                "outcome": "miss"
+              },
+              {
+                "text": "All hours above 40 must always be prohibited.",
+                "outcome": "overgeneralized"
+              }
+            ]
+          },
+          "hint": {
+            "text": "Use the stated averaging period and preserve the daily-rest condition.",
+            "clause_id": "ANNEX-6.1"
+          },
+          "counterexample": false,
+          "branches": {
+            "pass": {
+              "next_node": "review_complete",
+              "effect": "completed",
+              "skill_id": "communicate_boundary",
+              "state": "pass",
+              "interpretation": "Applied the cited conditions in a record-based review.",
+              "feedback": "You applied the grounded conditions to this reviewed case.",
+              "policy_clause_ids": [
+                "ANNEX-6.1"
+              ]
+            },
+            "miss": {
+              "next_node": "coach__boundary-response__jo_average_hours",
+              "effect": "none",
+              "skill_id": "communicate_boundary",
+              "state": "needs_practice",
+              "interpretation": "The reviewed answer missed a cited condition.",
+              "feedback": "Review the cited source and try this case again.",
+              "policy_clause_ids": [
+                "ANNEX-6.1"
+              ]
+            },
+            "overgeneralized": {
+              "next_node": "coach__boundary-response__jo_average_hours",
+              "effect": "none",
+              "skill_id": "communicate_boundary",
+              "state": "needs_practice",
+              "interpretation": "The reviewed answer used a blanket rule.",
+              "feedback": "Use the case facts and cited conditions rather than a blanket rule.",
+              "policy_clause_ids": [
+                "ANNEX-6.1"
+              ]
+            }
+          },
+          "text_rule": "communicate_boundary",
+          "text_branches": {
+            "pass": "pass",
+            "miss": "miss",
+            "overgeneralized": "overgeneralized"
+          }
+        },
+        "coach__screening__screen_clarify": {
+          "npc_id": "mira",
+          "category": "ethics_compliance",
+          "text": "Review this case from your record. Before deciding on a €26 gift from a German public official, what three facts or rules do you name?",
+          "allow_text": true,
+          "choices": [],
+          "knowledge": [
+            "ANNEX-1.1",
+            "ANNEX-1.2"
+          ],
+          "facts": {
+            "domain": "screening",
+            "scope": "Starting check: facts before judging a public-official gift",
+            "reference_date": "2026-09-10"
+          },
+          "rubric": {
+            "question": "Does the answer apply the stated facts and cited reference?",
+            "required": [
+              "recipient_role",
+              "applicable_rule",
+              "amount"
+            ],
+            "criteria": {
+              "recipient_role": "Identify the public-official role.",
+              "applicable_rule": "Name the applicable Germany-specific rule.",
+              "amount": "Use the €26 amount against the threshold."
+            },
+            "forbidden_claims": [],
+            "reference_answers": [
+              {
+                "text": "I first confirm the public-official role, the applicable Germany-specific rule and how €26 compares with its threshold.",
+                "outcome": "pass"
+              },
+              {
+                "text": "€26 is fine without checking anything.",
+                "outcome": "miss"
+              },
+              {
+                "text": "I refuse all gifts without checking context.",
+                "outcome": "overgeneralized"
+              }
+            ]
+          },
+          "hint": {
+            "text": "Name the role, the applicable rule and the amount before making the decision.",
+            "clause_id": "ANNEX-1.1"
+          },
+          "counterexample": false,
+          "branches": {
+            "pass": {
+              "next_node": "review_complete",
+              "effect": "completed",
+              "skill_id": "clarify_context",
+              "state": "pass",
+              "interpretation": "Applied the cited conditions in a record-based review.",
+              "feedback": "You applied the grounded conditions to this reviewed case.",
+              "policy_clause_ids": [
+                "ANNEX-1.1",
+                "ANNEX-1.2"
+              ]
+            },
+            "miss": {
+              "next_node": "coach__screening__screen_clarify",
+              "effect": "none",
+              "skill_id": "clarify_context",
+              "state": "needs_practice",
+              "interpretation": "The reviewed answer missed a cited condition.",
+              "feedback": "Review the cited source and try this case again.",
+              "policy_clause_ids": [
+                "ANNEX-1.1",
+                "ANNEX-1.2"
+              ]
+            },
+            "overgeneralized": {
+              "next_node": "coach__screening__screen_clarify",
+              "effect": "none",
+              "skill_id": "clarify_context",
+              "state": "needs_practice",
+              "interpretation": "The reviewed answer used a blanket rule.",
+              "feedback": "Use the case facts and cited conditions rather than a blanket rule.",
+              "policy_clause_ids": [
+                "ANNEX-1.1",
+                "ANNEX-1.2"
+              ]
+            }
+          },
+          "text_rule": "clarify_context",
+          "text_branches": {
+            "pass": "pass",
+            "miss": "miss",
+            "overgeneralized": "overgeneralized"
+          }
+        },
+        "coach__screening__screen_conflict": {
+          "npc_id": "mira",
+          "category": "ethics_compliance",
+          "text": "Review this case from your record. A €12,000 commercial transaction is presented as four linked €3,000 cash payments. What risk and next step do you identify?",
+          "allow_text": true,
+          "choices": [],
+          "knowledge": [
+            "ANNEX-4.1",
+            "ANNEX-4.3"
+          ],
+          "facts": {
+            "domain": "screening",
+            "scope": "Starting check: linked commercial cash payments",
+            "reference_date": "2026-09-10"
+          },
+          "rubric": {
+            "question": "Does the answer apply the stated facts and cited reference?",
+            "required": [
+              "linked_total",
+              "evasion_risk",
+              "process_step"
+            ],
+            "criteria": {
+              "linked_total": "Aggregate the payments.",
+              "evasion_risk": "Identify the splitting/evasion concern.",
+              "process_step": "State decline or escalation."
+            },
+            "forbidden_claims": [],
+            "reference_answers": [
+              {
+                "text": "The linked payments total €12,000, splitting does not avoid the cash limit, and I will decline or escalate through the required process.",
+                "outcome": "pass"
+              },
+              {
+                "text": "Each €3,000 payment is separate.",
+                "outcome": "miss"
+              },
+              {
+                "text": "Every payment must be reported as criminal.",
+                "outcome": "overgeneralized"
+              }
+            ]
+          },
+          "hint": {
+            "text": "Calculate the linked total, identify the splitting risk and name the process step.",
+            "clause_id": "ANNEX-4.1"
+          },
+          "counterexample": false,
+          "branches": {
+            "pass": {
+              "next_node": "review_complete",
+              "effect": "completed",
+              "skill_id": "conflict_awareness",
+              "state": "pass",
+              "interpretation": "Applied the cited conditions in a record-based review.",
+              "feedback": "You applied the grounded conditions to this reviewed case.",
+              "policy_clause_ids": [
+                "ANNEX-4.1",
+                "ANNEX-4.3"
+              ]
+            },
+            "miss": {
+              "next_node": "coach__screening__screen_conflict",
+              "effect": "none",
+              "skill_id": "conflict_awareness",
+              "state": "needs_practice",
+              "interpretation": "The reviewed answer missed a cited condition.",
+              "feedback": "Review the cited source and try this case again.",
+              "policy_clause_ids": [
+                "ANNEX-4.1",
+                "ANNEX-4.3"
+              ]
+            },
+            "overgeneralized": {
+              "next_node": "coach__screening__screen_conflict",
+              "effect": "none",
+              "skill_id": "conflict_awareness",
+              "state": "needs_practice",
+              "interpretation": "The reviewed answer used a blanket rule.",
+              "feedback": "Use the case facts and cited conditions rather than a blanket rule.",
+              "policy_clause_ids": [
+                "ANNEX-4.1",
+                "ANNEX-4.3"
+              ]
+            }
+          },
+          "text_rule": "conflict_awareness",
+          "text_branches": {
+            "pass": "pass",
+            "miss": "miss",
+            "overgeneralized": "overgeneralized"
+          }
+        },
+        "coach__screening__screen_boundary": {
+          "npc_id": "mira",
+          "category": "ethics_compliance",
+          "text": "Review this case from your record. Write one work reply for a high-risk breach known at 10:00 today: state the action, the reason and the next step.",
+          "allow_text": true,
+          "choices": [],
+          "knowledge": [
+            "ANNEX-2.1"
+          ],
+          "facts": {
+            "domain": "screening",
+            "scope": "Starting check: communicate a high-risk breach response",
+            "reference_date": "2026-09-10"
+          },
+          "rubric": {
+            "question": "Does the answer apply the stated facts and cited reference?",
+            "required": [
+              "action",
+              "reason",
+              "next_step"
+            ],
+            "criteria": {
+              "action": "State the authority and individual-notice action.",
+              "reason": "State awareness and high-risk reasoning.",
+              "next_step": "State the immediate follow-up step."
+            },
+            "forbidden_claims": [],
+            "reference_answers": [
+              {
+                "text": "We became aware at 10:00 today and the breach is high risk, so I will notify the authority within 72 hours and affected people without undue delay; I will document and coordinate the next steps now.",
+                "outcome": "pass"
+              },
+              {
+                "text": "We can wait a month before acting.",
+                "outcome": "miss"
+              },
+              {
+                "text": "We always tell everyone about every incident.",
+                "outcome": "overgeneralized"
+              }
+            ]
+          },
+          "hint": {
+            "text": "Use a three-part reply: action, awareness/high-risk reason and a concrete next step.",
+            "clause_id": "ANNEX-2.1"
+          },
+          "counterexample": false,
+          "branches": {
+            "pass": {
+              "next_node": "review_complete",
+              "effect": "completed",
+              "skill_id": "communicate_boundary",
+              "state": "pass",
+              "interpretation": "Applied the cited conditions in a record-based review.",
+              "feedback": "You applied the grounded conditions to this reviewed case.",
+              "policy_clause_ids": [
+                "ANNEX-2.1"
+              ]
+            },
+            "miss": {
+              "next_node": "coach__screening__screen_boundary",
+              "effect": "none",
+              "skill_id": "communicate_boundary",
+              "state": "needs_practice",
+              "interpretation": "The reviewed answer missed a cited condition.",
+              "feedback": "Review the cited source and try this case again.",
+              "policy_clause_ids": [
+                "ANNEX-2.1"
+              ]
+            },
+            "overgeneralized": {
+              "next_node": "coach__screening__screen_boundary",
+              "effect": "none",
+              "skill_id": "communicate_boundary",
+              "state": "needs_practice",
+              "interpretation": "The reviewed answer used a blanket rule.",
+              "feedback": "Use the case facts and cited conditions rather than a blanket rule.",
+              "policy_clause_ids": [
+                "ANNEX-2.1"
+              ]
+            }
+          },
+          "text_rule": "communicate_boundary",
+          "text_branches": {
+            "pass": "pass",
+            "miss": "miss",
+            "overgeneralized": "overgeneralized"
+          }
+        }
+      },
+      "coaching_sources": {
+        "dinner-invitation/alex_public_gift": "coach__dinner-invitation__alex_public_gift",
+        "dinner-invitation/alex_private_gift": "coach__dinner-invitation__alex_private_gift",
+        "dinner-invitation/alex_business_meal": "coach__dinner-invitation__alex_business_meal",
+        "dinner-invitation/alex_cash_gift": "coach__dinner-invitation__alex_cash_gift",
+        "dinner-invitation/alex_permitted_meal": "coach__dinner-invitation__alex_permitted_meal",
+        "supplier-gift/sam_cash_limit": "coach__supplier-gift__sam_cash_limit",
+        "supplier-gift/sam_kyc_boundary": "coach__supplier-gift__sam_kyc_boundary",
+        "supplier-gift/sam_linked_payments": "coach__supplier-gift__sam_linked_payments",
+        "supplier-gift/sam_beneficial_owner": "coach__supplier-gift__sam_beneficial_owner",
+        "supplier-gift/sam_permitted_cash": "coach__supplier-gift__sam_permitted_cash",
+        "data-incidents/mira_privacy_clock": "coach__data-incidents__mira_privacy_clock",
+        "data-incidents/mira_nis2_stages": "coach__data-incidents__mira_nis2_stages",
+        "data-incidents/mira_encrypted_backup": "coach__data-incidents__mira_encrypted_backup",
+        "boundary-response/jo_report_receipt": "coach__boundary-response__jo_report_receipt",
+        "boundary-response/jo_no_retaliation": "coach__boundary-response__jo_no_retaliation",
+        "boundary-response/jo_rest_hours": "coach__boundary-response__jo_rest_hours",
+        "boundary-response/jo_average_hours": "coach__boundary-response__jo_average_hours",
+        "screening/screen_clarify": "coach__screening__screen_clarify",
+        "screening/screen_conflict": "coach__screening__screen_conflict",
+        "screening/screen_boundary": "coach__screening__screen_boundary"
       }
     }
   },
   "screening_task": {
     "scenario_id": "screening",
-    "title": "Quick Skill Check",
+    "title": "Three-question starting check",
     "category": "ethics_compliance",
-    "estimated_minutes": 2,
+    "estimated_minutes": 3,
     "available_modes": [
       "screening"
     ]

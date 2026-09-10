@@ -56,6 +56,7 @@ export interface Attempt {
   learning_updates: LearningUpdate[];
   is_complete: boolean;
   feedback_mode: FeedbackMode;
+  assessment_status: "assessed" | "deferred" | "not_requested";
   timing: { active_seconds: number; model_wait_seconds: number };
 }
 

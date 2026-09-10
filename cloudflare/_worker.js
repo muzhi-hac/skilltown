@@ -1,12 +1,12 @@
 // Cloudflare Pages advanced-mode worker.
 //
 // Pages hosts the static Godot Web build. It cannot run the FastAPI backend
-// (no Python runtime, no persistent SQLite), so /api/* and /health are proxied
+// (no Python runtime, no persistent SQLite), so /api/*, /health and /ready are proxied
 // to API_ORIGIN. The browser therefore still sees one origin, which is what the
 // client relies on: config.gd reads window.location.origin.
 //
 // Deploy copies this file into the build directory; see tools/deploy_pages.sh.
-const API_PREFIXES = ["/api/", "/health"];
+const API_PREFIXES = ["/api/", "/health", "/ready"];
 
 function isApiPath(pathname) {
   return API_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(prefix));

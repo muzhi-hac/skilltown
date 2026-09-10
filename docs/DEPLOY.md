@@ -10,7 +10,7 @@ DNS、CDN 和证书。
 ```
 浏览器 ──► Cloudflare（DNS/CDN/TLS，你的免费域名）
              └──► Fly 机器（1 台）
-                    ├── FastAPI  /api/v1 + /health
+                    ├── FastAPI  /api/v1 + /health + /ready
                     ├── 前端构建 /  /assets/*
                     └── 持久卷   /data/skilltown.sqlite3
 ```
@@ -52,7 +52,14 @@ tools/deploy_fly.sh <app>               # 构建前端 → 部署 → 线上冒�
 ```
 
 `tools/deploy_fly.sh` 最后会对 `https://<app>.fly.dev` 跑一遍 `tools/smoke_api.py`，
-所以部署完成即刻就能知道线上是不是真的通。
+所以部署完成即刻就能知道线上是不是真的通。部署后再运行：
+
+```bash
+tools/run_fly_rag_release_probe.sh <app>
+```
+
+它在机器内测量锁定模型的 warmup、100 次顺序检索、5×20 并发检索和 cgroup 内存峰值，
+不发送模型请求，也不读取或写入学习者记录。
 
 ## 必须守住的约束：永远只有一台机器
 
@@ -91,7 +98,7 @@ flyctl certs create demo.example.org --app <app>      # 输出需要添加的 DN
 
 - `ci.yml`：pytest；前端 `npm ci` + 类型检查 + 构建；`tools/e2e_room.py` 用真实 Chrome
   对真实服务端跑验收；`tools/smoke_api.py` HTTP 冒烟；上传前端产物。
-- `deploy-fly.yml`：构建前端 → 远程构建镜像 → `flyctl deploy` → 等 `/health` → 线上冒烟。
+- `deploy-fly.yml`：构建前端 → 远程构建镜像 → `flyctl deploy` → 等 `/ready` → 线上冒烟。
   需要仓库 Secret：`FLY_API_TOKEN`（`flyctl tokens create deploy`）。
 - `deploy-pages.yml`：备选路径（Cloudflare Pages），仅手动触发。
 
@@ -105,12 +112,13 @@ flyctl certs create demo.example.org --app <app>      # 输出需要添加的 DN
 - `ANTHROPIC_API_KEY` 只作为 Fly secret 注入。未设置时自由回答走确定性 fallback，
   响应里 `feedback_mode` 明确为 `fallback`，不冒充实时 AI。
 - `CORS_ORIGINS` 同源部署下留空。
+- `SKILLTOWN_REQUIRE_DENSE=true` 要求镜像中的锁定模型完成 hybrid 预热；部署探针使用 `/ready`。
 - 密钥不要提交。仓库 `.env` 已忽略；Cloudflare 凭据放
   `~/.config/skilltown/cloudflare.env`（chmod 600）。
 
 ## 备选：页面放 Cloudflare Pages，API 放别处
 
-`cloudflare/_worker.js` 会把 `/api/*` 和 `/health` 反代到 Pages 环境变量
+`cloudflare/_worker.js` 会把 `/api/*`、`/health` 和 `/ready` 反代到 Pages 环境变量
 `API_ORIGIN`，从而保持同源；`tools/deploy_pages.sh` 负责构建 + 部署。适用于
 “页面要吃 Cloudflare 边缘、后端在别的宿主”的情况，代价是多一跳和一个要维护的
 `API_ORIGIN`。用 Fly 托管全站时不需要它。前端换成 React 之后，Pages 的单文件

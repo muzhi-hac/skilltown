@@ -35,7 +35,13 @@ logger = logging.getLogger(__name__)
 
 KNOWLEDGE_DIR = Path(__file__).parents[1] / "content" / "knowledge"
 # Baked into the image at build time so query encoding never needs the network.
-DENSE_MODEL = os.getenv("SKILLTOWN_DENSE_MODEL", "minishlab/potion-base-8M")
+DENSE_MODEL_PATH = Path(os.getenv(
+    "SKILLTOWN_DENSE_MODEL_PATH",
+    str(Path(__file__).parents[2] / "models" / "potion-base-8M"),
+))
+DENSE_MODEL_REVISION = os.getenv("SKILLTOWN_DENSE_MODEL_REVISION", "bf8b056651a2c21b8d2565580b8569da283cab23")
+_DENSE_FAILURE_REASON = ""
+_DENSE_RUNTIME_FAILURE = ""
 # Reciprocal Rank Fusion constant; 60 is the value the original paper settles on.
 RRF_K = 60
 # Measured on 16 questions from this corpus (tools/retrieval_bench.py): sparse
@@ -212,21 +218,37 @@ def search_sparse(query: str, limit: int = 3, within: str = "") -> list[Chunk]:
 # --- dense side ----------------------------------------------------------------
 
 
+def _set_dense_failure(reason: str) -> None:
+    global _DENSE_FAILURE_REASON
+    _DENSE_FAILURE_REASON = reason
+
+
+def dense_failure_reason() -> str:
+    return _DENSE_FAILURE_REASON
+
+
+def dense_runtime_failure_reason() -> str:
+    return _DENSE_RUNTIME_FAILURE
+
+
+def mark_dense_runtime_failed(reason: str) -> None:
+    global _DENSE_RUNTIME_FAILURE
+    _DENSE_RUNTIME_FAILURE = reason
+
+
 @lru_cache(maxsize=1)
 def _encoder():
-    """Load the static embedding model once, or report that dense is unavailable."""
+    """Load only the image-baked static model; runtime never downloads weights."""
+    if not DENSE_MODEL_PATH.is_dir():
+        _set_dense_failure("model_path_missing")
+        return None
     try:
         from model2vec import StaticModel
-    except Exception as exc:  # noqa: BLE001 - optional dependency
-        logger.info("dense retrieval unavailable (model2vec not importable: %s)", exc)
+        return StaticModel.from_pretrained(str(DENSE_MODEL_PATH))
+    except Exception as exc:  # noqa: BLE001 - model loading must not crash sparse development mode
+        _set_dense_failure(f"encoder_error:{type(exc).__name__}")
+        logger.info("dense model unavailable: %s", exc)
         return None
-    local = Path(__file__).parents[2] / "models" / Path(DENSE_MODEL).name
-    for source in (str(local), DENSE_MODEL):
-        try:
-            return StaticModel.from_pretrained(source)
-        except Exception as exc:  # noqa: BLE001 - missing weights or no network
-            logger.info("dense model %s unavailable: %s", source, exc)
-    return None
 
 
 def dense_available() -> bool:
@@ -244,7 +266,14 @@ def _dense_matrix():
     chunks = corpus()
     # The heading is part of the meaning of a clause, so it is embedded with it.
     texts = [f"{chunk.path}\n{chunk.text}" for chunk in chunks]
-    vectors = np.asarray(encoder.encode(texts), dtype="float32")
+    try:
+        vectors = np.asarray(encoder.encode(texts), dtype="float32")
+    except Exception as exc:  # noqa: BLE001
+        _set_dense_failure(f"encode_error:{type(exc).__name__}")
+        return None, ()
+    if vectors.ndim != 2 or vectors.shape[0] != len(chunks) or vectors.shape[1] == 0:
+        _set_dense_failure("matrix_shape_invalid")
+        return None, ()
     norms = np.linalg.norm(vectors, axis=1, keepdims=True)
     norms[norms == 0] = 1.0
     return vectors / norms, tuple(chunk.id for chunk in chunks)
@@ -260,7 +289,14 @@ def search_dense(query: str, limit: int = 3, within: str = "") -> list[Chunk]:
     import numpy as np
 
     encoder = _encoder()
-    vector = np.asarray(encoder.encode([query]), dtype="float32")[0]
+    try:
+        vector = np.asarray(encoder.encode([query]), dtype="float32")[0]
+    except Exception as exc:  # noqa: BLE001
+        _set_dense_failure(f"query_encode_error:{type(exc).__name__}")
+        raise RuntimeError("dense query encoding failed") from exc
+    if vector.ndim != 1 or matrix.shape[1] != vector.shape[0]:
+        _set_dense_failure("query_dimension_invalid")
+        raise RuntimeError("dense query dimension does not match corpus matrix")
     norm = float(np.linalg.norm(vector)) or 1.0
     scores = matrix @ (vector / norm)
     chunks = _index()[0]
@@ -287,7 +323,14 @@ def search(query: str, limit: int = 3, within: str = "") -> list[Chunk]:
         return []
     depth = max(limit * 3, 6)
     sparse = search_sparse(query, limit=depth, within=within)
-    dense = search_dense(query, limit=depth, within=within)
+    if dense_runtime_failure_reason():
+        dense = []
+    else:
+        try:
+            dense = search_dense(query, limit=depth, within=within)
+        except RuntimeError:
+            mark_dense_runtime_failed(dense_failure_reason() or "dense_query_failed")
+            dense = []
     if not dense:
         return sparse[:limit]
 

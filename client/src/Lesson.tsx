@@ -5,9 +5,9 @@ import { useEffect, useRef, useState } from "react";
 import type { Attempt, Passport, PolicyCard, Recommendation } from "./api";
 
 const SKILL_LABELS: Record<string, string> = {
-  clarify_context: "Gather key context",
-  conflict_awareness: "Spot conflicts of interest",
-  communicate_boundary: "Communicate a boundary",
+  clarify_context: "Gather relevant facts",
+  conflict_awareness: "Recognize risks and applicable conditions",
+  communicate_boundary: "Explain the decision and next step",
 };
 
 const STATE_LABELS: Record<string, string> = {
@@ -40,12 +40,16 @@ export interface LessonProps {
   onHint: () => void;
   onRewind: () => void;
   onClose: () => void;
+  versionMismatch?: boolean;
+  onStartUpdated?: () => void;
 }
 
 export function Lesson(props: LessonProps) {
   const { attempt, busy } = props;
   const [draft, setDraft] = useState("");
   const input = useRef<HTMLTextAreaElement>(null);
+  const lastAttempt = useRef<string | null>(null);
+  const lastRevision = useRef<number | null>(null);
 
   const node = attempt?.node ?? null;
   const canAnswer = Boolean(node?.allow_text) && !attempt?.is_complete && !busy;
@@ -54,10 +58,19 @@ export function Lesson(props: LessonProps) {
     if (canAnswer) input.current?.focus();
   }, [canAnswer, node?.id]);
 
+  useEffect(() => {
+    if (!attempt) return;
+    const changedAttempt = lastAttempt.current !== null && lastAttempt.current !== attempt.attempt_id;
+    const assessedReply = lastRevision.current !== null && lastRevision.current !== attempt.revision
+      && attempt.assessment_status === "assessed";
+    if (changedAttempt || assessedReply || attempt.is_complete) setDraft("");
+    lastAttempt.current = attempt.attempt_id;
+    lastRevision.current = attempt.revision;
+  }, [attempt?.attempt_id, attempt?.revision, attempt?.assessment_status, attempt?.is_complete]);
+
   function submit() {
     const text = draft.trim();
     if (!text || !canAnswer) return;
-    setDraft("");
     props.onAnswer(text);
   }
 
@@ -142,7 +155,7 @@ export function Lesson(props: LessonProps) {
           <button className="primary" disabled={!canAnswer || !draft.trim()} onClick={submit}>
             {busy ? "Sending…" : "Send answer"}
           </button>
-          <button className="ghost" disabled={busy || !attempt} onClick={props.onHint}>
+          <button className="ghost" disabled={busy || !attempt || attempt.is_complete || !node?.allow_text} onClick={props.onHint}>
             Hint
           </button>
           <button
@@ -152,6 +165,9 @@ export function Lesson(props: LessonProps) {
           >
             Rewind to the decision
           </button>
+          {props.versionMismatch && props.onStartUpdated ? (
+            <button className="ghost" disabled={busy} onClick={props.onStartUpdated}>Start updated task</button>
+          ) : null}
           <span className="status">{props.status}</span>
         </div>
       </div>

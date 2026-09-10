@@ -31,4 +31,31 @@ POLICY_CARDS = {
 
 
 def get_policy_cards(clause_ids: list[str]) -> list[dict]:
-    return [POLICY_CARDS[clause_id] for clause_id in clause_ids if clause_id in POLICY_CARDS]
+    """Resolve clause ids to cards, real corpus passages first.
+
+    An id like ANNEX-1.2 comes from the committed EU documents and is served as
+    a real reference with its source named. An id like ETH-01 is a training-only
+    stand-in from the table above and is labelled as fictional. Unknown ids are
+    dropped rather than invented, which is what stops a model from citing a
+    clause that does not exist.
+    """
+    from server.core import knowledge
+
+    cards: list[dict] = []
+    for clause_id in dict.fromkeys(clause_ids):
+        chunk = knowledge.get(clause_id)
+        if chunk is not None:
+            cards.append(
+                {
+                    "clause_id": chunk.id,
+                    "title": chunk.title,
+                    "text": chunk.excerpt(),
+                    "fictional": False,
+                    "source": chunk.source,
+                }
+            )
+            continue
+        stand_in = POLICY_CARDS.get(clause_id)
+        if stand_in is not None:
+            cards.append(stand_in)
+    return cards

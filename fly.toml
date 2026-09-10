@@ -31,6 +31,7 @@ primary_region = "fra"
   # to sit through repeatedly, so the demo runs Sonnet 5. Effort stays at the
   # code default; only the model changed.
   SKILLTOWN_MODEL = "claude-sonnet-5"
+  SKILLTOWN_REQUIRE_DENSE = "true"
 
 [http_service]
   internal_port = 8000
@@ -46,7 +47,7 @@ primary_region = "fra"
     timeout = "5s"
     grace_period = "15s"
     method = "GET"
-    path = "/health"
+    path = "/ready"
 
 [[mounts]]
   source = "skilltown_data"

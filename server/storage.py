@@ -169,7 +169,8 @@ class Store:
             db.execute("DELETE FROM sessions WHERE id = ?", (session_id,))
 
     def create_attempt(
-        self, session_id: str, scenario_id: str, scenario_version: str, mode: str, start_node_id: str
+        self, session_id: str, scenario_id: str, scenario_version: str, mode: str,
+        start_node_id: str, *, assisted: bool = False,
     ) -> dict[str, Any]:
         attempt_id = str(uuid4())
         timestamp = iso_now()
@@ -178,8 +179,8 @@ class Store:
                 """INSERT INTO attempts
                 (id, session_id, scenario_id, scenario_version, mode, status, revision,
                  assisted, current_node_id, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, 'in_progress', 0, 0, ?, ?, ?)""",
-                (attempt_id, session_id, scenario_id, scenario_version, mode, start_node_id, timestamp, timestamp),
+                VALUES (?, ?, ?, ?, ?, 'in_progress', 0, ?, ?, ?, ?)""",
+                (attempt_id, session_id, scenario_id, scenario_version, mode, int(assisted), start_node_id, timestamp, timestamp),
             )
         return self.get_attempt(session_id, attempt_id)
 
@@ -402,6 +403,21 @@ class Store:
             )
         return seconds
 
+    def coaching_candidates(self, session_id: str, skill_id: str) -> list[dict[str, Any]]:
+        """Recent non-coaching evidence, with the source content version attached."""
+        with self.connect() as db:
+            rows = db.execute(
+                """SELECT e.id AS evidence_id, e.scenario_id, e.node_id,
+                          e.observed_response, e.interpretation, e.created_at,
+                          a.scenario_version
+                   FROM evidence AS e
+                   JOIN attempts AS a ON a.id = e.attempt_id AND a.session_id = e.session_id
+                   WHERE e.session_id = ? AND e.skill_id = ? AND e.scenario_id <> 'ethics-review'
+                   ORDER BY e.created_at DESC, e.rowid DESC""",
+                (session_id, skill_id),
+            ).fetchall()
+        return [dict(row) for row in rows]
+
     def passport(self, session_id: str) -> tuple[list[dict[str, Any]], dict[str, int]]:
         with self.connect() as db:
             states = {
@@ -434,9 +450,9 @@ class Store:
             }
             evidence_by_skill.setdefault(item["skill_id"], []).append(item)
         labels = {
-            "clarify_context": "Gather the key context before judging",
-            "conflict_awareness": "Spot conflict-of-interest signals",
-            "communicate_boundary": "State the boundary, the reason and the next step",
+            "clarify_context": "Gather relevant facts",
+            "conflict_awareness": "Recognize risks and applicable conditions",
+            "communicate_boundary": "Explain the decision and next step",
         }
         skills = [
             {
