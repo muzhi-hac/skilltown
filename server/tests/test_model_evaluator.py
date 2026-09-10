@@ -166,3 +166,52 @@ def test_an_sdk_without_refusal_fallback_parameters_is_called_once():
     result = evaluator(StrictClient()).evaluate("clarify_context", "去就去吧。")
     assert result.mode == "ai"
     assert len(recorded) == 1
+
+
+def test_repeated_failures_stop_paying_for_a_dead_endpoint():
+    now = [1000.0]
+
+    def clock() -> float:
+        return now[0]
+
+    verdict = RubricVerdict(passed=False, feedback="先确认谁付款。", policy_clause_ids=["ETH-03"])
+
+    # A strict signature, like the installed SDK: one outcome consumed per call,
+    # with no betas/fallbacks retry in between.
+    class StrictMessages:
+        def __init__(self, outcomes):
+            self.outcomes = list(outcomes)
+            self.calls = []
+
+        def parse(self, *, model, max_tokens, system, messages, output_format, output_config):
+            self.calls.append(model)
+            outcome = self.outcomes.pop(0)
+            if isinstance(outcome, Exception):
+                raise outcome
+            return outcome
+
+    class StrictClient:
+        def __init__(self, *outcomes):
+            self.messages = StrictMessages(outcomes)
+
+    client = StrictClient(
+        BadRequestError("blocked"),
+        BadRequestError("blocked"),
+        BadRequestError("blocked"),
+        FakeResponse(verdict),
+    )
+    subject = ClaudeTextEvaluator(api_key="test", client=client, clock=clock)
+
+    for _ in range(3):
+        assert subject.evaluate("clarify_context", "去就去吧。").mode == "fallback"
+    calls_after_threshold = len(client.messages.calls)
+
+    # Inside the cooldown the endpoint is not called at all.
+    now[0] += 30
+    assert subject.evaluate("clarify_context", "去就去吧。").mode == "fallback"
+    assert len(client.messages.calls) == calls_after_threshold
+
+    # After the cooldown it tries again, and a success clears the breaker.
+    now[0] += 121
+    assert subject.evaluate("clarify_context", "去就去吧。").mode == "ai"
+    assert len(client.messages.calls) == calls_after_threshold + 1

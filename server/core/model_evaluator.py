@@ -20,6 +20,8 @@ import inspect
 import logging
 import os
 import re
+import time
+from collections.abc import Callable
 from dataclasses import dataclass
 
 from pydantic import BaseModel, Field
@@ -38,6 +40,11 @@ REFUSAL_FALLBACK_BETA = "server-side-fallback-2026-07-01"
 MAX_FEEDBACK_CHARS = 400
 # A short rubric check with a fixed schema does not need the default `high`.
 DEFAULT_EFFORT = "medium"
+# If the endpoint is refusing or unreachable, stop paying a failed round trip on
+# every answer: after this many consecutive failures, go straight to the
+# deterministic evaluator for a cooldown, then try once more.
+FAILURE_THRESHOLD = 3
+COOLDOWN_SECONDS = 120.0
 
 
 @dataclass(frozen=True)
@@ -109,11 +116,15 @@ class ClaudeTextEvaluator:
         effort: str = DEFAULT_EFFORT,
         auth_token: str | None = None,
         base_url: str | None = None,
+        clock: Callable[[], float] = time.monotonic,
     ) -> None:
         self._model = model
         self._timeout = timeout_seconds
         self._effort = effort
         self._fallback = fallback or FallbackTextEvaluator()
+        self._clock = clock
+        self._failures = 0
+        self._cooldown_until = 0.0
         if client is not None:
             self._client = client
         else:  # pragma: no cover - requires the anthropic package and a credential
@@ -142,14 +153,35 @@ class ClaudeTextEvaluator:
         if not allow_model:
             logger.info("model call budget exhausted; using fallback for %s", rule)
             return self._fallback.evaluate(rule, text)
+        if self._in_cooldown():
+            logger.info("model endpoint in cooldown; using fallback for %s", rule)
+            return self._fallback.evaluate(rule, text)
         try:
             verdict = self._ask(rubric, text)
         except Exception as exc:  # noqa: BLE001 - any failure must not blame the learner
             logger.warning("model evaluation unavailable (%s): %s", type(exc).__name__, exc)
+            self._record_failure()
             return self._fallback.evaluate(rule, text)
         if verdict is None:
+            self._record_failure()
             return self._fallback.evaluate(rule, text)
+        self._failures = 0
+        self._cooldown_until = 0.0
         return self._verified(rubric, rule, text, verdict)
+
+    def _in_cooldown(self) -> bool:
+        return self._clock() < self._cooldown_until
+
+    def _record_failure(self) -> None:
+        self._failures += 1
+        if self._failures >= FAILURE_THRESHOLD:
+            self._cooldown_until = self._clock() + COOLDOWN_SECONDS
+            self._failures = 0
+            logger.warning(
+                "model endpoint failed %d times in a row; falling back for %.0fs",
+                FAILURE_THRESHOLD,
+                COOLDOWN_SECONDS,
+            )
 
     def _ask(self, rubric: Rubric, text: str) -> RubricVerdict | None:
         prompt = self._prompt(rubric, text)
