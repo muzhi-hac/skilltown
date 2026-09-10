@@ -359,3 +359,54 @@ def test_town_marks_npcs_from_the_learners_own_record(tmp_path):
         assert marked["alex"] == "review"
         assert marked["sam"] == "review"
         assert marked["jo"] == "none"
+
+
+def test_api_labels_ai_feedback_and_falls_back_once_the_budget_is_spent(tmp_path, monkeypatch):
+    from uuid import uuid4 as _uuid
+
+    from server.core.evaluator import EvaluationResult
+
+    monkeypatch.setenv("SKILLTOWN_MODEL_CALL_BUDGET", "1")
+
+    class StubEvaluator:
+        def __init__(self):
+            self.allowed = []
+
+        def evaluate(self, rule, text, allow_model=True):
+            self.allowed.append(allow_model)
+            mode = "ai" if allow_model else "fallback"
+            return EvaluationResult(
+                passed=True,
+                interpretation="stub",
+                feedback="stub feedback",
+                policy_clause_ids=["ETH-03"],
+                mode=mode,
+            )
+
+    app = create_app(tmp_path / "test.sqlite3")
+    stub = StubEvaluator()
+    app.state.evaluator = stub
+    with TestClient(app) as client:
+        _, headers = session(client)
+
+        def answer(attempt):
+            return client.post(
+                f"/api/v1/attempts/{attempt['attempt_id']}/respond",
+                headers=headers,
+                json={
+                    "client_event_id": str(_uuid()),
+                    "expected_revision": attempt["revision"],
+                    "kind": "text",
+                    "text": "我先确认谁付款以及是否涉及续约审批，再决定是否参加。",
+                },
+            ).json()
+
+        first = answer(create_attempt(client, headers))
+        assert first["feedback_mode"] == "ai"
+        assert first["feedback"]["mode"] == "ai"
+
+        # The one allowed model call is spent, so the next answer is deterministic
+        # and says so instead of silently pretending to be AI feedback.
+        second = answer(create_attempt(client, headers))
+        assert second["feedback_mode"] == "fallback"
+        assert stub.allowed == [True, False]

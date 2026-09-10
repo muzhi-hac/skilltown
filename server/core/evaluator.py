@@ -24,7 +24,8 @@ def _contains_any(text: str, terms: tuple[str, ...]) -> bool:
 class FallbackTextEvaluator:
     """Auditable keyword-group fallback; never labelled as AI output."""
 
-    def evaluate(self, rule: str, text: str) -> EvaluationResult:
+    def evaluate(self, rule: str, text: str, allow_model: bool = True) -> EvaluationResult:
+        del allow_model  # deterministic path never calls a model
         if rule == "clarify_context":
             groups = [
                 _contains_any(text, ("谁付款", "谁买单", "付款方", "who pays", "paying")),

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import os
+import time
 from datetime import UTC, datetime
 from typing import Annotated
 from uuid import UUID, uuid4
@@ -183,7 +185,17 @@ def respond(
             from server.main import ApiError
 
             raise ApiError(400, "text_not_allowed", "Free text is not allowed at this node.")
-        evaluated = evaluator.evaluate(rule, body.text)
+        # A publicly shared demo needs a spend ceiling; over budget the answer is
+        # still evaluated, just deterministically and labelled as fallback.
+        budget = int(os.getenv("SKILLTOWN_MODEL_CALL_BUDGET", "40"))
+        started = time.monotonic()
+        evaluated = evaluator.evaluate(
+            rule, body.text, allow_model=store.model_calls(session["id"]) < budget
+        )
+        waited = time.monotonic() - started
+        if evaluated.mode == "ai":
+            store.record_model_call(session["id"])
+        store.add_model_wait(session["id"], str(attempt_id), waited)
         next_node_id = node["text_pass_node"] if evaluated.passed else node_id
         effect = "completed" if evaluated.passed and next_node_id.endswith("_complete") else "none"
         skill_id = rule

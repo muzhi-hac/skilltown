@@ -15,7 +15,7 @@ from fastapi.staticfiles import StaticFiles
 
 from server.api.models import ErrorDetail, ErrorEnvelope, HealthResponse
 from server.api.routes import router
-from server.core.evaluator import FallbackTextEvaluator
+from server.core.model_evaluator import build_evaluator
 from server.core.scenario_engine import ScenarioEngine, ScenarioError
 from server.core.session import AuthError
 from server.storage import (
@@ -54,7 +54,7 @@ def create_app(
     app = FastAPI(title="SkillTown Learning API", version="1.0.0")
     app.state.store = Store(database_path or os.getenv("DATABASE_PATH", "data/skilltown.sqlite3"))
     app.state.engine = ScenarioEngine()
-    app.state.evaluator = FallbackTextEvaluator()
+    app.state.evaluator = build_evaluator()
     app.add_middleware(
         CORSMiddleware,
         allow_origins=[origin for origin in os.getenv("CORS_ORIGINS", "http://localhost:8060").split(",") if origin],

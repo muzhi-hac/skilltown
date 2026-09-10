@@ -120,6 +120,11 @@ class Store:
                     updated_at TEXT NOT NULL,
                     PRIMARY KEY(session_id, skill_id)
                 );
+                CREATE TABLE IF NOT EXISTS model_calls (
+                    id TEXT PRIMARY KEY,
+                    session_id TEXT NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
+                    created_at TEXT NOT NULL
+                );
                 CREATE TABLE IF NOT EXISTS activity_events (
                     session_id TEXT NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
                     attempt_id TEXT NOT NULL REFERENCES attempts(id) ON DELETE CASCADE,
@@ -353,6 +358,30 @@ class Store:
                 (session_id, attempt_id, client_event_id, kind, iso_now()),
             )
         self.refresh_active_seconds(session_id, attempt_id)
+
+    def model_calls(self, session_id: str) -> int:
+        with self.connect() as db:
+            row = db.execute(
+                "SELECT COUNT(*) n FROM model_calls WHERE session_id = ?", (session_id,)
+            ).fetchone()
+        return int(row["n"])
+
+    def record_model_call(self, session_id: str) -> None:
+        with self.connect() as db:
+            db.execute(
+                "INSERT INTO model_calls VALUES (?, ?, ?)", (str(uuid4()), session_id, iso_now())
+            )
+
+    def add_model_wait(self, session_id: str, attempt_id: str, seconds: float) -> None:
+        """Waiting on a model is reported separately from active learning time."""
+        if seconds <= 0:
+            return
+        with self.connect() as db:
+            db.execute(
+                """UPDATE attempts SET model_wait_seconds = model_wait_seconds + ?, updated_at = ?
+                WHERE id = ? AND session_id = ?""",
+                (int(round(seconds)), iso_now(), attempt_id, session_id),
+            )
 
     def refresh_active_seconds(self, session_id: str, attempt_id: str) -> int:
         """Recompute the attempt's active time from its own activity events."""

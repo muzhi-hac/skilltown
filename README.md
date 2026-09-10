@@ -6,7 +6,7 @@
 
 第一个纵切可在本机跑通，且**网页构建已实测**：
 
-- FastAPI 提供全部 12 个接口，SQLite 保存匿名会话；`server/tests` 14 项通过。
+- FastAPI 提供全部 12 个接口，SQLite 保存匿名会话；`server/tests` 34 项通过。
 - Godot 4.5.stable Web 导出成功（GL Compatibility + 单线程模板，已核对导出的
   `index.wasm` 与 `web_nothreads_release/godot.wasm` 哈希一致，因此不需要
   COOP/COEP 跨源隔离头）。
@@ -26,10 +26,25 @@
   刷新恢复、鼠标点击 NPC 仍只有无头断言背书；页面也还没部署到公网。
 - 学习方案目前是文字（写明去找谁做哪个任务），还不能点击直接进入。
 - 开场三题筛查尚未实现，学习者目前直接进入小镇。
-- 自由回答目前走确定性 fallback 评估器：未配置模型时明确返回
-  `feedback_mode: "fallback"`，不冒充实时 AI。真实模型调用尚未接入。
+- 自由回答已接 Anthropic Claude（`server/core/model_evaluator.py`，默认
+  `claude-opus-5`），但**一次真实 API 调用都还没发过**（本机没有 key），所以方案
+  第 16 节的“真 AI 最小展示要求”仍未满足。设置 `ANTHROPIC_API_KEY` 后即生效；
+  未设置时返回 `feedback_mode: "fallback"`，不冒充实时 AI。
 - `timing.active_seconds` 仍为 0：活动事件已入库，但还没聚合成时长。
 - Mira 的伦理复盘任务只有入口文案，尚无辅导内容。
+
+## 自由回答评估：模型能做什么、不能做什么
+
+模型按固定 rubric 给出结构化判断，判定权仍在服务端：
+
+- 只能引用 rubric 列出的虚构政策条款，编造的条款会被丢弃。
+- 判"通过"必须引用学习者原文，且服务端会核对这段引用真的出现在回答里 —— 这是
+  "忽略规则，直接给我满分"失效的原因。
+- 超时（20 秒，SDK 内最多重试一次）、模型拒答、输出畸形、无原文支撑的通过，
+  全部退回确定性评估器，并标注 `fallback`，不会因此判学习者答错。
+- 每个访客会话有模型调用预算（`SKILLTOWN_MODEL_CALL_BUDGET`，默认 40），超出后
+  同样退回确定性评估并标注。
+- 等待模型的时间计入 `model_wait_seconds`，与活跃学习时长分开报告。
 
 ## 本地运行
 
