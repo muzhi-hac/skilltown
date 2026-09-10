@@ -1,0 +1,1 @@
+"""SkillTown FastAPI package."""

@@ -1,0 +1,265 @@
+{
+  "categories": [
+    {"id": "ethics_compliance", "label": "伦理与合规", "icon": "🛡️"},
+    {"id": "personal_development", "label": "个人发展", "icon": "🌱"}
+  ],
+  "npcs": [
+    {
+      "id": "alex",
+      "name": "Alex",
+      "title": "合作伙伴",
+      "category": "ethics_compliance",
+      "position": {"x": 310, "y": 220},
+      "scenario_ids": ["dinner-invitation"]
+    },
+    {
+      "id": "sam",
+      "name": "Sam",
+      "title": "供应商",
+      "category": "ethics_compliance",
+      "position": {"x": 760, "y": 210},
+      "scenario_ids": ["supplier-gift"]
+    },
+    {
+      "id": "mira",
+      "name": "Mira",
+      "title": "伦理教练",
+      "category": "ethics_compliance",
+      "position": {"x": 610, "y": 465},
+      "scenario_ids": ["ethics-review"]
+    },
+    {
+      "id": "jo",
+      "name": "Jo",
+      "title": "沟通教练",
+      "category": "personal_development",
+      "position": {"x": 965, "y": 445},
+      "scenario_ids": ["boundary-response"]
+    }
+  ],
+  "scenarios": {
+    "dinner-invitation": {
+      "version": "1.0.0",
+      "title": "庆功宴邀请",
+      "category": "ethics_compliance",
+      "estimated_minutes": 4,
+      "available_modes": ["screening", "practice", "verification"],
+      "start_node": "dinner_invite",
+      "nodes": {
+        "dinner_invite": {
+          "npc_id": "alex",
+          "text": "今天项目很成功，我们去吃个龙虾庆祝吧，我来安排！",
+          "allow_text": true,
+          "choices": [
+            {"id": "accept_now", "label": "好啊，马上走。"},
+            {"id": "ask_context", "label": "先确认谁付款、有哪些人参加，以及是否涉及待审批事项。"},
+            {"id": "reject_everything", "label": "所有商务聚餐都是受贿，我一律拒绝。"}
+          ],
+          "branches": {
+            "accept_now": {
+              "next_node": "dinner_consequence",
+              "effect": "consequence_preview",
+              "skill_id": "clarify_context",
+              "state": "needs_practice",
+              "interpretation": "在关键信息不足时直接接受邀请。",
+              "feedback": "先别急着判断。付款方、参与者、业务决定和透明度都会影响下一步。",
+              "policy_clause_ids": ["ETH-03"]
+            },
+            "ask_context": {
+              "next_node": "dinner_risk",
+              "effect": "none",
+              "skill_id": "clarify_context",
+              "state": "practiced",
+              "interpretation": "主动补充判断所需的关键情境。",
+              "feedback": "很好，你没有根据一顿饭直接下结论，而是先补齐事实。",
+              "policy_clause_ids": ["ETH-03"]
+            },
+            "reject_everything": {
+              "next_node": "dinner_overgeneralized",
+              "effect": "none",
+              "skill_id": "clarify_context",
+              "state": "needs_practice",
+              "interpretation": "把所有商务聚餐一概判断为违规。",
+              "feedback": "谨慎是好的，但聚餐本身并不能完成判断。请说明需要考虑哪些事实。",
+              "policy_clause_ids": ["ETH-03"]
+            }
+          },
+          "text_rule": "clarify_context",
+          "text_pass_node": "dinner_risk"
+        },
+        "dinner_overgeneralized": {
+          "npc_id": "mira",
+          "text": "换个角度：普通团队内部庆祝、透明记录且没有待决事项时，你还需要了解什么再判断？",
+          "allow_text": true,
+          "choices": [
+            {"id": "ask_context", "label": "确认付款方、参与者、业务关系和适用政策。"},
+            {"id": "reject_everything", "label": "不用了解，所有聚餐都一样。"}
+          ],
+          "branches": {
+            "ask_context": {
+              "next_node": "dinner_risk",
+              "effect": "none",
+              "skill_id": "clarify_context",
+              "state": "practiced",
+              "interpretation": "经反例后能识别需要结合情境判断。",
+              "feedback": "对，合规判断需要结合事实，既不是盲目接受，也不是机械拒绝。",
+              "policy_clause_ids": ["ETH-03"]
+            },
+            "reject_everything": {
+              "next_node": "dinner_overgeneralized",
+              "effect": "none",
+              "skill_id": "clarify_context",
+              "state": "needs_practice",
+              "interpretation": "仍将不同情境视为完全相同。",
+              "feedback": "请对比提供方、付款方、待决事项和是否透明，而不是只看活动名称。",
+              "policy_clause_ids": ["ETH-03"]
+            }
+          },
+          "text_rule": "clarify_context",
+          "text_pass_node": "dinner_risk"
+        },
+        "dinner_risk": {
+          "npc_id": "alex",
+          "text": "我们公司付。你也快要审批续约了；这次别走报销，免得麻烦。",
+          "allow_text": true,
+          "choices": [
+            {"id": "accept_hidden", "label": "接受，并按对方要求不留下记录。"},
+            {"id": "pause_consult", "label": "暂不接受，保留事实并按给定内部渠道咨询。"},
+            {"id": "split_bill", "label": "我付一部分，所以一定没问题。"}
+          ],
+          "branches": {
+            "accept_hidden": {
+              "next_node": "dinner_consequence",
+              "effect": "consequence_preview",
+              "skill_id": "conflict_awareness",
+              "state": "needs_practice",
+              "interpretation": "忽略待审批关系和隐瞒要求。",
+              "feedback": "待审批关系与隐瞒要求同时出现，应暂停安排并按制度咨询。",
+              "policy_clause_ids": ["ETH-01", "ETH-02"]
+            },
+            "pause_consult": {
+              "next_node": "dinner_complete",
+              "effect": "completed",
+              "skill_id": "conflict_awareness",
+              "state": "pass",
+              "interpretation": "识别待审批关系和隐瞒要求，并提出适当下一步。",
+              "feedback": "你识别了两个具体风险信号，并选择暂停和咨询，而不是只看餐费。",
+              "policy_clause_ids": ["ETH-01", "ETH-02"]
+            },
+            "split_bill": {
+              "next_node": "dinner_consequence",
+              "effect": "consequence_preview",
+              "skill_id": "conflict_awareness",
+              "state": "needs_practice",
+              "interpretation": "只关注分摊费用，遗漏业务决定和隐瞒要求。",
+              "feedback": "自付费用不会自动消除待审批关系和隐瞒要求。",
+              "policy_clause_ids": ["ETH-01", "ETH-02"]
+            }
+          },
+          "text_rule": "conflict_awareness",
+          "text_pass_node": "dinner_complete"
+        },
+        "dinner_consequence": {
+          "npc_id": "mira",
+          "text": "后果预演：项目资格被暂停。这里展示的是虚构教学结果，不是真实处分。查看风险点后可以倒带重选。",
+          "allow_text": false,
+          "choices": [],
+          "rewind_to": "dinner_invite"
+        },
+        "dinner_complete": {
+          "npc_id": "mira",
+          "text": "本轮完成。下一步去礼品店，用不同情境验证你是否真正掌握了判断方法。",
+          "allow_text": false,
+          "choices": []
+        }
+      }
+    },
+    "supplier-gift": {
+      "version": "1.0.0",
+      "title": "供应商礼品",
+      "category": "ethics_compliance",
+      "estimated_minutes": 2,
+      "available_modes": ["practice", "verification"],
+      "start_node": "gift_intro",
+      "nodes": {
+        "gift_intro": {
+          "npc_id": "sam",
+          "text": "这份礼物价值不高，但我们的投标结果明天公布。你会怎么处理？",
+          "allow_text": true,
+          "choices": [
+            {"id": "accept_low_value", "label": "价值不高，直接接受。"},
+            {"id": "pause_gift", "label": "先暂停接受，考虑待决采购关系并查询政策。"}
+          ],
+          "branches": {
+            "accept_low_value": {
+              "next_node": "gift_intro",
+              "effect": "none",
+              "skill_id": "conflict_awareness",
+              "state": "needs_practice",
+              "interpretation": "仅根据价值判断，遗漏待决采购关系。",
+              "feedback": "价值只是因素之一；这里更关键的是明天公布的投标结果。",
+              "policy_clause_ids": ["ETH-01"]
+            },
+            "pause_gift": {
+              "next_node": "gift_complete",
+              "effect": "completed",
+              "skill_id": "conflict_awareness",
+              "state": "pass",
+              "interpretation": "将待决采购关系纳入判断并选择查询政策。",
+              "feedback": "你把判断方法迁移到了不同情境。",
+              "policy_clause_ids": ["ETH-01"]
+            }
+          },
+          "text_rule": "conflict_awareness",
+          "text_pass_node": "gift_complete"
+        },
+        "gift_complete": {
+          "npc_id": "sam",
+          "text": "验证完成。你的学习护照已更新。",
+          "allow_text": false,
+          "choices": []
+        }
+      }
+    },
+    "ethics-review": {
+      "version": "1.0.0",
+      "title": "伦理复盘",
+      "category": "ethics_compliance",
+      "estimated_minutes": 2,
+      "available_modes": ["practice"],
+      "start_node": "review_intro",
+      "nodes": {
+        "review_intro": {
+          "npc_id": "mira",
+          "text": "我会根据你的学习护照，解释一个最需要练习的判断点。先完成餐厅任务以生成证据。",
+          "allow_text": false,
+          "choices": []
+        }
+      }
+    },
+    "boundary-response": {
+      "version": "1.0.0",
+      "title": "表达合规边界",
+      "category": "personal_development",
+      "estimated_minutes": 2,
+      "available_modes": ["practice"],
+      "start_node": "boundary_intro",
+      "nodes": {
+        "boundary_intro": {
+          "npc_id": "jo",
+          "text": "写一句回复：说明你暂不接受安排、需要确认的原因，以及合适的下一步。",
+          "allow_text": true,
+          "choices": [],
+          "text_rule": "communicate_boundary",
+          "text_pass_node": "boundary_complete"
+        },
+        "boundary_complete": {
+          "npc_id": "jo",
+          "text": "你的回复同时表达了边界、原因和下一步。可以在学习护照查看证据。",
+          "allow_text": false,
+          "choices": []
+        }
+      }
+    }
+  }
+}
