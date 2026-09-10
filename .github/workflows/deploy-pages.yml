@@ -2,11 +2,10 @@ name: deploy-pages
 
 # 页面（静态 Godot 构建）部署到 Cloudflare Pages。
 # 后端 /api/* 由 cloudflare/_worker.js 反代到 Pages 环境变量 API_ORIGIN。
+# 备选路径，只手动触发：Pages 单文件上限 25 MiB，而 index.wasm 是 36 MiB，
+# 所以直接部署会失败——要走这条路得先把大文件放到 R2 并由 worker 代理。
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths: ["godot/**", "cloudflare/**", ".github/workflows/deploy-pages.yml"]
 
 jobs:
   deploy:

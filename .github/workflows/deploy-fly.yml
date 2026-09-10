@@ -44,5 +44,19 @@ jobs:
       - run: flyctl deploy --remote-only
       - name: 线上冒烟
         run: |
+          set -euo pipefail
           app=$(awk -F'"' '/^app =/{print $2}' fly.toml)
-          python3 tools/smoke_api.py "https://$app.fly.dev"
+          url="https://$app.fly.dev"
+          # 部署返回后机器可能还在启动，先等 /health，再跑冒烟；否则会误报失败。
+          for i in $(seq 1 30); do
+            if curl -fsS --max-time 10 "$url/health" >/dev/null 2>&1; then
+              echo "健康检查通过（第 ${i} 次尝试）"
+              break
+            fi
+            if [ "$i" = 30 ]; then
+              echo "等待 $url/health 超时" >&2
+              exit 1
+            fi
+            sleep 5
+          done
+          python3 tools/smoke_api.py "$url"

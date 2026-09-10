@@ -4,6 +4,11 @@
 
 ## 当前状态
 
+**已部署：https://skilltown.fly.dev** （Fly.io，法兰克福单机 + 1GB 持久卷，页面与
+`/api/v1` 同源）。线上已验证：`tools/smoke_api.py` 对该 URL 全绿；真实 Chrome 打开
+后引擎启动、4 名 NPC 初始化、`POST /api/v1/session` 与 `GET /api/v1/town` 成功、
+新访客欢迎卡弹出。部署由 GitHub Actions 执行（`deploy-fly.yml`）。
+
 第一个纵切可在本机跑通，且**网页构建已实测**：
 
 - FastAPI 提供全部 12 个接口，SQLite 保存匿名会话；`server/tests` 34 项通过。
@@ -23,11 +28,8 @@
 
 尚未验证的部分（不要当成已完成）：
 
-- 尚未部署到公网：Fly.io 的配置（`fly.toml`、`Dockerfile`、`tools/deploy_fly.sh`、
-  `.github/workflows/deploy-fly.yml`）已就绪，但还没有执行过一次真实部署，也没有
-  验证过线上环境。见 [部署说明](docs/DEPLOY.md)。
-- **没有人工点过**：引擎启动与 API 调用已在无头 Chrome 里验证，但移动/E 键交互、窄屏、
-  刷新恢复、鼠标点击 NPC 仍只有无头断言背书；页面也还没部署到公网。
+- **没有人工点过**：引擎启动、API 调用和欢迎卡已在无头 Chrome（含线上环境）验证，
+  但移动/E 键交互、窄屏、刷新恢复、鼠标点击 NPC 仍只有无头断言背书。
 - 学习方案目前是文字（写明去找谁做哪个任务），还不能点击直接进入。
 - 开场三题筛查尚未实现，学习者目前直接进入小镇。
 - 自由回答已接 Anthropic Claude（`server/core/model_evaluator.py`，默认

@@ -23,6 +23,17 @@ DNS、CDN 和证书。
 免费额度内。仓库里仍保留 `cloudflare/_worker.js`，作为“页面放 Pages、API 放别处”的
 备选路径（见文末）。
 
+## 从哪里部署：优先用 CI
+
+`flyctl deploy` 会把构建上下文（含 36MB 的 `index.wasm`）上传到远端构建器。在上行
+不稳的网络上这一步会卡在 `[internal] load build context`，最后报
+`error releasing builder: deadline_exceeded` —— 这与 Fly 配置无关，实测
+`api.fly.io` 本身握手只要 26ms。
+
+所以**默认走 GitHub Actions**（`deploy-fly.yml`）：CI 里现场导出构建，再从 GitHub
+的网络推给 Fly，完全不经过你的上行。本机 `tools/deploy_fly.sh` 留作网络条件好时
+的快捷方式。
+
 ## 一次性设置
 
 ```bash
