@@ -11,7 +11,7 @@
 
 第一个纵切可在本机跑通，且**网页构建已实测**：
 
-- FastAPI 提供全部 12 个接口，SQLite 保存匿名会话；`server/tests` 34 项通过。
+- FastAPI 提供全部 12 个接口，SQLite 保存匿名会话；`server/tests` 39 项通过。
 - Godot 4.5.stable Web 导出成功（GL Compatibility + 单线程模板，已核对导出的
   `index.wasm` 与 `web_nothreads_release/godot.wasm` 哈希一致，因此不需要
   COOP/COEP 跨源隔离头）。
@@ -31,10 +31,10 @@
 - **没有人工点过**：引擎启动、API 调用和欢迎卡已在无头 Chrome（含线上环境）验证，
   但移动/E 键交互、窄屏、刷新恢复、鼠标点击 NPC 仍只有无头断言背书。
 - 自由回答已接 Anthropic Claude（`server/core/model_evaluator.py`，默认
-  `claude-opus-5`），但**线上仍是 fallback**：用 `tools/check_model.py` 对已配置的
-  兼容网关打过真实调用，连最小文本调用都返回 403（该网关不放行应用侧流量），而官方
-  `ANTHROPIC_API_KEY` 尚未配置。因此方案第 16 节的“真 AI 最小展示要求”仍未满足；
-  配上官方 key 后适配器无需改动即生效。
+  `claude-opus-5`），但**线上目前刻意使用 fallback**：已配置的兼容网关在 TLS 建连时
+  重置连接。`SKILLTOWN_MODEL_ENABLED=false` 会阻止每个回答等待失效网关；用
+  `tools/check_model.py` 验证一组可访问凭据后改为 `true`，适配器即进入真实 AI 模式。
+  因此方案第 16 节的“真 AI 最小展示要求”仍未满足。
 - 时长只统计活动事件之间的间隔（每段上限 30 秒，pause/end 关闭区间）。没有客户端
   心跳的会话，`active_seconds` 就是 0，这是设计如此，不是缺陷。
 - 单机部署没有高可用；每次部署有几秒不可用（单机单卷无法蓝绿）。
@@ -46,7 +46,7 @@
 - 只能引用 rubric 列出的虚构政策条款，编造的条款会被丢弃。
 - 判"通过"必须引用学习者原文，且服务端会核对这段引用真的出现在回答里 —— 这是
   "忽略规则，直接给我满分"失效的原因。
-- 超时（20 秒，SDK 内最多重试一次）、模型拒答、输出畸形、无原文支撑的通过，
+- 模型未启用、超时（20 秒，SDK 内最多重试一次）、模型拒答、输出畸形、无原文支撑的通过，
   全部退回确定性评估器，并标注 `fallback`，不会因此判学习者答错。
 - 每个访客会话有模型调用预算（`SKILLTOWN_MODEL_CALL_BUDGET`，默认 40），超出后
   同样退回确定性评估并标注。
@@ -62,8 +62,9 @@ set -a; . <你的环境变量文件>; set +a
 .venv/bin/python tools/check_model.py
 ```
 
-并非所有"Claude 兼容"网关都放行应用侧调用；有的只服务特定客户端，会对我们的请求
-返回 403。遇到这种情况就换官方 key，或接受自由回答走 fallback 并在演示中说明。
+并非所有"Claude 兼容"网关都允许应用侧 HTTPS 调用；本项目当前配置的端点在 TLS
+建立阶段断开。配置新端点后先运行探测脚本；探测成功再将
+`SKILLTOWN_MODEL_ENABLED=true` 写入部署环境。
 
 ## 本地运行
 
@@ -109,7 +110,7 @@ Godot 4.5（GDScript，Compatibility renderer，单线程 Web Export）/ FastAPI
 | A：@muzhi-hac | Godot Web、地图、交互、对话、结果、方案 UI、发布操作 | `godot/`，根部署文件 |
 | B：@Isso-W | FastAPI、剧情、政策、评估、记忆、推荐、会话隔离 | `server/`，API 模型维护 |
 
-请从 [Issues](https://github.com/muzhi-hac/skilltown/issues) 按 owner:A / owner:B / owner:joint 筛选任务。B 的仓库访问需先接受协作邀请。
+请从 [Issues](https://github.com/muzhi-hac/skilltown/issues) 按 owner:A / owner:B / owner:joint 筛选任务。两名协作者均已获得仓库写入权限。
 
 ## 协作文档
 
