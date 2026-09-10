@@ -18,8 +18,11 @@ const STATE_LABELS := {
 	"demonstrated": "Passed independently",
 }
 
+@onready var panel: Panel = $Panel
 @onready var npc_name_label: Label = $Panel/NPCName
 @onready var npc_title_label: Label = $Panel/NPCTitle
+@onready var task_label: Label = $Panel/TaskLabel
+@onready var progress_label: Label = $Panel/ProgressLabel
 @onready var dialogue_text: RichTextLabel = $Panel/DialogueText
 @onready var choice_container: VBoxContainer = $Panel/ChoiceContainer
 @onready var player_input: LineEdit = $Panel/PlayerInput
@@ -32,6 +35,9 @@ const STATE_LABELS := {
 
 var current_npc_name := ""
 var current_scenario_id := ""
+var current_task_title := ""
+var current_mode := ""
+var current_minutes := ""
 var attempt_id := ""
 var revision := 0
 var allow_text := false
@@ -43,6 +49,7 @@ var _heartbeat: Timer = null
 func _ready() -> void:
 	add_to_group("dialogue_system")
 	visible = false
+	_style_dialogue_panel()
 	send_button.pressed.connect(_on_send_pressed)
 	close_button.pressed.connect(_on_close_pressed)
 	hint_button.pressed.connect(_on_hint_pressed)
@@ -60,6 +67,26 @@ func _ready() -> void:
 	add_child(_heartbeat)
 	_reset_controls()
 	Config.log_info("对话 UI 初始化完成")
+
+func _style_dialogue_panel() -> void:
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0.04, 0.045, 0.055, 0.94)
+	style.border_color = Color(0.90, 0.74, 0.32, 0.9)
+	style.set_border_width_all(2)
+	style.set_corner_radius_all(10)
+	style.content_margin_left = 12
+	style.content_margin_right = 12
+	style.content_margin_top = 10
+	style.content_margin_bottom = 10
+	panel.add_theme_stylebox_override("panel", style)
+	npc_name_label.add_theme_color_override("font_color", Color(1, 1, 1, 1))
+	npc_title_label.add_theme_color_override("font_color", Color(0.78, 0.84, 0.90, 1))
+	dialogue_text.add_theme_color_override("default_color", Color(0.92, 0.94, 0.96, 1))
+	dialogue_text.add_theme_font_size_override("normal_font_size", 22)
+	player_input.add_theme_font_size_override("font_size", 20)
+	status_label.add_theme_font_size_override("font_size", 17)
+	for button in [send_button, close_button, hint_button, rewind_button, passport_button]:
+		button.add_theme_font_size_override("font_size", 18)
 
 # 对话框可见时拦截移动与交互按键，避免输入文字时角色跑动。
 func _input(event: InputEvent) -> void:
@@ -82,6 +109,9 @@ func _input(event: InputEvent) -> void:
 func start_dialogue(npc_name: String) -> void:
 	current_npc_name = npc_name
 	current_scenario_id = ""
+	current_task_title = ""
+	current_mode = ""
+	current_minutes = ""
 	attempt_id = ""
 	revision = 0
 	allow_text = false
@@ -123,13 +153,20 @@ func start_scenario(scenario_id: String, mode: String, title: String, minutes: S
 		_set_status("Task id is missing")
 		return
 	current_scenario_id = scenario_id
+	current_task_title = title if not title.is_empty() else scenario_id
+	current_mode = mode
+	current_minutes = minutes
 	attempt_id = ""
 	revision = 0
 	is_complete = false
 	allow_text = false
 	_clear_choices()
+	_set_task_summary(
+		"Current mission: %s · %s min · %s" % [current_task_title, current_minutes, _mode_label(current_mode)],
+		"Next action: loading the first decision point…",
+	)
 	_append_line("[color=gray]Task: %s · about %s min · mode %s[/color]" % [
-		title if not title.is_empty() else scenario_id,
+		current_task_title,
 		minutes,
 		mode,
 	])
@@ -145,6 +182,10 @@ func show_welcome(screening: Dictionary) -> void:
 	allow_text = false
 	npc_name_label.text = "SkillTown"
 	npc_title_label.text = "Compliance learning · Personal development"
+	_set_task_summary(
+		"Current mission: start with a quick skill check or explore the town",
+		"Progress: no evidence yet · Recommended route starts with 3 questions",
+	)
 	dialogue_text.clear()
 	_clear_choices()
 	_reset_controls()
@@ -222,6 +263,7 @@ func _on_attempt_received(payload: Dictionary) -> void:
 	is_complete = bool(payload.get("is_complete", false))
 	_track_activity()
 	_set_waiting(false, "")
+	_update_task_progress(payload)
 	_render_feedback(payload.get("feedback"))
 	_render_learning_updates(payload.get("learning_updates", []))
 	_render_node(payload.get("node"))
@@ -290,6 +332,7 @@ func _render_node(node) -> void:
 		allow_text = false
 		_update_text_input()
 		return
+	_update_node_next_action(node)
 	_append_line("[color=yellow]%s:[/color] %s" % [
 		npc_name_label.text,
 		str(node.get("text", "")),
@@ -319,7 +362,8 @@ func _add_choice_button(choice_id: String, label: String) -> void:
 	button.text = label
 	button.clip_text = true
 	button.alignment = HORIZONTAL_ALIGNMENT_LEFT
-	button.custom_minimum_size = Vector2(0, 32)
+	button.custom_minimum_size = Vector2(0, 50)
+	button.add_theme_font_size_override("font_size", 19)
 	button.set_meta("choice_id", choice_id)
 	button.disabled = waiting or is_complete
 	button.pressed.connect(_on_choice_pressed.bind(choice_id, label))
@@ -330,7 +374,8 @@ func _add_action_button(label: String, handler: Callable) -> void:
 	button.text = label
 	button.clip_text = true
 	button.alignment = HORIZONTAL_ALIGNMENT_LEFT
-	button.custom_minimum_size = Vector2(0, 32)
+	button.custom_minimum_size = Vector2(0, 50)
+	button.add_theme_font_size_override("font_size", 19)
 	button.pressed.connect(handler)
 	choice_container.add_child(button)
 
@@ -405,19 +450,28 @@ func _on_passport_received(payload: Dictionary) -> void:
 	_append_line("[color=gray]—— Learning Passport ——[/color]")
 	var skills = payload.get("skills", [])
 	if typeof(skills) == TYPE_ARRAY:
+		var completed_count := 0
+		var total_count := 0
 		for skill in skills:
 			if not skill is Dictionary:
 				continue
+			total_count += 1
 			var evidence = skill.get("evidence", [])
 			var count := 0
 			if typeof(evidence) == TYPE_ARRAY:
 				count = evidence.size()
 			var state := str(skill.get("state", "unseen"))
+			if state in ["practiced", "demonstrated"]:
+				completed_count += 1
 			_append_line("[color=gray]%s: %s (%d evidence)[/color]" % [
 				str(skill.get("label", skill.get("skill_id", ""))),
 				str(STATE_LABELS.get(state, state)),
 				count,
 			])
+		_set_task_summary(
+			"Current mission: review your learning passport",
+			"Progress: %d/%d skills practiced or demonstrated · next plan below" % [completed_count, total_count],
+		)
 	_append_line("[color=gray]Active time %d s, model wait %d s.[/color]" % [
 		int(payload.get("total_active_seconds", 0)),
 		int(payload.get("total_model_wait_seconds", 0)),
@@ -511,6 +565,82 @@ func _apply_effect(effect: String, feedback_mode: String) -> void:
 		if status.is_empty():
 			status = "Task complete, you can view the learning passport."
 	_set_status(status)
+
+func _mode_label(mode: String) -> String:
+	match mode:
+		"screening":
+			return "quick check"
+		"practice":
+			return "practice"
+		"challenge":
+			return "challenge"
+		_:
+			return mode
+
+func _category_label(category_id: String) -> String:
+	if category_id.is_empty():
+		return ""
+	return APIClient.category_label(category_id)
+
+func _screening_step(node_id: String) -> String:
+	match node_id:
+		"screen_clarify":
+			return "Question 1/3"
+		"screen_conflict":
+			return "Question 2/3"
+		"screen_boundary":
+			return "Question 3/3"
+		"screen_complete":
+			return "Screening complete"
+		_:
+			return "Screening"
+
+func _set_task_summary(title: String, progress: String) -> void:
+	task_label.text = title
+	progress_label.text = progress
+
+func _update_task_progress(payload: Dictionary) -> void:
+	var node = payload.get("node")
+	var category := ""
+	var node_id := ""
+	if typeof(node) == TYPE_DICTIONARY:
+		category = _category_label(str(node.get("category", "")))
+		node_id = str(node.get("id", ""))
+	var title := current_task_title if not current_task_title.is_empty() else APIClient.task_title(str(payload.get("scenario_id", current_scenario_id)))
+	var mission := "Current mission: %s" % title
+	if not category.is_empty():
+		mission += " · " + category
+	if not current_minutes.is_empty():
+		mission += " · %s min" % current_minutes
+	if is_complete:
+		_set_task_summary(mission, "Progress: complete · open Passport for verified skills and next task")
+	elif current_mode == "screening":
+		_set_task_summary(mission, "Progress: %s · answer to update your personal memory" % _screening_step(node_id))
+	else:
+		_set_task_summary(mission, "Progress: step %d · choose or type a response to create evidence" % (revision + 1))
+
+func _update_node_next_action(node: Dictionary) -> void:
+	if is_complete:
+		progress_label.text = "Progress: complete · open Passport for verified skills and next task"
+		return
+	var choices = node.get("choices", [])
+	var choice_count: int = choices.size() if typeof(choices) == TYPE_ARRAY else 0
+	var can_type := bool(node.get("allow_text", false))
+	var prefix := progress_label.text
+	var action := ""
+	if choice_count > 0 and can_type:
+		action = "Next action: pick one of %d choices, or write your own answer" % choice_count
+	elif choice_count > 0:
+		action = "Next action: pick the best of %d choices" % choice_count
+	elif can_type:
+		action = "Next action: write your answer in the input box"
+	else:
+		action = "Next action: read the feedback, then open Passport"
+	if current_mode == "screening":
+		var node_id := str(node.get("id", ""))
+		progress_label.text = "%s · %s" % [_screening_step(node_id), action]
+	else:
+		progress_label.text = "%s · %s" % [prefix, action]
 
 func _update_text_input() -> void:
 	player_input.editable = allow_text and not is_complete

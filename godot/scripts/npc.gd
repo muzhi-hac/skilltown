@@ -169,11 +169,36 @@ func refresh_label() -> void:
 		"recommended":
 			marker = " · Recommended"
 		"review":
-			marker = " · Review suggested"
-	var text := "%s (%s)\n%s%s" % [npc_name, npc_title, learning_category, marker]
+			marker = " · Review"
+	var category := _short_category(learning_category)
+	var text := "%s\n%s%s" % [npc_name, category, marker]
 	if not task_title.is_empty():
-		text += "\n%s · about %s min" % [task_title, task_minutes]
+		text += "\nTask: %s · %sm" % [_short_task_title(task_title), task_minutes]
 	name_label.text = text
+
+func _short_category(category: String) -> String:
+	match category:
+		"Ethics & Compliance":
+			return "Compliance"
+		"Personal Development":
+			return "Personal dev"
+		_:
+			return category
+
+func _short_task_title(title: String) -> String:
+	match title:
+		"Celebration Dinner Invitation":
+			return "Dinner invite"
+		"Supplier Gift":
+			return "Supplier gift"
+		"Ethics Review":
+			return "Ethics review"
+		"Setting a Compliance Boundary":
+			return "Boundary"
+		"Quick Skill Check":
+			return "Quick check"
+		_:
+			return title
 
 func get_npc_name() -> String:
 	return npc_name
