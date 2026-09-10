@@ -18,6 +18,7 @@ const BEAT_SECONDS := 0.9
 @onready var queue_label: Label = $RoomHUD/QueueLabel
 @onready var door_button: Button = $RoomHUD/DoorButton
 @onready var passport_button: Button = $RoomHUD/PassportButton
+@onready var clear_button: Button = $RoomHUD/ClearButton
 @onready var knock_sound: AudioStreamPlayer = $Knock
 
 var order: Array = []
@@ -30,6 +31,7 @@ var _screening: Dictionary = {}
 var _screening_pending := false
 var _visitor_checked := false
 var _reauth_attempted := false
+var _clear_armed := false
 
 func _ready() -> void:
 	Config.log_info("Room scene ready")
@@ -38,10 +40,12 @@ func _ready() -> void:
 		_dialogue.closed.connect(_on_lesson_closed)
 	door_button.pressed.connect(_on_door_pressed)
 	passport_button.pressed.connect(_on_passport_pressed)
+	clear_button.pressed.connect(_on_clear_pressed)
 	APIClient.session_created.connect(_on_session_created)
 	APIClient.town_received.connect(_on_town_received)
 	APIClient.passport_received.connect(_on_passport_received)
 	APIClient.api_error.connect(_on_api_error)
+	APIClient.session_deleted.connect(_on_session_deleted)
 	for npc in get_tree().get_nodes_in_group("npcs"):
 		npc.wander_enabled = false
 		npc.global_position = OFFSCREEN_POSITION
@@ -199,6 +203,47 @@ func _after_visit() -> void:
 	_set_status("Checking who should come next…", _waiting_line())
 	await get_tree().create_timer(BEAT_SECONDS).timeout
 	APIClient.get_town()
+
+# A guest must be able to delete their own record. Two clicks, because one
+# misclick would throw away every answer they gave.
+func _on_clear_pressed() -> void:
+	if not _clear_armed:
+		_clear_armed = true
+		clear_button.text = "Confirm"
+		_set_status(
+			"Clearing deletes every answer in this guest session.",
+			"Click Confirm within 5 seconds, or ignore this to keep your record."
+		)
+		await get_tree().create_timer(5.0).timeout
+		if _clear_armed:
+			_clear_armed = false
+			clear_button.text = "Clear record"
+			_knock_next()
+		return
+	_clear_armed = false
+	clear_button.text = "Clear record"
+	_reset_room()
+	_set_status("Clearing your record…", "")
+	APIClient.delete_session()
+
+func _on_session_deleted() -> void:
+	_visitor_checked = false
+	_screening_pending = false
+	_reauth_attempted = false
+	_set_status("Record cleared. Starting a fresh guest session…", "")
+	APIClient.create_session("Demo learner")
+
+func _reset_room() -> void:
+	busy = false
+	order = []
+	current = ""
+	door_button.disabled = true
+	if _dialogue != null and _dialogue.visible:
+		_dialogue.hide_dialogue()
+	for npc in get_tree().get_nodes_in_group("npcs"):
+		npc.global_position = OFFSCREEN_POSITION
+		if npc.has_method("set_present"):
+			npc.set_present(false)
 
 func _on_passport_pressed() -> void:
 	if _dialogue == null:

@@ -2,6 +2,7 @@
 extends Node
 
 signal session_created(payload: Dictionary)
+signal session_deleted
 signal town_received(payload: Dictionary)
 signal attempt_received(payload: Dictionary)
 signal hint_received(payload: Dictionary)
@@ -165,6 +166,7 @@ func _on_request_completed(result: int, response_code: int, _headers: PackedStri
 			town = {}
 			if FileAccess.file_exists(SESSION_FILE):
 				DirAccess.remove_absolute(SESSION_FILE)
+			session_deleted.emit()
 		"town":
 			town = payload
 			town_received.emit(payload)

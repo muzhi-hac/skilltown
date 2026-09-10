@@ -37,7 +37,11 @@ for tscn in (ROOT / "scenes").glob("*.tscn"):
 def members(path: Path):
     text = path.read_text(encoding="utf-8")
     funcs = {m.group(1): m.group(2) for m in re.finditer(r'^func (\w+)\(([^)]*)\)', text, re.M)}
-    sigs = {m.group(1): m.group(2) for m in re.finditer(r'^signal (\w+)\(([^)]*)\)', text, re.M)}
+    # A parameterless signal may be declared without parentheses; both are valid.
+    sigs = {
+        m.group(1): (m.group(2) or "")
+        for m in re.finditer(r'^signal (\w+)(?:\(([^)]*)\))?', text, re.M)
+    }
     names = set(funcs) | set(sigs)
     names |= set(re.findall(r'^(?:@onready )?var (\w+)', text, re.M))
     names |= set(re.findall(r'^const (\w+)', text, re.M))

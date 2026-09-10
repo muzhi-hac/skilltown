@@ -105,6 +105,29 @@ func _run() -> void:
 		marked.get(knocking, "") in ["review", "recommended"],
 		"%s -> %s" % [knocking, marked.get(knocking, "?")])
 
+	print("6) A guest can delete their own record")
+	var before: String = APIClient.session_token
+	room.clear_button.pressed.emit()
+	_check("clearing asks for confirmation first",
+		room.clear_button.text == "Confirm", room.clear_button.text)
+	_check("the warning says what will be deleted",
+		room.status_label.text.contains("deletes every answer"), room.status_label.text)
+	room.clear_button.pressed.emit()
+	await APIClient.session_deleted
+	var fresh := await _await_status("knocking", 20.0)
+	_check("a fresh guest session starts after clearing", fresh, room.status_label.text)
+	_check("the session token really changed", APIClient.session_token != before)
+	_check("the skill check is offered again to the fresh guest",
+		room.status_label.text.contains("skill check"), room.status_label.text)
+	var passport = await _fetch_passport()
+	var evidence_count := 0
+	for skill in passport.get("skills", []):
+		if skill is Dictionary:
+			var evidence = skill.get("evidence", [])
+			if typeof(evidence) == TYPE_ARRAY:
+				evidence_count += evidence.size()
+	_check("the new session carries no evidence", evidence_count == 0, str(evidence_count))
+
 	print("")
 	if failures.is_empty():
 		print("ROOM SMOKE OK — knock, let in, teach through the real API, leave, next knock")
@@ -114,6 +137,10 @@ func _run() -> void:
 		for item in failures:
 			print("  - ", item)
 		get_tree().quit(1)
+
+func _fetch_passport() -> Dictionary:
+	APIClient.get_passport()
+	return await APIClient.passport_received
 
 func _press(choice_id: String) -> void:
 	for child in _dialogue().choice_container.get_children():
