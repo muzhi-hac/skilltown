@@ -17,8 +17,15 @@ primary_region = "fra"
   WEB_DIR = "/app/godot/web"
   # 同源部署，CORS 不参与；留空避免误配。
   CORS_ORIGINS = ""
-  # 当前兼容网关不可连接；探测成功后改为 true，才允许真实模型评估。
-  SKILLTOWN_MODEL_ENABLED = "false"
+  # Real model evaluation is on. Verified 2026-09-10 with one live call through
+  # the configured gateway: a plain text call and the structured rubric call both
+  # returned 200, and the verdict quoted the learner's own words.
+  SKILLTOWN_MODEL_ENABLED = "true"
+  # That gateway refuses the SDK's default client identity and serves plain HTTP
+  # clients, so the operator sets the header explicitly. Unset it when moving to a
+  # first-party ANTHROPIC_API_KEY - it is not needed there, and this gateway's
+  # client policy can change at any time.
+  SKILLTOWN_MODEL_USER_AGENT = "curl/8.4.0"
 
 [http_service]
   internal_port = 8000

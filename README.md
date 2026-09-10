@@ -30,11 +30,13 @@
 
 - **没有人工点过**：引擎启动、API 调用和欢迎卡已在无头 Chrome（含线上环境）验证，
   但移动/E 键交互、窄屏、刷新恢复、鼠标点击 NPC 仍只有无头断言背书。
-- 自由回答已接 Anthropic Claude（`server/core/model_evaluator.py`，默认
-  `claude-opus-5`），但**线上目前刻意使用 fallback**：已配置的兼容网关在 TLS 建连时
-  重置连接。`SKILLTOWN_MODEL_ENABLED=false` 会阻止每个回答等待失效网关；用
-  `tools/check_model.py` 验证一组可访问凭据后改为 `true`，适配器即进入真实 AI 模式。
-  因此方案第 16 节的“真 AI 最小展示要求”仍未满足。
+- 自由回答走 Anthropic Claude（`server/core/model_evaluator.py`，默认
+  `claude-opus-5`），线上已启用（`fly.toml` 里 `SKILLTOWN_MODEL_ENABLED=true`）。
+  2026-09-10 实测：配置的兼容网关拒绝 SDK 默认客户端标识（403 `Your request was
+  blocked`，且无效 token 返回同样结果，说明拦在鉴权之前），但接受普通 HTTPS 客户端；
+  设置 `SKILLTOWN_MODEL_USER_AGENT` 后一次真实调用返回 200，结构化输出被接受，
+  判定引用了学习者原文并通过服务端核对。该网关的客户端策略可能随时变化，换官方
+  `ANTHROPIC_API_KEY` 时应删掉这个变量。
 - 时长只统计活动事件之间的间隔（每段上限 30 秒，pause/end 关闭区间）。没有客户端
   心跳的会话，`active_seconds` 就是 0，这是设计如此，不是缺陷。
 - 单机部署没有高可用；每次部署有几秒不可用（单机单卷无法蓝绿）。
@@ -62,16 +64,15 @@ set -a; . <你的环境变量文件>; set +a
 .venv/bin/python tools/check_model.py
 ```
 
-并非所有"Claude 兼容"网关都允许应用侧 HTTPS 调用；本项目当前配置的端点在 TLS
-建立阶段断开。配置新端点后先运行探测脚本；探测成功再将
-`SKILLTOWN_MODEL_ENABLED=true` 写入部署环境。
+并非所有"Claude 兼容"网关都放行 SDK 的默认客户端标识。配置新端点后先运行探测脚本；
+成功再把 `SKILLTOWN_MODEL_ENABLED=true` 写入部署环境（本项目已写在 `fly.toml`）。
 
 ## 本地运行
 
 ```bash
 python3 -m venv .venv
 .venv/bin/python -m pip install -r server/requirements.txt
-.venv/bin/python -m pytest server/tests -q                    # 34 passed
+.venv/bin/python -m pytest server/tests -q                    # 39 passed
 
 # 后端 + 已构建的网页（同源）
 .venv/bin/python -m uvicorn server.main:app --reload          # http://127.0.0.1:8000
