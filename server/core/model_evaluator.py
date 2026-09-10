@@ -16,7 +16,6 @@ Boundaries this adapter keeps, because the learning claim depends on them:
 
 from __future__ import annotations
 
-import inspect
 import logging
 import os
 import re
@@ -24,7 +23,7 @@ import time
 from collections.abc import Callable
 from dataclasses import dataclass
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ValidationError
 
 from server.core.evaluator import EvaluationResult, FallbackTextEvaluator
 
@@ -36,7 +35,6 @@ DEFAULT_TIMEOUT_SECONDS = 20.0
 # One retry only: a learner waiting on a second retry is worse than a clearly
 # labelled fixed response.
 MAX_RETRIES = 1
-REFUSAL_FALLBACK_BETA = "server-side-fallback-2026-07-01"
 MAX_FEEDBACK_CHARS = 400
 # A short rubric check with a fixed schema does not need the default `high`.
 DEFAULT_EFFORT = "medium"
@@ -163,7 +161,6 @@ class ClaudeTextEvaluator:
                 # identity, which is the right default for a first-party key.
                 options["default_headers"] = {"User-Agent": user_agent}
             self._client = anthropic.Anthropic(**options)
-        self._supports_refusal_fallback = _accepts_refusal_fallback(self._client)
 
     def evaluate(self, rule: str, text: str, allow_model: bool = True) -> EvaluationResult:
         rubric = RUBRICS.get(rule)
@@ -204,17 +201,24 @@ class ClaudeTextEvaluator:
             )
 
     def _ask(self, rubric: Rubric, text: str) -> RubricVerdict | None:
-        prompt = self._prompt(rubric, text)
-        request = {
-            "model": self._model,
-            "max_tokens": MAX_OUTPUT_TOKENS,
-            "system": SYSTEM_PROMPT,
-            "messages": [{"role": "user", "content": prompt}],
-            "output_format": RubricVerdict,
-            # The SDK merges this with the schema it derives from output_format.
-            "output_config": {"effort": self._effort},
-        }
-        response = self._parse_with_refusal_fallback(request)
+        """One call, then read the verdict ourselves.
+
+        The SDK's messages.parse would be tidier, but it json.loads the raw text
+        and hard-fails when an endpoint does not implement structured outputs
+        natively. Measured against the gateway in use: the verdict comes back
+        wrapped in a ```json fence, which is perfectly usable once unwrapped.
+        Reading it here keeps one code path that works on both.
+        """
+        response = self._client.messages.create(
+            model=self._model,
+            max_tokens=MAX_OUTPUT_TOKENS,
+            system=SYSTEM_PROMPT,
+            messages=[{"role": "user", "content": self._prompt(rubric, text)}],
+            output_config={
+                "effort": self._effort,
+                "format": {"type": "json_schema", "schema": _verdict_schema()},
+            },
+        )
         stop_reason = getattr(response, "stop_reason", None)
         if stop_reason == "refusal":
             logger.warning("model declined to evaluate; falling back")
@@ -224,30 +228,7 @@ class ClaudeTextEvaluator:
             # not something to show a learner as evaluated feedback.
             logger.warning("verdict hit the output cap; falling back")
             return None
-        verdict = getattr(response, "parsed_output", None)
-        return verdict if isinstance(verdict, RubricVerdict) else None
-
-    def _parse_with_refusal_fallback(self, request: dict):
-        """Ask with server-side refusal fallbacks, retrying once without them.
-
-        The fallback parameters are only accepted on some SDK/endpoint
-        combinations; if this SDK build rejects them we still want a verdict.
-        """
-        if not self._supports_refusal_fallback:
-            # This SDK build's messages.parse has no betas/fallbacks parameters, so
-            # a refusal is handled below by falling back to the deterministic rule.
-            return self._client.messages.parse(**request)
-        try:
-            return self._client.messages.parse(
-                **request, betas=[REFUSAL_FALLBACK_BETA], fallbacks="default"
-            )
-        except TypeError as exc:
-            logger.info("SDK rejected refusal-fallback parameters (%s); retrying plain", exc)
-        except Exception as exc:  # noqa: BLE001
-            if not _looks_like_bad_request(exc):
-                raise
-            logger.info("API rejected refusal-fallback parameters; retrying plain")
-        return self._client.messages.parse(**request)
+        return _verdict_from_response(response)
 
     def _prompt(self, rubric: Rubric, text: str) -> str:
         required = "\n".join(f"- {item}" for item in rubric.required)
@@ -298,20 +279,52 @@ class ClaudeTextEvaluator:
         return _normalise(cleaned) in _normalise(text)
 
 
-def _accepts_refusal_fallback(client: object) -> bool:
-    """Whether this client's messages.parse takes betas/fallbacks at all."""
+def _verdict_schema() -> dict:
+    """Strict JSON schema for the verdict, as the Messages API wants it."""
+    schema = RubricVerdict.model_json_schema()
+    schema["additionalProperties"] = False
+    schema["required"] = list(schema.get("properties", {}))
+    return schema
+
+
+def _response_text(response: object) -> str:
+    blocks = getattr(response, "content", None) or []
+    parts: list[str] = []
+    for block in blocks:
+        if getattr(block, "type", None) == "text":
+            parts.append(str(getattr(block, "text", "")))
+    return "\n".join(parts).strip()
+
+
+def _extract_json(text: str) -> str | None:
+    """Pull the JSON object out of a reply that may be fenced or prefaced."""
+    cleaned = text.strip()
+    fence = re.search(r"```(?:json)?\s*(.+?)```", cleaned, re.DOTALL)
+    if fence:
+        cleaned = fence.group(1).strip()
+    start = cleaned.find("{")
+    end = cleaned.rfind("}")
+    if start == -1 or end <= start:
+        return None
+    return cleaned[start : end + 1]
+
+
+def _verdict_from_response(response: object) -> RubricVerdict | None:
+    text = _response_text(response)
+    if not text:
+        logger.warning("model returned no text; falling back")
+        return None
+    payload = _extract_json(text)
+    if payload is None:
+        logger.warning("no JSON object in the model reply; falling back")
+        return None
     try:
-        parameters = inspect.signature(client.messages.parse).parameters
-    except (AttributeError, TypeError, ValueError):  # pragma: no cover - exotic clients
-        return False
-    if any(p.kind is inspect.Parameter.VAR_KEYWORD for p in parameters.values()):
-        return True
-    return "betas" in parameters and "fallbacks" in parameters
+        return RubricVerdict.model_validate_json(payload)
+    except ValidationError as exc:
+        logger.warning("verdict did not match the rubric schema: %s", exc)
+        return None
 
 
-def _looks_like_bad_request(exc: Exception) -> bool:
-    status = getattr(exc, "status_code", None)
-    return status == 400 or type(exc).__name__ in {"BadRequestError", "UnprocessableEntityError"}
 
 
 def build_evaluator() -> FallbackTextEvaluator | ClaudeTextEvaluator:

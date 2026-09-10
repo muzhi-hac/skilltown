@@ -18,7 +18,7 @@ def call(method, path, body=None, token=None, expect=200):
         req.add_header("Authorization", "Bearer " + token)
     data = json.dumps(body).encode() if body is not None else None
     try:
-        with urllib.request.urlopen(req, data, timeout=10) as r:
+        with urllib.request.urlopen(req, data, timeout=90) as r:
             code, text = r.status, r.read().decode()
     except urllib.error.HTTPError as e:
         code, text = e.code, e.read().decode()
