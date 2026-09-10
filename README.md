@@ -16,14 +16,14 @@
 
 ## 技术方向
 
-React + TypeScript + Phaser / Node + TypeScript / SQLite；同源网页与 API，模型密钥仅存服务端。
+Godot 4.5（GDScript，Compatibility renderer，单线程 Web Export）/ FastAPI + Pydantic / SQLite。Godot 构建产物与 `/api` 同源发布，模型密钥仅存服务端。
 
 ## 两人分工
 
 | 角色 | 负责 | 目录 |
 |---|---|---|
-| A：@muzhi-hac | 地图、交互、对话、结果、方案 UI、发布操作 | `web/`，根部署文件 |
-| B：@Isso-W | 剧情、政策、API、评估、记忆、推荐、会话隔离 | `server/`，`shared/` 契约维护 |
+| A：@muzhi-hac | Godot Web、地图、交互、对话、结果、方案 UI、发布操作 | `godot/`，根部署文件 |
+| B：@Isso-W | FastAPI、剧情、政策、评估、记忆、推荐、会话隔离 | `server/`，API 模型维护 |
 
 请从 [Issues](https://github.com/muzhi-hac/skilltown/issues) 按 owner:A / owner:B / owner:joint 筛选任务。B 的仓库访问需先接受协作邀请。
 
@@ -31,12 +31,13 @@ React + TypeScript + Phaser / Node + TypeScript / SQLite；同源网页与 API�
 
 - [完整实现方案](docs/superpowers/plans/2026-09-10-skilltown-implementation.md)
 - [分工与协作规则](docs/TEAM.md)
-- [接口约定草案](docs/API_CONTRACT.md)
+- [API 接口文档](docs/API_CONTRACT.md)
+- [OpenAPI 3.1 定义](docs/openapi.yaml)
 
 ## 开工顺序
 
-1. 共同冻结剧情、能力标签和接口字段。
-2. A 做网页骨架，B 做场景 API；第一个半天接通一次真实请求。
+1. A 先验证参考 Godot 工程能以 Compatibility renderer 导出 Web；共同冻结剧情、能力标签和接口字段。
+2. A 移植 Godot 小镇，B 做 FastAPI 场景 API；第一个半天接通一次真实请求。
 3. 第一天结束前在线跑通主线与一次真实 AI 回答。
 4. 第二天完成记忆与个人方案，最后半天只做测试、部署和路演。
 

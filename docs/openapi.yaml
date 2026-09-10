@@ -1,0 +1,629 @@
+openapi: 3.1.0
+info:
+  title: SkillTown Learning API
+  version: 1.0.0
+  description: >-
+    Godot Web and FastAPI contract for the SkillTown hackathon demo. Scenario
+    evidence describes performance in a fictional exercise, not real misconduct
+    or employment performance.
+servers:
+  - url: /
+    description: Same-origin deployment
+tags:
+  - name: System
+    description: Service readiness and version metadata.
+  - name: Session
+    description: Anonymous learner session lifecycle and data deletion.
+  - name: Town
+    description: NPC, category, task and learner-specific map metadata.
+  - name: Attempts
+    description: Scenario state, responses, hints, rewind and active-time events.
+  - name: Learning
+    description: Learner-visible evidence, skill projection and task recommendations.
+paths:
+  /health:
+    get:
+      summary: Check service readiness
+      tags: [System]
+      operationId: healthCheck
+      security: []
+      responses:
+        '200':
+          description: Service is ready.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/HealthResponse'}
+              example: {status: ok, version: 1.0.0}
+  /api/v1/session:
+    post:
+      summary: Create an anonymous learner session
+      tags: [Session]
+      operationId: createSession
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/CreateSessionRequest'}
+      responses:
+        '201':
+          description: Anonymous learning session created.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/CreateSessionResponse'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+    delete:
+      summary: Delete the current learner session
+      tags: [Session]
+      operationId: deleteSession
+      responses:
+        '204': {description: Session and associated learning records deleted.}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+  /api/v1/town:
+    get:
+      summary: Get the personalized town configuration
+      tags: [Town]
+      operationId: getTown
+      responses:
+        '200':
+          description: Town configuration with learner-specific task markers.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/TownResponse'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+  /api/v1/attempts:
+    post:
+      summary: Start a scenario attempt
+      tags: [Attempts]
+      operationId: createAttempt
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/CreateAttemptRequest'}
+      responses:
+        '201':
+          description: Attempt created with an immutable scenario version.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/AttemptResponse'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+  /api/v1/attempts/{attempt_id}:
+    parameters:
+      - {$ref: '#/components/parameters/AttemptId'}
+    get:
+      summary: Restore the current attempt state
+      tags: [Attempts]
+      operationId: getAttempt
+      responses:
+        '200':
+          description: Current authoritative attempt state.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/AttemptResponse'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+  /api/v1/attempts/{attempt_id}/respond:
+    parameters:
+      - {$ref: '#/components/parameters/AttemptId'}
+    post:
+      summary: Submit a choice or free-text answer
+      tags: [Attempts]
+      operationId: respondToAttempt
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - {$ref: '#/components/schemas/ChoiceResponseRequest'}
+                - {$ref: '#/components/schemas/TextResponseRequest'}
+              discriminator:
+                propertyName: kind
+                mapping:
+                  choice: '#/components/schemas/ChoiceResponseRequest'
+                  text: '#/components/schemas/TextResponseRequest'
+            examples:
+              choice:
+                value:
+                  client_event_id: 52135b80-985b-49ca-8fc5-b529d4e61cb8
+                  expected_revision: 0
+                  kind: choice
+                  choice_id: ask_context
+              text:
+                value:
+                  client_event_id: 5a020b27-1112-4b2d-aa9e-0c204bed6484
+                  expected_revision: 2
+                  kind: text
+                  text: 我会先暂停接受邀请，确认谁付款以及续约审批是否会受到影响。
+      responses:
+        '200':
+          description: Answer processed, with next node and learning updates.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/AttemptResponse'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+        '429': {$ref: '#/components/responses/RateLimited'}
+        '503': {$ref: '#/components/responses/AiUnavailable'}
+  /api/v1/attempts/{attempt_id}/hint:
+    parameters:
+      - {$ref: '#/components/parameters/AttemptId'}
+    post:
+      summary: Request a learning hint
+      tags: [Attempts]
+      operationId: requestHint
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/MutationRequest'}
+      responses:
+        '200':
+          description: Hint returned; attempt permanently marked assisted.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/HintResponse'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+  /api/v1/attempts/{attempt_id}/rewind:
+    parameters:
+      - {$ref: '#/components/parameters/AttemptId'}
+    post:
+      summary: Rewind after a consequence preview
+      tags: [Attempts]
+      operationId: rewindAttempt
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/MutationRequest'}
+      responses:
+        '200':
+          description: Attempt moved to the server-approved rewind node.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/AttemptResponse'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+  /api/v1/attempts/{attempt_id}/activity:
+    parameters:
+      - {$ref: '#/components/parameters/AttemptId'}
+    post:
+      summary: Record learner activity state
+      tags: [Attempts]
+      operationId: recordActivity
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/ActivityRequest'}
+      responses:
+        '204': {description: Activity event accepted; duplicate event IDs ignored.}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+  /api/v1/passport:
+    get:
+      summary: Get the learner's evidence passport
+      tags: [Learning]
+      operationId: getPassport
+      responses:
+        '200':
+          description: Learner-visible skill projection and evidence.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/PassportResponse'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+  /api/v1/recommendations:
+    post:
+      summary: Generate grounded learning recommendations
+      tags: [Learning]
+      operationId: generateRecommendations
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/RecommendationRequest'}
+      responses:
+        '200':
+          description: Existing tasks selected by rules with grounded explanations.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/RecommendationResponse'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '429': {$ref: '#/components/responses/RateLimited'}
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: opaque-session-token
+  parameters:
+    AttemptId:
+      name: attempt_id
+      in: path
+      required: true
+      schema: {type: string, format: uuid}
+  responses:
+    BadRequest:
+      description: Action is invalid for the current node.
+      content: {application/json: {schema: {$ref: '#/components/schemas/ErrorEnvelope'}}}
+    Unauthorized:
+      description: Session is missing or expired.
+      content: {application/json: {schema: {$ref: '#/components/schemas/ErrorEnvelope'}}}
+    NotFound:
+      description: Resource is absent or outside the current session.
+      content: {application/json: {schema: {$ref: '#/components/schemas/ErrorEnvelope'}}}
+    Conflict:
+      description: Revision or idempotency conflict.
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/ErrorEnvelope'}
+          example:
+            error:
+              code: revision_conflict
+              message: Attempt revision is stale.
+              request_id: req-8f49a7
+              retryable: true
+              latest_attempt_url: /api/v1/attempts/02dcc3ab-00b2-42e6-88ee-c519c07d1e65
+    ValidationError:
+      description: Request body failed schema validation.
+      content: {application/json: {schema: {$ref: '#/components/schemas/ErrorEnvelope'}}}
+    RateLimited:
+      description: Per-session request limit reached.
+      headers:
+        Retry-After:
+          description: Seconds before retry.
+          schema: {type: integer}
+      content: {application/json: {schema: {$ref: '#/components/schemas/ErrorEnvelope'}}}
+    AiUnavailable:
+      description: AI unavailable; no negative learning update was recorded.
+      content: {application/json: {schema: {$ref: '#/components/schemas/ErrorEnvelope'}}}
+  schemas:
+    HealthResponse:
+      type: object
+      additionalProperties: false
+      required: [status, version]
+      properties:
+        status: {type: string, const: ok}
+        version: {type: string}
+    CreateSessionRequest:
+      type: object
+      additionalProperties: false
+      required: [display_name]
+      properties:
+        display_name: {type: string, minLength: 1, maxLength: 40}
+    Session:
+      type: object
+      additionalProperties: false
+      required: [id, display_name, expires_at]
+      properties:
+        id: {type: string, format: uuid}
+        display_name: {type: string}
+        expires_at: {type: string, format: date-time}
+    CreateSessionResponse:
+      type: object
+      additionalProperties: false
+      required: [session_token, session]
+      properties:
+        session_token: {type: string, minLength: 32, writeOnly: true}
+        session: {$ref: '#/components/schemas/Session'}
+    LearningCategory:
+      type: string
+      enum: [ethics_compliance, personal_development]
+    NpcId:
+      type: string
+      enum: [alex, sam, mira, jo]
+    SkillId:
+      type: string
+      enum: [clarify_context, conflict_awareness, communicate_boundary]
+    LearningState:
+      type: string
+      enum: [unseen, needs_practice, practiced, demonstrated]
+    AttemptMode:
+      type: string
+      enum: [screening, practice, verification]
+    AttemptStatus:
+      type: string
+      enum: [in_progress, completed, abandoned]
+    Effect:
+      type: string
+      enum: [none, consequence_preview, rewind_available, completed]
+    FeedbackMode:
+      type: string
+      enum: [scripted, ai, fallback]
+    PolicyCard:
+      type: object
+      additionalProperties: false
+      required: [clause_id, title, text, fictional]
+      properties:
+        clause_id: {type: string}
+        title: {type: string}
+        text: {type: string}
+        fictional: {type: boolean, const: true}
+    Choice:
+      type: object
+      additionalProperties: false
+      required: [id, label]
+      properties:
+        id: {type: string, pattern: '^[a-z0-9_-]+$'}
+        label: {type: string, maxLength: 240}
+    ScenarioNode:
+      type: object
+      additionalProperties: false
+      required: [id, npc_id, category, text, choices, allow_text]
+      properties:
+        id: {type: string}
+        npc_id: {$ref: '#/components/schemas/NpcId'}
+        category: {$ref: '#/components/schemas/LearningCategory'}
+        text: {type: string, maxLength: 1200}
+        choices:
+          type: array
+          maxItems: 4
+          items: {$ref: '#/components/schemas/Choice'}
+        allow_text: {type: boolean}
+        policy_cards:
+          type: array
+          items: {$ref: '#/components/schemas/PolicyCard'}
+    TaskSummary:
+      type: object
+      additionalProperties: false
+      required: [scenario_id, title, category, estimated_minutes, available_modes]
+      properties:
+        scenario_id: {type: string}
+        title: {type: string}
+        category: {$ref: '#/components/schemas/LearningCategory'}
+        estimated_minutes: {type: integer, minimum: 1, maximum: 15}
+        available_modes:
+          type: array
+          uniqueItems: true
+          items: {$ref: '#/components/schemas/AttemptMode'}
+    TownNpc:
+      type: object
+      additionalProperties: false
+      required: [id, name, title, category, position, tasks, recommendation_state]
+      properties:
+        id: {$ref: '#/components/schemas/NpcId'}
+        name: {type: string}
+        title: {type: string}
+        category: {$ref: '#/components/schemas/LearningCategory'}
+        position:
+          type: object
+          additionalProperties: false
+          required: [x, y]
+          properties:
+            x: {type: number}
+            y: {type: number}
+        tasks:
+          type: array
+          items: {$ref: '#/components/schemas/TaskSummary'}
+        recommendation_state:
+          type: string
+          enum: [none, recommended, review]
+    TownResponse:
+      type: object
+      additionalProperties: false
+      required: [categories, npcs]
+      properties:
+        categories:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [id, label, icon]
+            properties:
+              id: {$ref: '#/components/schemas/LearningCategory'}
+              label: {type: string}
+              icon: {type: string}
+        npcs:
+          type: array
+          items: {$ref: '#/components/schemas/TownNpc'}
+    CreateAttemptRequest:
+      type: object
+      additionalProperties: false
+      required: [scenario_id, mode]
+      properties:
+        scenario_id: {type: string}
+        mode: {$ref: '#/components/schemas/AttemptMode'}
+    MutationRequest:
+      type: object
+      additionalProperties: false
+      required: [client_event_id, expected_revision]
+      properties:
+        client_event_id: {type: string, format: uuid}
+        expected_revision: {type: integer, minimum: 0}
+    ChoiceResponseRequest:
+      type: object
+      additionalProperties: false
+      required: [client_event_id, expected_revision, kind, choice_id]
+      properties:
+        client_event_id: {type: string, format: uuid}
+        expected_revision: {type: integer, minimum: 0}
+        kind: {type: string, const: choice}
+        choice_id: {type: string}
+    TextResponseRequest:
+      type: object
+      additionalProperties: false
+      required: [client_event_id, expected_revision, kind, text]
+      properties:
+        client_event_id: {type: string, format: uuid}
+        expected_revision: {type: integer, minimum: 0}
+        kind: {type: string, const: text}
+        text: {type: string, minLength: 1, maxLength: 1000}
+    Feedback:
+      type: object
+      additionalProperties: false
+      required: [title, message, mode, policy_clauses]
+      properties:
+        title: {type: string}
+        message: {type: string, maxLength: 1200}
+        mode: {$ref: '#/components/schemas/FeedbackMode'}
+        policy_clauses:
+          type: array
+          items: {$ref: '#/components/schemas/PolicyCard'}
+    LearningUpdate:
+      type: object
+      additionalProperties: false
+      required: [skill_id, state, evidence_id, assisted]
+      properties:
+        skill_id: {$ref: '#/components/schemas/SkillId'}
+        state: {$ref: '#/components/schemas/LearningState'}
+        evidence_id: {type: string, format: uuid}
+        assisted: {type: boolean}
+    Timing:
+      type: object
+      additionalProperties: false
+      required: [active_seconds, model_wait_seconds]
+      properties:
+        active_seconds: {type: integer, minimum: 0}
+        model_wait_seconds: {type: integer, minimum: 0}
+    AttemptResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - attempt_id
+        - scenario_id
+        - scenario_version
+        - mode
+        - status
+        - revision
+        - assisted
+        - node
+        - effect
+        - learning_updates
+        - is_complete
+        - feedback_mode
+        - timing
+      properties:
+        attempt_id: {type: string, format: uuid}
+        scenario_id: {type: string}
+        scenario_version: {type: string}
+        mode: {$ref: '#/components/schemas/AttemptMode'}
+        status: {$ref: '#/components/schemas/AttemptStatus'}
+        revision: {type: integer, minimum: 0}
+        assisted: {type: boolean}
+        node:
+          anyOf:
+            - {$ref: '#/components/schemas/ScenarioNode'}
+            - {type: 'null'}
+        feedback:
+          anyOf:
+            - {$ref: '#/components/schemas/Feedback'}
+            - {type: 'null'}
+        effect: {$ref: '#/components/schemas/Effect'}
+        learning_updates:
+          type: array
+          items: {$ref: '#/components/schemas/LearningUpdate'}
+        is_complete: {type: boolean}
+        feedback_mode: {$ref: '#/components/schemas/FeedbackMode'}
+        timing: {$ref: '#/components/schemas/Timing'}
+    HintResponse:
+      type: object
+      additionalProperties: false
+      required: [attempt_id, revision, assisted, hint, policy_card]
+      properties:
+        attempt_id: {type: string, format: uuid}
+        revision: {type: integer}
+        assisted: {type: boolean, const: true}
+        hint: {type: string}
+        policy_card: {$ref: '#/components/schemas/PolicyCard'}
+    ActivityRequest:
+      type: object
+      additionalProperties: false
+      required: [client_event_id, kind]
+      properties:
+        client_event_id: {type: string, format: uuid}
+        kind:
+          type: string
+          enum: [start, heartbeat, pause, resume, end]
+    Evidence:
+      type: object
+      additionalProperties: false
+      required: [id, skill_id, scenario_id, node_id, observed_response, policy_clause_ids, assisted, created_at]
+      properties:
+        id: {type: string, format: uuid}
+        skill_id: {$ref: '#/components/schemas/SkillId'}
+        scenario_id: {type: string}
+        node_id: {type: string}
+        observed_response: {type: string}
+        interpretation: {type: string}
+        policy_clause_ids:
+          type: array
+          items: {type: string}
+        assisted: {type: boolean}
+        created_at: {type: string, format: date-time}
+    SkillPassportEntry:
+      type: object
+      additionalProperties: false
+      required: [skill_id, label, state, evidence]
+      properties:
+        skill_id: {$ref: '#/components/schemas/SkillId'}
+        label: {type: string}
+        state: {$ref: '#/components/schemas/LearningState'}
+        evidence:
+          type: array
+          items: {$ref: '#/components/schemas/Evidence'}
+    PassportResponse:
+      type: object
+      additionalProperties: false
+      required: [skills, total_active_seconds, total_model_wait_seconds]
+      properties:
+        skills:
+          type: array
+          items: {$ref: '#/components/schemas/SkillPassportEntry'}
+        total_active_seconds: {type: integer, minimum: 0}
+        total_model_wait_seconds: {type: integer, minimum: 0}
+    RecommendationRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        max_items: {type: integer, minimum: 1, maximum: 3, default: 3}
+    Recommendation:
+      type: object
+      additionalProperties: false
+      required: [id, scenario_id, npc_id, skill_id, reason, evidence_ids]
+      properties:
+        id: {type: string, format: uuid}
+        scenario_id: {type: string}
+        npc_id: {$ref: '#/components/schemas/NpcId'}
+        skill_id: {$ref: '#/components/schemas/SkillId'}
+        reason: {type: string, maxLength: 500}
+        evidence_ids:
+          type: array
+          items: {type: string, format: uuid}
+    RecommendationResponse:
+      type: object
+      additionalProperties: false
+      required: [generated_at, items]
+      properties:
+        generated_at: {type: string, format: date-time}
+        items:
+          type: array
+          maxItems: 3
+          items: {$ref: '#/components/schemas/Recommendation'}
+    ErrorDetail:
+      type: object
+      additionalProperties: false
+      required: [code, message, request_id, retryable]
+      properties:
+        code: {type: string}
+        message: {type: string}
+        request_id: {type: string}
+        retryable: {type: boolean}
+        latest_attempt_url: {type: string}
+    ErrorEnvelope:
+      type: object
+      additionalProperties: false
+      required: [error]
+      properties:
+        error: {$ref: '#/components/schemas/ErrorDetail'}
+security:
+  - bearerAuth: []

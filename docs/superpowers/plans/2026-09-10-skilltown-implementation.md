@@ -1,12 +1,12 @@
-# SkillTown 实现方案 v0.3：两人 × 两天的 AI 教育网页 Demo
+# SkillTown 实现方案 v0.4：Godot Web × FastAPI 两人两天 Demo
 
-仓库落点：当前工作区即仓库根目录，实施时直接建立 web/、server/、shared/，不再嵌套 skilltown/。
+仓库落点：当前工作区即仓库根目录，实施时直接建立 godot/ 与 server/，接口契约位于 docs/openapi.yaml。
 
-状态：待审核；v0.3 在保留 v0.2 产品范围的基础上，确定两人职责、接口契约、16 小时双人排期和交付门槛。本轮仅更新计划，未开始应用开发。
+状态：待审核；v0.4 将技术路线改为 Godot Web + FastAPI，并用 docs/openapi.yaml 固定接口。当前机器未安装 Godot，所以 Web Export 属于第一项技术验证，尚未宣称运行成功。
 
 ## 1. 最新范围
 
-- 两天交付可访问的网页，不使用 Godot 桌面客户端作为交付物。
+- 两天交付可访问的网页；复用参考 Godot 小镇并导出 Web，而不是交付桌面客户端。
 - 合规培训为主要学习路径；明显区分“伦理与合规”“个人发展”。
 - 点击 NPC 直接开启任务，或 WASD/方向键移动、靠近后按 E；输入框聚焦时暂停移动快捷键。
 - 员工通过 NPC 选择题、追问和短回答接受训练。
@@ -109,36 +109,40 @@ Alex：我们公司付，你也快要审批续约了；别走报销，免得麻�
 
 ## 8. 实现路线
 
-采用 React + TypeScript + Phaser 网页、一个轻量 Node 服务端、SQLite 持久会话。Phaser 只负责地图、角色与输入；React 负责对话、选择、学习护照和方案，便于键盘访问和快速修改。
+采用 Godot 4.5 + GDScript 作为员工网页客户端，FastAPI + Pydantic 作为后端，SQLite 保存匿名会话。复用参考项目的地图、移动、NPC 交互、HTTPRequest 和 FastAPI 组织方式；训练状态、会话隔离、评估和学习记忆按本方案新增。
 
-浏览器 → 同源 /api → 会话验证 → 场景引擎 → 模型适配 → 证据/记忆存储。
+浏览器中的 Godot Web → 同源 `/api/v1` → Bearer 会话 → 场景引擎 → AI 适配 → 证据/记忆存储。
 
-- 不迁移原 Godot 脚本；借鉴参考项目的视觉交互与 NPC 思路。
-- 模型密钥只在服务端环境变量。每次消息长度限制、每会话调用预算与速率限制。
-- 游客身份为服务端签发的随机会话；前端不能通过 employee_id 读取别人的记忆。
-- 浏览器可缓存 UI 位置，正式证据由服务端产生；不做 supervisor API。
-- 合规规则和分支使用预审 JSON，模型只在受限范围内追问、解释和生成建议。
-- 静态前端与 API 同源部署；SQLite 使用持久卷。如果部署目标无持久磁盘，在第 0–3 小时换成持久数据库再继续，不到最后才处理。
-- 上线所需宿主、域名与模型配额在第一时段确认；优先第 1 天发布可访问骨架。
-- 模型超时最多一次重试，随后展示预审知识卡并明确当前为固定反馈；自由回答不伪造 AI 评分。
+- 第一项任务是把参考工程切换为 Compatibility renderer，并验证 Godot 4.5 单线程 Web Export；若两小时技术验证通过，就继续 Godot 路线。
+- Godot 负责地图、点击/WASD/E、Control UI、后果预演、护照和推荐展示；它不保存隐藏答案或判定能力状态。
+- FastAPI 负责访客身份、剧情状态、幂等、选择题判定、自由回答评估、能力投影和推荐。
+- 模型密钥只在 FastAPI 环境变量；每次消息限长，每会话有调用预算和速率限制。
+- 使用服务端签发的短期 Bearer token；客户端不通过 employee_id 选择数据。
+- 合规规则和分支来自预审 JSON，模型只在受限知识范围内追问、解释和组织推荐理由。
+- Godot Web 静态构建与 `/api` 同源部署，SQLite 使用持久卷；尽早确认宿主是否支持 WASM、正确 MIME 和持久存储。
+- 模型超时最多一次重试，随后展示明确标注的固定反馈，保持学习状态不变。
 
-Phaser 输入文档：https://docs.phaser.io/phaser/concepts/input
-参考项目：https://github.com/datawhalechina/hello-agents/tree/main/code/chapter15/Helloagents-AI-Town
-参考项目 README 标注 CC BY-NC-SA 4.0；直接使用素材前检查许可。首版优先自绘/已获许可素材，不把比赛场景自动等同于满足许可条件。
+参考：
+- Godot Web Export：https://docs.godotengine.org/en/4.5/tutorials/export/exporting_for_web.html
+- Godot HTTPRequest：https://docs.godotengine.org/en/stable/tutorials/networking/http_request_class.html
+- 参考项目：https://github.com/datawhalechina/hello-agents/tree/main/code/chapter15/Helloagents-AI-Town
 
-## 9. 最小接口和模块
+参考项目 README 标注 CC BY-NC-SA 4.0；直接采用代码或素材前记录来源并检查比赛展示与后续商业使用范围。
 
-接口：
-- POST /api/session：创建游客会话。
-- GET /api/town：分类、NPC、场景摘要和个人推荐标记。
-- POST /api/attempts：开始指定场景，固定版本。
-- POST /api/attempts/:id/respond：choice_id 或 text、幂等事件 ID；返回下一节点/反馈/证据变化。
-- POST /api/attempts/:id/hint：记录帮助并返回相关知识卡。
-- GET /api/passport：个人能力摘要、证据、时长。
-- POST /api/recommendations：根据已验证记录生成可点击学习方案。
-- DELETE /api/session：清除该会话记录并退出。
+## 9. API 与模块
 
-模块：TownScene、DialoguePanel、LearningPassport、LearningPlan；服务端 ScenarioEngine、AnswerEvaluator、MemoryStore、RecommendationService、SessionGuard。不新增多智能体调度平台或向量库。
+完整、机器可读接口位于 `docs/openapi.yaml`；人类可读约定和 Godot 示例位于 `docs/API_CONTRACT.md`。核心路由为：
+
+- `POST /api/v1/session`、`DELETE /api/v1/session`：匿名会话生命周期。
+- `GET /api/v1/town`：分类、NPC、任务和推荐标记。
+- `POST /api/v1/attempts`、`GET /api/v1/attempts/{id}`：开始与恢复任务。
+- `POST /api/v1/attempts/{id}/respond`：选择或自由回答，带 revision 和幂等事件 ID。
+- `POST /api/v1/attempts/{id}/hint`、`/rewind`、`/activity`：提示、倒带和可靠时长。
+- `GET /api/v1/passport`、`POST /api/v1/recommendations`：个人证据和学习方案。
+
+Godot 模块：`TrainingState`、`ApiClient`、`SessionStore`、`TownController`、`DialoguePanel`、`ConsequencePanel`、`LearningPassport`、`LearningPlan`。
+
+FastAPI 模块：`routes`、`models`、`ScenarioEngine`、`AnswerEvaluator`、`MemoryStore`、`RecommendationService`、`SessionGuard`。不引入微服务、向量库或自治 Agent 调度。
 
 ## 10. 两人、两天交付计划
 
@@ -147,7 +151,7 @@ Phaser 输入文档：https://docs.phaser.io/phaser/concepts/input
 | 时段 | A：体验、游戏与发布操作 | B：内容、AI、状态与数据 | 联合交付门槛 |
 |---|---|---|---|
 | Day 1 0–1h | 定布局、颜色、角色、页面流程 | 定能力标签、主线分支、模拟政策 | 共同冻结场景 ID、API 字段和删减清单 |
-| Day 1 1–3h | React/Phaser 骨架、NPC 点击、分类标签；部署静态页 | Node API、游客会话、SQLite、返回真实场景 JSON；部署 health | 一个公网域名能打开页面和请求 API |
+| Day 1 1–3h | 导入参考工程、Compatibility renderer、单线程 Web Export、NPC 点击与分类 | FastAPI、游客会话、SQLite、返回真实场景 JSON；部署 health | Godot 网页可打开并成功请求 `/health` |
 | Day 1 3–5h | 对话框、选项、输入框、提示/倒带按钮；先接真实 API | 场景引擎、主线分支、事件幂等、证据记录 | 联调：一次选择真实保存，下一节点真实返回 |
 | Day 1 5–7h | WASD/E、输入焦点隔离、后果预演、轻量动画 | 接一个真实模型调用，固定 rubric 评短回答并给反馈 | 同一网页至少跑通一次真实 AI 回答 |
 | Day 1 7–8h | 修主线 UI 和部署问题 | 修状态、超时、证据问题 | 在线跑通“筛查→主线→反馈→结果”的基础闭环 |
@@ -181,52 +185,54 @@ Phaser 输入文档：https://docs.phaser.io/phaser/concepts/input
 
 ## 13. 分工、文件归属和协作
 
-### A：前端体验负责人 + 发布操作负责人
+### A：Godot Web 体验负责人 + 发布操作负责人
 
-交付：地图、分类、四 NPC、点击/WASD/E、对话选择与输入、后果预演、学习护照、推荐方案、公网页面。
+交付：参考工程导入与许可记录、Web Export、地图、四 NPC、点击/WASD/E、对话选择与输入、后果预演、学习护照、推荐方案、公网页面。
 
 文件归属（计划路径，尚未创建）：
-- /Users/wang/Documents/ChatGPT/AI hacthon/web/src/game/TownScene.ts
-- /Users/wang/Documents/ChatGPT/AI hacthon/web/src/components/DialoguePanel.tsx
-- /Users/wang/Documents/ChatGPT/AI hacthon/web/src/components/ConsequenceOverlay.tsx
-- /Users/wang/Documents/ChatGPT/AI hacthon/web/src/components/LearningPassport.tsx
-- /Users/wang/Documents/ChatGPT/AI hacthon/web/src/components/LearningPlan.tsx
-- /Users/wang/Documents/ChatGPT/AI hacthon/web/src/api.ts
-- /Users/wang/Documents/ChatGPT/AI hacthon/web/src/styles.css
-- /Users/wang/Documents/ChatGPT/AI hacthon/web/public/assets/
-- /Users/wang/Documents/ChatGPT/AI hacthon/web/tests/e2e.spec.ts
-- /Users/wang/Documents/ChatGPT/AI hacthon/Dockerfile
-- /Users/wang/Documents/ChatGPT/AI hacthon/README.md
+- `/Users/wang/Documents/ChatGPT/AI hacthon/godot/project.godot`
+- `/Users/wang/Documents/ChatGPT/AI hacthon/godot/export_presets.cfg`
+- `/Users/wang/Documents/ChatGPT/AI hacthon/godot/scripts/api_client.gd`
+- `/Users/wang/Documents/ChatGPT/AI hacthon/godot/scripts/session_store.gd`
+- `/Users/wang/Documents/ChatGPT/AI hacthon/godot/scripts/training_state.gd`
+- `/Users/wang/Documents/ChatGPT/AI hacthon/godot/scripts/town_controller.gd`
+- `/Users/wang/Documents/ChatGPT/AI hacthon/godot/scripts/ui/dialogue_panel.gd`
+- `/Users/wang/Documents/ChatGPT/AI hacthon/godot/scripts/ui/consequence_panel.gd`
+- `/Users/wang/Documents/ChatGPT/AI hacthon/godot/scripts/ui/learning_passport.gd`
+- `/Users/wang/Documents/ChatGPT/AI hacthon/godot/scripts/ui/learning_plan.gd`
+- `/Users/wang/Documents/ChatGPT/AI hacthon/godot/scenes/training_hud.tscn`
+- `/Users/wang/Documents/ChatGPT/AI hacthon/godot/web/`（生成物，不手工编辑）
+- `/Users/wang/Documents/ChatGPT/AI hacthon/Dockerfile`
+- `/Users/wang/Documents/ChatGPT/AI hacthon/README.md`
 
-A 不在 UI 中实现“正确答案→能力升级”的逻辑，UI 只渲染服务端返回。搭建期间可使用同契约 fixture，但界面应显示“开发模拟”，正式 Demo 使用真实 API。
+A 不在 GDScript 中实现“正确答案→能力升级”。搭建期间可以读取契约 fixture，但正式 Demo 使用真实 FastAPI。
 
-### B：AI/后端负责人 + 学习内容负责人
+### B：FastAPI / AI 负责人 + 学习内容负责人
 
-交付：预审剧情和政策、服务端会话、场景引擎、模型输出校验、记忆、个性化方案、持久化及失败回退。
+交付：预审剧情和政策、服务端会话、场景引擎、Pydantic 输入输出、模型结果校验、记忆、个性化方案、SQLite 及失败回退。
 
 文件归属：
-- /Users/wang/Documents/ChatGPT/AI hacthon/server/src/index.ts
-- /Users/wang/Documents/ChatGPT/AI hacthon/server/src/session.ts
-- /Users/wang/Documents/ChatGPT/AI hacthon/server/src/scenario-engine.ts
-- /Users/wang/Documents/ChatGPT/AI hacthon/server/src/evaluator.ts
-- /Users/wang/Documents/ChatGPT/AI hacthon/server/src/memory-store.ts
-- /Users/wang/Documents/ChatGPT/AI hacthon/server/src/recommendations.ts
-- /Users/wang/Documents/ChatGPT/AI hacthon/server/src/db.ts
-- /Users/wang/Documents/ChatGPT/AI hacthon/server/content/scenarios.json
-- /Users/wang/Documents/ChatGPT/AI hacthon/server/content/demo-policy.md
-- /Users/wang/Documents/ChatGPT/AI hacthon/server/tests/engine.test.ts
-- /Users/wang/Documents/ChatGPT/AI hacthon/server/tests/evaluator.test.ts
-- /Users/wang/Documents/ChatGPT/AI hacthon/server/tests/session.test.ts
+- `/Users/wang/Documents/ChatGPT/AI hacthon/server/main.py`
+- `/Users/wang/Documents/ChatGPT/AI hacthon/server/api/models.py`
+- `/Users/wang/Documents/ChatGPT/AI hacthon/server/api/routes.py`
+- `/Users/wang/Documents/ChatGPT/AI hacthon/server/core/scenario_engine.py`
+- `/Users/wang/Documents/ChatGPT/AI hacthon/server/core/evaluator.py`
+- `/Users/wang/Documents/ChatGPT/AI hacthon/server/core/memory.py`
+- `/Users/wang/Documents/ChatGPT/AI hacthon/server/core/recommendations.py`
+- `/Users/wang/Documents/ChatGPT/AI hacthon/server/core/session.py`
+- `/Users/wang/Documents/ChatGPT/AI hacthon/server/storage.py`
+- `/Users/wang/Documents/ChatGPT/AI hacthon/server/content/scenarios.json`
+- `/Users/wang/Documents/ChatGPT/AI hacthon/server/content/demo_policy.md`
+- `/Users/wang/Documents/ChatGPT/AI hacthon/server/tests/`
+- `/Users/wang/Documents/ChatGPT/AI hacthon/docs/openapi.yaml`
 
-B 使用一个模型服务，不引入 HelloAgents 运行时、向量数据库或自治 Agent 调度框架，借鉴参考项目的角色与记忆设计即可。Node/TypeScript 与前端统一语言，Express 为薄 HTTP 层、Zod 校验输入和模型输出、SQLite 存储；包版本在首小时实测锁定。
+B 使用一个模型服务，不引入向量库或自治 Agent 调度。FastAPI 生成的 OpenAPI 与 `docs/openapi.yaml` 做契约测试；依赖版本在首小时实测锁定。
 
 ### 共享边界
 
-B 负责契约初稿，A 评审；契约定稿后 B 单点修改并通知 A：
-- /Users/wang/Documents/ChatGPT/AI hacthon/shared/contracts.ts
-- /Users/wang/Documents/ChatGPT/AI hacthon/shared/fixtures.json
+B 维护 `docs/openapi.yaml` 和对应 Pydantic 模型，A 依据契约实现 GDScript 客户端。字段、枚举或错误码变动必须修改 OpenAPI，并在 PR 中通知 A。NPC 与任务 ID 统一由 `GET /api/v1/town` 下发。
 
-A 负责根构建/部署文件，B 提供服务端启动命令、端口、数据库路径和环境变量清单。第一小时确定后双方避免同时改同一文件。A 分支 codex/web-experience；B 分支 codex/learning-engine；建议各自 checkout，不共享正在切换的工作目录。每 2–3 小时集成一次，不等第二天下午才合并。
+A 负责 Godot Web 构建和根部署文件；B 提供 FastAPI 启动命令、端口、数据库路径与环境变量清单。A 分支 `codex/web-experience`，B 分支 `codex/learning-engine`。每 2–3 小时集成一次。
 
 ## 14. 内容预算：有深度的一条主线，而非大题库
 
@@ -295,11 +301,11 @@ B 写内容，A 在第一天首小时和发布前做逻辑复核。虚构政策�
 
 ## 16. 部署与真正的 Demo 边界
 
-推荐单服务同源部署：A 构建 React 静态文件，Node 提供静态页和 /api，HTTPS 由宿主处理，SQLite 挂载持久目录。模型密钥只在服务端注入。B 在首小时列出 API_KEY、MODEL、BASE_URL、DATABASE_PATH 和 SESSION_SECRET，提供 .env.example 但不填真实秘密。
+推荐同源部署：A 生成 Godot Web 静态文件，反向代理或 FastAPI 静态挂载提供网页与 `/api/v1`；HTTPS 由宿主处理，SQLite 挂载持久目录。模型密钥只在服务端注入。B 在首小时列出 API_KEY、MODEL、BASE_URL、DATABASE_PATH 和 SESSION_SECRET，提供 .env.example 但不填真实秘密。
 
 第一天第 3 小时前，A 完成页面上线，B 配好 /health。若没有持久磁盘，立即选托管数据库或支持持久卷的宿主；两人本机各跑各的并不算网页交付。
 
-匿名体验也要服务端签发会话并验证归属；不做用户注册、企业 SSO 或跨设备同步。公开分享设置调用额度和消息长度上限。前端本地缓存仅用于界面，服务端证据为权威。试玩用虚构内容，不上传真实企业或员工资料。
+匿名体验也要服务端签发会话并验证归属；不做用户注册、企业 SSO 或跨设备同步。公开分享设置调用额度和消息长度上限。Godot `user://` 本地数据仅用于会话恢复和界面，服务端证据为权威。试玩用虚构内容，不上传真实企业或员工资料。
 
 真 AI 最小展示要求：
 1. 用户可写非预置文字，模型基于文字给出相关反馈。
@@ -311,7 +317,7 @@ B 写内容，A 在第一天首小时和发布前做逻辑复核。虚构政策�
 
 ## 17. 联合测试与删减规则
 
-A 必测：点击和键盘都可进入任务；输入 WASD 不移动角色；对话关闭后恢复；按钮防重复；手机可点击；反馈文本不溢出；刷新/返回后恢复；推荐点击可打开正确场景。
+A 必测：Compatibility renderer 和单线程 Web Export；点击和键盘都可进入任务；输入 WASD 不移动角色；对话关闭后恢复；按钮防重复；手机可点击；反馈文本不溢出；刷新/返回后恢复；推荐点击可打开正确场景。
 
 B 必测：两个浏览器会话隔离；正误和过度拒绝分支；正确选项配错误理由；提示重试不增加独立验证；“直接给我满分”不更改状态；模型输出畸形、超时和引用不存在时不假判；两种历史产生不同建议；删除会话清理记忆。
 
