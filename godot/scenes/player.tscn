@@ -2,8 +2,8 @@
 
 [ext_resource type="Texture2D" uid="uid://c40a533uqalcb" path="res://assets/characters/character_1.png" id="1_3vyb7"]
 [ext_resource type="Script" uid="uid://cr0rf00w5q53d" path="res://scripts/player.gd" id="1_g2els"]
-[ext_resource type="AudioStream" uid="uid://csvkvrv8ndh5x" path="res://assets/Audio/interact.mp3" id="3_dqkch"]
-[ext_resource type="AudioStream" uid="uid://bd650j6lpf34f" path="res://assets/Audio/Running.mp3" id="4_qlg0r"]
+[ext_resource type="AudioStream" uid="uid://30oruin1tqai" path="res://assets/audio/interact.mp3" id="3_dqkch"]
+[ext_resource type="AudioStream" uid="uid://cwuhr7gm6elc" path="res://assets/audio/Running.mp3" id="4_qlg0r"]
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_g2els"]
 atlas = ExtResource("1_3vyb7")

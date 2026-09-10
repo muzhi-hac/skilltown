@@ -240,6 +240,7 @@ func _add_choice_button(choice_id: String, label: String) -> void:
 	button.clip_text = true
 	button.alignment = HORIZONTAL_ALIGNMENT_LEFT
 	button.custom_minimum_size = Vector2(0, 32)
+	button.set_meta("choice_id", choice_id)
 	button.disabled = waiting or is_complete
 	button.pressed.connect(_on_choice_pressed.bind(choice_id, label))
 	choice_container.add_child(button)

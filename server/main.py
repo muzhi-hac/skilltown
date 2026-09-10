@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import mimetypes
 import os
 from pathlib import Path
 from uuid import uuid4
@@ -10,6 +11,7 @@ from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 
 from server.api.models import ErrorDetail, ErrorEnvelope, HealthResponse
 from server.api.routes import router
@@ -46,7 +48,9 @@ def _error(status_code: int, code: str, message: str, retryable: bool = False, l
     return JSONResponse(status_code=status_code, content=envelope.model_dump(mode="json", exclude_none=True))
 
 
-def create_app(database_path: str | Path | None = None) -> FastAPI:
+def create_app(
+    database_path: str | Path | None = None, web_dir: str | Path | None = None
+) -> FastAPI:
     app = FastAPI(title="SkillTown Learning API", version="1.0.0")
     app.state.store = Store(database_path or os.getenv("DATABASE_PATH", "data/skilltown.sqlite3"))
     app.state.engine = ScenarioEngine()
@@ -93,7 +97,24 @@ def create_app(database_path: str | Path | None = None) -> FastAPI:
         return _error(422, "validation_error", details)
 
     app.include_router(router)
+    _mount_web_client(app, web_dir)
     return app
+
+
+def _mount_web_client(app: FastAPI, web_dir: str | Path | None) -> None:
+    """Serve the Godot Web build from the same origin as /api/v1, when it exists.
+
+    Same-origin means the client reads its API base from window.location.origin and
+    no CORS applies. The build is generated (godot/web), so a missing directory is
+    normal during backend-only work.
+    """
+    default = Path(__file__).parents[1] / "godot" / "web"
+    directory = Path(web_dir or os.getenv("WEB_DIR", default))
+    if not (directory / "index.html").is_file():
+        return
+    # Some hosts do not know .wasm; a wrong MIME type breaks the Godot loader.
+    mimetypes.add_type("application/wasm", ".wasm")
+    app.mount("/", StaticFiles(directory=directory, html=True), name="web")
 
 
 app = create_app()

@@ -192,3 +192,21 @@ def test_stale_revision_reports_conflict_so_the_client_can_resync(tmp_path):
         assert error["code"] == "revision_conflict"
         assert error["retryable"] is True
         assert error["latest_attempt_url"].endswith(attempt["attempt_id"])
+
+
+def test_web_build_is_served_from_the_same_origin_without_shadowing_the_api(tmp_path):
+    web = tmp_path / "web"
+    web.mkdir()
+    (web / "index.html").write_text("<canvas id='canvas'></canvas>", encoding="utf-8")
+    (web / "index.wasm").write_bytes(b"\x00asm")
+    app = create_app(tmp_path / "test.sqlite3", web_dir=web)
+    with TestClient(app) as client:
+        page = client.get("/")
+        assert page.status_code == 200
+        assert "canvas" in page.text
+        wasm = client.get("/index.wasm")
+        assert wasm.status_code == 200
+        assert wasm.headers["content-type"] == "application/wasm"
+        # The API and health routes must still win over the static mount.
+        assert client.get("/health").json()["status"] == "ok"
+        assert client.get("/api/v1/town").status_code == 401

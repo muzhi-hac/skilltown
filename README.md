@@ -4,12 +4,23 @@
 
 ## 当前状态
 
-第一个纵切已可运行在本机：FastAPI 提供全部 12 个接口，SQLite 保存匿名会话，`创建会话 → 进入龙虾任务 → 提交选择 → 后果预演 → 倒回决策点 → 记录学习证据 → 护照与推荐` 已通过 pytest 与真实 HTTP 冒烟验证。
+第一个纵切可在本机跑通，且**网页构建已实测**：
+
+- FastAPI 提供全部 12 个接口，SQLite 保存匿名会话；`server/tests` 12 项通过。
+- Godot 4.5.stable Web 导出成功（GL Compatibility + 单线程模板，已核对导出的
+  `index.wasm` 与 `web_nothreads_release/godot.wasm` 哈希一致，因此不需要
+  COOP/COEP 跨源隔离头）。
+- FastAPI 同源挂载该构建：`/` 返回页面、`/index.wasm` 带 `application/wasm`、
+  `/api/v1/*` 不被静态挂载遮挡。
+- 无头集成冒烟用真实 GDScript 客户端打通：点击 Alex → 龙虾任务 → 补齐信息记录证据
+  → 答错触发后果预演 → 倒回出错的决策点 → 完成 → 学习护照 → 换 Jo 走自由回答支线。
 
 尚未验证的部分（不要当成已完成）：
 
-- 本机未安装 Godot，Compatibility renderer 与单线程 Web Export **尚未实测**，网页也未部署。
-- 自由回答目前走确定性 fallback 评估器：未配置模型时明确返回 `feedback_mode: "fallback"`，不冒充实时 AI。
+- **没有在真实浏览器里人工点过**：移动/E 键交互、窄屏、刷新恢复、按钮防重复只有无头
+  断言背书；页面也还没部署到公网。
+- 自由回答目前走确定性 fallback 评估器：未配置模型时明确返回
+  `feedback_mode: "fallback"`，不冒充实时 AI。真实模型调用尚未接入。
 - `timing.active_seconds` 仍为 0：活动事件已入库，但还没聚合成时长。
 - Mira 的伦理复盘任务只有入口文案，尚无辅导内容。
 
@@ -18,14 +29,25 @@
 ```bash
 python3 -m venv .venv
 .venv/bin/python -m pip install -r server/requirements.txt
-.venv/bin/python -m pytest server/tests -q                    # 11 passed
+.venv/bin/python -m pytest server/tests -q                    # 12 passed
+
+# 后端 + 已构建的网页（同源）
 .venv/bin/python -m uvicorn server.main:app --reload          # http://127.0.0.1:8000
 python3 tools/smoke_api.py                                    # 真实 HTTP 冒烟，部署后换成线上 URL
 ```
 
-Godot 客户端在 `godot/`，用 Godot 4.5 打开该目录。未安装 Godot 时可先用
-`python3 tools/check_godot_client.py` 做静态一致性检查（节点路径、`APIClient`/`Config`
-成员、信号参数个数）；它不是 GDScript 解析器，替代不了在编辑器里跑一次。
+Godot 客户端在 `godot/`（Godot 4.5.stable，`GODOT` 指向本机可执行文件）：
+
+```bash
+GODOT=/Applications/Godot.app/Contents/MacOS/Godot
+$GODOT --headless --path godot --import                        # 导入资源，检查脚本解析
+$GODOT --headless --path godot --export-release "Web" web/index.html
+$GODOT --headless --path godot res://tests/headless_flow.tscn  # 需后端已在 8000 端口
+python3 tools/check_godot_client.py                            # 静态一致性检查（不需要 Godot）
+```
+
+`godot/web/` 是生成物，不提交、不手工编辑。`tools/check_godot_client.py` 只查节点路径、
+`APIClient`/`Config` 成员和信号参数个数，替代不了上面两条 Godot 命令。
 
 ## 目标体验
 
