@@ -315,7 +315,16 @@ def _looks_like_bad_request(exc: Exception) -> bool:
 
 
 def build_evaluator() -> FallbackTextEvaluator | ClaudeTextEvaluator:
-    """Model-backed evaluator when a credential is set, deterministic otherwise."""
+    """Build the evaluator selected by an explicit runtime feature flag.
+
+    A stale gateway token can otherwise turn every free-text answer into a
+    network timeout. Keep the production default disabled until one real probe
+    succeeds; enabling it is a deliberate operator action.
+    """
+    enabled = os.getenv("SKILLTOWN_MODEL_ENABLED", "false").strip().lower()
+    if enabled not in {"1", "true", "yes", "on"}:
+        logger.info("model evaluator disabled; free text uses the fallback evaluator")
+        return FallbackTextEvaluator()
     api_key = os.getenv("ANTHROPIC_API_KEY", "").strip()
     auth_token = os.getenv("ANTHROPIC_AUTH_TOKEN", "").strip()
     base_url = os.getenv("ANTHROPIC_BASE_URL", "").strip()

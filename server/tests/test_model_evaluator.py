@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from server.core.model_evaluator import ClaudeTextEvaluator, RubricVerdict
+from server.core.evaluator import FallbackTextEvaluator
+from server.core.model_evaluator import ClaudeTextEvaluator, RubricVerdict, build_evaluator
 
 
 GOOD_ANSWER = (
@@ -254,3 +255,10 @@ def test_the_request_leaves_room_for_thinking_plus_the_verdict():
     evaluator(client).evaluate("clarify_context", "去就去吧。")
     assert client.messages.calls[0]["max_tokens"] == MAX_OUTPUT_TOKENS
     assert MAX_OUTPUT_TOKENS >= 4096
+
+
+def test_feature_flag_skips_even_a_configured_gateway(monkeypatch):
+    monkeypatch.setenv("SKILLTOWN_MODEL_ENABLED", "false")
+    monkeypatch.setenv("ANTHROPIC_AUTH_TOKEN", "stale-token")
+    monkeypatch.setenv("ANTHROPIC_BASE_URL", "https://example.invalid")
+    assert isinstance(build_evaluator(), FallbackTextEvaluator)

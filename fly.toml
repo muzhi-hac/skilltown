@@ -17,6 +17,8 @@ primary_region = "fra"
   WEB_DIR = "/app/godot/web"
   # 同源部署，CORS 不参与；留空避免误配。
   CORS_ORIGINS = ""
+  # 当前兼容网关不可连接；探测成功后改为 true，才允许真实模型评估。
+  SKILLTOWN_MODEL_ENABLED = "false"
 
 [http_service]
   internal_port = 8000
