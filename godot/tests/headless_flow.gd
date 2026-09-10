@@ -191,7 +191,7 @@ func _run() -> void:
 	ui.passport_button.pressed.emit()
 	await APIClient.passport_received
 	await APIClient.recommendations_received
-	_press_action("去找")
+	_press_action("Go to")
 	var from_plan = await APIClient.attempt_received
 	_check("方案按钮直接开出对应任务", not _node_id(from_plan).is_empty(), _node_id(from_plan))
 
