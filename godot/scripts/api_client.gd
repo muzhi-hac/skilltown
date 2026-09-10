@@ -118,7 +118,9 @@ func category_label(category_id: String) -> String:
 	if typeof(categories) == TYPE_ARRAY:
 		for item in categories:
 			if item is Dictionary and str(item.get("id", "")) == category_id:
-				return "%s %s" % [str(item.get("icon", "")), str(item.get("label", ""))]
+				# The pixel font in the exported Godot build does not contain emoji
+				# glyphs, so map labels use the explicit text category instead.
+				return str(item.get("label", ""))
 	return category_id
 
 func _request_json(method: int, path: String, body: Dictionary, kind: String, with_auth: bool = true) -> void:

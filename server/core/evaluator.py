@@ -37,14 +37,14 @@ class FallbackTextEvaluator:
             return EvaluationResult(
                 passed=passed,
                 interpretation=(
-                    "回答主动补充了至少两类关键事实。"
+                    "The answer proactively added at least two kinds of key facts."
                     if passed
-                    else "回答尚未同时覆盖付款方、参与者、待决事项或适用制度中的至少两类。"
+                    else "The answer doesn't yet cover at least two of: who pays, who attends, pending matters, or the applicable policy."
                 ),
                 feedback=(
-                    "你在下结论前先补齐了关键情境。"
+                    "You gathered the key context before drawing a conclusion."
                     if passed
-                    else "先确认谁付款、谁参加、是否存在待审批事项，以及适用什么制度。"
+                    else "First confirm who pays, who attends, whether any pending approval is involved, and which policy applies."
                 ),
                 policy_clause_ids=["ETH-03"],
             )
@@ -62,14 +62,14 @@ class FallbackTextEvaluator:
             return EvaluationResult(
                 passed=passed,
                 interpretation=(
-                    "回答识别了待决业务关系、透明度风险，并提出暂停或咨询。"
+                    "The answer identified the pending business relationship and the transparency risk, and proposed pausing or consulting."
                     if passed
-                    else "回答未同时连接待决业务关系、隐瞒要求和合适的下一步。"
+                    else "The answer doesn't connect the pending business relationship, the request to hide it, and an appropriate next step all at once."
                 ),
                 feedback=(
-                    "你指出了具体风险信号，并给出了暂停和咨询的下一步。"
+                    "You pointed out the concrete risk signals and gave a next step of pausing and consulting."
                     if passed
-                    else "请同时考虑待决业务事项、要求隐瞒或绕过记录，以及暂停并咨询的行动。"
+                    else "Consider the pending business matter, the request to hide it or bypass the record, and the action of pausing and consulting, all together."
                 ),
                 policy_clause_ids=["ETH-01", "ETH-02"],
             )
@@ -81,14 +81,14 @@ class FallbackTextEvaluator:
             return EvaluationResult(
                 passed=passed,
                 interpretation=(
-                    "回复包含清晰边界、原因和可执行下一步。"
+                    "The reply includes a clear boundary, a reason, and an actionable next step."
                     if passed
-                    else "回复尚未同时包含边界、原因和下一步。"
+                    else "The reply doesn't yet include the boundary, the reason, and the next step all at once."
                 ),
                 feedback=(
-                    "表达清晰：先说明边界，再解释原因，并给出继续合作的下一步。"
+                    "Clearly expressed: state the boundary, then explain the reason, and give a next step for continuing to work together."
                     if passed
-                    else "试着用三部分表达：暂不接受、说明需要确认的原因、提出查询或咨询的下一步。"
+                    else "Try a three-part reply: you're holding off, the reason you need to confirm, and a next step to check or consult."
                 ),
                 policy_clause_ids=["DEV-01"],
             )

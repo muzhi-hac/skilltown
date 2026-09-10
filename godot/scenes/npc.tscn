@@ -308,13 +308,15 @@ position = Vector2(-0.5, 0)
 shape = SubResource("RectangleShape2D_nh2m4")
 
 [node name="NameLabel" type="Label" parent="."]
-offset_left = -20.0
-offset_top = -58.0
-offset_right = 20.0
+offset_left = -150.0
+offset_top = -112.0
+offset_right = 150.0
 offset_bottom = -35.0
 theme_override_colors/font_color = Color(1, 1, 0.3764706, 1)
-text = "张三"
+theme_override_font_sizes/font_size = 12
+text = "NPC"
 horizontal_alignment = 1
+autowrap_mode = 2
 
 [node name="DialogueLabel" type="Label" parent="."]
 visible = false

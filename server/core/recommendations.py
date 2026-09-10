@@ -13,9 +13,9 @@ TASK_BY_SKILL = {
 
 
 REASONS = {
-    "unseen": "这项能力还没有情境证据，建议先完成一个短任务。",
-    "needs_practice": "最近的回答显示这里仍有具体缺口，建议换一个情境练习。",
-    "practiced": "你已在练习中展示过这项能力，建议用未见案例独立验证。",
+    "unseen": "This skill has no situational evidence yet; start with a short task.",
+    "needs_practice": "Recent answers show a specific gap here; try practicing with a different situation.",
+    "practiced": "You've shown this skill in practice; verify it independently with a case you haven't seen.",
 }
 
 

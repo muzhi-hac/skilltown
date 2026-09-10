@@ -22,7 +22,7 @@ offset_top = 10.0
 offset_right = 420.0
 offset_bottom = 33.0
 theme_override_font_sizes/font_size = 24
-text = "NPC名字"
+text = "NPC Name"
 
 [node name="NPCTitle" type="Label" parent="Panel"]
 layout_mode = 0
@@ -31,7 +31,7 @@ offset_top = 40.0
 offset_right = 620.0
 offset_bottom = 63.0
 theme_override_colors/font_color = Color(0.45452422, 0.45452428, 0.45452422, 1)
-text = "职位"
+text = "Role"
 
 [node name="DialogueText" type="RichTextLabel" parent="Panel"]
 layout_mode = 0
@@ -57,7 +57,7 @@ offset_left = 20.0
 offset_top = 335.0
 offset_right = 1020.0
 offset_bottom = 375.0
-placeholder_text = "也可以输入自己的回答..."
+placeholder_text = "You can also type your own answer..."
 clear_button_enabled = true
 
 [node name="SendButton" type="Button" parent="Panel"]
@@ -66,7 +66,7 @@ offset_left = 1030.0
 offset_top = 335.0
 offset_right = 1130.0
 offset_bottom = 375.0
-text = "发送"
+text = "Send"
 
 [node name="CloseButton" type="Button" parent="Panel"]
 layout_mode = 0
@@ -74,7 +74,7 @@ offset_left = 1140.0
 offset_top = 385.0
 offset_right = 1240.0
 offset_bottom = 420.0
-text = "关闭"
+text = "Close"
 
 [node name="StatusLabel" type="Label" parent="Panel"]
 layout_mode = 0
@@ -92,7 +92,7 @@ offset_top = 385.0
 offset_right = 800.0
 offset_bottom = 420.0
 disabled = true
-text = "提示"
+text = "Hint"
 
 [node name="RewindButton" type="Button" parent="Panel"]
 layout_mode = 0
@@ -101,7 +101,7 @@ offset_top = 385.0
 offset_right = 950.0
 offset_bottom = 420.0
 disabled = true
-text = "倒回决策点"
+text = "Rewind"
 
 [node name="PassportButton" type="Button" parent="Panel"]
 layout_mode = 0
@@ -109,4 +109,4 @@ offset_left = 960.0
 offset_top = 385.0
 offset_right = 1090.0
 offset_bottom = 420.0
-text = "学习护照"
+text = "Passport"

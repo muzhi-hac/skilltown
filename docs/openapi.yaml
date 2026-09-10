@@ -427,9 +427,9 @@ components:
           type: array
           items: {$ref: '#/components/schemas/TownNpc'}
         screening:
-          allOf:
+          anyOf:
             - $ref: '#/components/schemas/TaskSummary'
-          nullable: true
+            - type: 'null'
           description: >
             开场三题筛查任务。不挂在任何 NPC 上，但 id 仍由服务端下发，
             客户端不得硬编码 scenario_id。新访客没有证据时前端显示欢迎卡。

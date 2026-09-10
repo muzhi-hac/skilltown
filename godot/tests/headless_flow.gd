@@ -80,7 +80,7 @@ func _run() -> void:
 	_check("进入 dinner_invite", _node_id(start) == "dinner_invite", _node_id(start))
 	_check("渲染出 3 个选项", ui.choice_container.get_child_count() == 3)
 	_check("本节点允许自由回答", ui.player_input.editable)
-	_check("NPC 抬头带分类", ui.npc_title_label.text.contains("伦理与合规"), ui.npc_title_label.text)
+	_check("NPC 抬头带分类", ui.npc_title_label.text.contains("Compliance"), ui.npc_title_label.text)
 
 	print("3) 先补齐信息，再答错触发后果预演")
 	var risk = await _press("ask_context")
@@ -89,7 +89,7 @@ func _run() -> void:
 	_check("记录 clarify_context 证据",
 		updates.size() == 1 and str(updates[0].get("skill_id", "")) == "clarify_context",
 		str(updates))
-	_check("反馈已显示在对话框", ui.dialogue_text.get_parsed_text().contains("学习反馈"))
+	_check("反馈已显示在对话框", ui.dialogue_text.get_parsed_text().contains("Learning feedback"))
 	var consequence = await _press("accept_hidden")
 	_check("进入 dinner_consequence", _node_id(consequence) == "dinner_consequence", _node_id(consequence))
 	_check("effect 为 consequence_preview", str(consequence.get("effect", "")) == "consequence_preview")
@@ -102,7 +102,7 @@ func _run() -> void:
 	var done = await _press("pause_consult")
 	_check("任务完成", bool(done.get("is_complete", false)))
 	_check("完成后禁用输入", ui.send_button.disabled and ui.player_input.editable == false)
-	_check("状态栏提示完成", ui.status_label.text.contains("完成"), ui.status_label.text)
+	_check("状态栏提示完成", ui.status_label.text.to_lower().contains("complete"), ui.status_label.text)
 
 	print("5) 学习护照")
 	ui.passport_button.pressed.emit()
@@ -114,7 +114,7 @@ func _run() -> void:
 	_check("conflict_awareness 已练习", states.get("conflict_awareness", "") == "practiced", str(states))
 	var plan = await APIClient.recommendations_received
 	_check("方案给出可去的任务", plan.get("items", []).size() > 0, str(plan))
-	_check("方案已显示在对话框", ui.dialogue_text.get_parsed_text().contains("学习方案"))
+	_check("方案已显示在对话框", ui.dialogue_text.get_parsed_text().contains("Learning Plan"))
 
 	print("6) 换 Jo 走自由回答支线，验证跨 NPC 会话延续")
 	ui.hide_dialogue()
@@ -169,7 +169,7 @@ func _run() -> void:
 		fresh_states.values().count("recommended") == 4, str(fresh_states))
 	ui.show_welcome(screening)
 	_check("欢迎卡给出两个入口", ui.choice_container.get_child_count() == 2)
-	_press_action("先试试")
+	_press_action("Quick skill check")
 	var q1 = await APIClient.attempt_received
 	_check("第 1 题 screen_clarify", _node_id(q1) == "screen_clarify", _node_id(q1))
 	var q2 = await _press("who_pays_pending")

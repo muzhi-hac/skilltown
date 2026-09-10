@@ -3,26 +3,26 @@
 POLICY_CARDS = {
     "ETH-01": {
         "clause_id": "ETH-01",
-        "title": "待决业务事项",
-        "text": "利益与本人正在参与的采购、续约、审批或评价有关时，先暂停接受并确认适用流程。",
+        "title": "Pending business matters",
+        "text": "When the benefit relates to a procurement, renewal, approval, or evaluation you are currently involved in, pause before accepting and confirm the applicable process.",
         "fictional": True,
     },
     "ETH-02": {
         "clause_id": "ETH-02",
-        "title": "透明与记录",
-        "text": "要求隐瞒、绕过报销或省略记录，是需要停止并咨询指定内部渠道的风险信号。",
+        "title": "Transparency and records",
+        "text": "A request to hide it, bypass the expense report, or omit the record is a risk signal to stop and consult the designated internal channel.",
         "fictional": True,
     },
     "ETH-03": {
         "clause_id": "ETH-03",
-        "title": "结合情境判断",
-        "text": "聚餐或礼物本身不自动等于违规；应考虑提供方、付款方、时间、业务关系和透明度。",
+        "title": "Judge with the context",
+        "text": "A meal or gift is not automatically a violation; consider the provider, who pays, the timing, the business relationship, and transparency.",
         "fictional": True,
     },
     "DEV-01": {
         "clause_id": "DEV-01",
-        "title": "表达边界",
-        "text": "说明暂不接受、需要确认的原因和合适下一步，有助于兼顾边界与合作关系。",
+        "title": "Express a boundary",
+        "text": "Stating that you're holding off, the reason you need to confirm, and an appropriate next step helps balance the boundary with the working relationship.",
         "fictional": True,
     },
 }

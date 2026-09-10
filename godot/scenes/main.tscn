@@ -403,14 +403,14 @@ position = Vector2(453, 492)
 [node name="NPC_Alex" parent="NPCs" instance=ExtResource("3_jyhfs")]
 position = Vector2(367, 172)
 npc_name = "Alex"
-npc_title = "合作伙伴"
-learning_category = "伦理与合规"
+npc_title = "Business Partner"
+learning_category = "Ethics & Compliance"
 
 [node name="NPC_Sam" parent="NPCs" instance=ExtResource("3_jyhfs")]
 position = Vector2(1071, 164)
 npc_name = "Sam"
-npc_title = "供应商"
-learning_category = "伦理与合规"
+npc_title = "Supplier"
+learning_category = "Ethics & Compliance"
 sprite_frames = SubResource("SpriteFrames_tbgi4")
 move_speed = 20.0
 
@@ -418,8 +418,8 @@ move_speed = 20.0
 z_index = 1
 position = Vector2(206, 423)
 npc_name = "Mira"
-npc_title = "伦理教练"
-learning_category = "伦理与合规"
+npc_title = "Ethics Coach"
+learning_category = "Ethics & Compliance"
 sprite_frames = SubResource("SpriteFrames_dp3eg")
 wander_range = 0.0
 
@@ -427,8 +427,8 @@ wander_range = 0.0
 z_index = 1
 position = Vector2(1025, 455)
 npc_name = "Jo"
-npc_title = "沟通教练"
-learning_category = "个人发展"
+npc_title = "Communication Coach"
+learning_category = "Personal Development"
 sprite_frames = SubResource("SpriteFrames_dp3eg")
 wander_range = 0.0
 

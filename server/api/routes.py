@@ -225,7 +225,7 @@ def respond(
             )
         feedback = (
             {
-                "title": "学习反馈",
+                "title": "Learning feedback",
                 "message": feedback_message,
                 "mode": feedback_mode,
                 "policy_clauses": get_policy_cards(clause_ids),
@@ -277,7 +277,7 @@ def request_hint(
     )
     return {
         **updated,
-        "hint": "先找出还缺少的事实、与业务决定的关系，以及合适的下一步。",
+        "hint": "First identify the facts still missing, the relationship to the business decision, and an appropriate next step.",
         "policy_card": get_policy_cards([clause_id])[0],
     }
 

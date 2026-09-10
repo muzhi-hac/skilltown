@@ -144,7 +144,7 @@ func show_welcome(screening: Dictionary) -> void:
 	is_complete = false
 	allow_text = false
 	npc_name_label.text = "SkillTown"
-	npc_title_label.text = "🛡️ Ethics & Compliance · 🌱 Personal Development"
+	npc_title_label.text = "Compliance learning · Personal development"
 	dialogue_text.clear()
 	_clear_choices()
 	_reset_controls()
@@ -359,28 +359,28 @@ func _submit_text() -> void:
 	if message.is_empty():
 		return
 	if not allow_text:
-		_set_status("这一节点只接受选项作答")
+		_set_status("This node only accepts multiple-choice answers")
 		return
 	player_input.text = ""
-	_append_line("[color=cyan]你写的回答：[/color]%s" % message)
-	_set_waiting(true, "正在评估你的回答…")
+	_append_line("[color=cyan]Your answer:[/color] %s" % message)
+	_set_waiting(true, "Evaluating your answer…")
 	APIClient.respond_text(attempt_id, revision, message)
 
 func _on_hint_pressed() -> void:
 	if waiting or attempt_id.is_empty() or is_complete:
 		return
-	_set_waiting(true, "正在获取提示…")
+	_set_waiting(true, "Getting a hint…")
 	APIClient.request_hint(attempt_id, revision)
 
 func _on_hint_received(payload: Dictionary) -> void:
 	if not visible:
 		return
 	revision = int(payload.get("revision", revision))
-	_set_waiting(false, "本次任务已标记为使用提示（assisted）")
-	_append_line("[color=violet]提示：[/color]%s" % str(payload.get("hint", "")))
+	_set_waiting(false, "This task is now marked as hint-assisted")
+	_append_line("[color=violet]Hint:[/color] %s" % str(payload.get("hint", "")))
 	var card = payload.get("policy_card")
 	if typeof(card) == TYPE_DICTIONARY:
-		_append_line("[color=aqua]虚构培训政策 %s · %s[/color]：%s" % [
+		_append_line("[color=aqua]Fictional training policy %s · %s[/color]: %s" % [
 			str(card.get("clause_id", "")),
 			str(card.get("title", "")),
 			str(card.get("text", "")),
@@ -389,20 +389,20 @@ func _on_hint_received(payload: Dictionary) -> void:
 func _on_rewind_pressed() -> void:
 	if waiting or attempt_id.is_empty():
 		return
-	_set_waiting(true, "正在倒回决策点…")
+	_set_waiting(true, "Rewinding to the decision point…")
 	APIClient.rewind_attempt(attempt_id, revision)
 
 func _on_passport_pressed() -> void:
 	if waiting:
 		return
-	_set_waiting(true, "正在读取学习护照…")
+	_set_waiting(true, "Loading learning passport…")
 	APIClient.get_passport()
 
 func _on_passport_received(payload: Dictionary) -> void:
 	if not visible:
 		return
 	_set_waiting(false, "")
-	_append_line("[color=gray]—— 学习护照 ——[/color]")
+	_append_line("[color=gray]—— Learning Passport ——[/color]")
 	var skills = payload.get("skills", [])
 	if typeof(skills) == TYPE_ARRAY:
 		for skill in skills:
@@ -413,17 +413,17 @@ func _on_passport_received(payload: Dictionary) -> void:
 			if typeof(evidence) == TYPE_ARRAY:
 				count = evidence.size()
 			var state := str(skill.get("state", "unseen"))
-			_append_line("[color=gray]%s：%s（证据 %d 条）[/color]" % [
+			_append_line("[color=gray]%s: %s (%d evidence)[/color]" % [
 				str(skill.get("label", skill.get("skill_id", ""))),
 				str(STATE_LABELS.get(state, state)),
 				count,
 			])
-	_append_line("[color=gray]活跃时长 %d 秒，模型等待 %d 秒。[/color]" % [
+	_append_line("[color=gray]Active time %d s, model wait %d s.[/color]" % [
 		int(payload.get("total_active_seconds", 0)),
 		int(payload.get("total_model_wait_seconds", 0)),
 	])
 	# 方案由服务端按缺口选任务，客户端只负责显示去哪找谁。
-	_set_waiting(true, "正在生成学习方案…")
+	_set_waiting(true, "Generating a learning plan…")
 	APIClient.get_recommendations(3)
 
 func _on_recommendations_received(payload: Dictionary) -> void:
@@ -432,9 +432,9 @@ func _on_recommendations_received(payload: Dictionary) -> void:
 	_set_waiting(false, "")
 	var items = payload.get("items", [])
 	if typeof(items) != TYPE_ARRAY or items.is_empty():
-		_append_line("[color=gray]暂无学习建议。[/color]")
+		_append_line("[color=gray]No learning suggestions yet.[/color]")
 		return
-	_append_line("[color=gray]—— 学习方案 ——[/color]")
+	_append_line("[color=gray]—— Learning Plan ——[/color]")
 	for item in items:
 		if not item is Dictionary:
 			continue
@@ -445,12 +445,12 @@ func _on_recommendations_received(payload: Dictionary) -> void:
 			count = evidence.size()
 		var npc_name := APIClient.npc_name_by_id(str(item.get("npc_id", "")))
 		var title := APIClient.task_title(scenario_id)
-		_append_line("[color=gray]%s：%s（依据 %d 条证据）[/color]" % [
+		_append_line("[color=gray]%s: %s (based on %d evidence)[/color]" % [
 			title,
 			str(item.get("reason", "")),
 			count,
 		])
-		_add_action_button("去找 %s 做「%s」" % [npc_name, title],
+		_add_action_button("Go to %s for \"%s\"" % [npc_name, title],
 			_on_plan_pressed.bind(scenario_id, title))
 
 func _on_plan_pressed(scenario_id: String, title: String) -> void:
@@ -486,36 +486,36 @@ func _on_api_error(code: String, message: String, retryable: bool) -> void:
 		return
 	_set_waiting(false, "")
 	if code == "revision_conflict" and not attempt_id.is_empty():
-		_append_line("[color=gray]进度不同步，正在拉取最新状态…[/color]")
-		_set_waiting(true, "正在同步进度…")
+		_append_line("[color=gray]Progress is out of sync, fetching the latest state…[/color]")
+		_set_waiting(true, "Syncing progress…")
 		APIClient.restore_attempt(attempt_id)
 		return
-	_append_line("[color=red]错误：%s（%s）[/color]" % [message, code])
-	_set_status("可以重试" if retryable else "请调整后再试")
+	_append_line("[color=red]Error: %s (%s)[/color]" % [message, code])
+	_set_status("You can retry" if retryable else "Please adjust and try again")
 
 func _apply_effect(effect: String, feedback_mode: String) -> void:
 	rewind_button.disabled = effect != "consequence_preview"
 	var status := ""
 	match effect:
 		"consequence_preview":
-			status = "后果预演：教学模拟，不是真实处分。可倒回决策点重答。"
+			status = "Consequence preview: a teaching simulation, not a real penalty. You can rewind to the decision point and retry."
 		"rewind_available":
-			status = "已倒回决策点，可以重新作答。"
+			status = "Rewound to the decision point, you can answer again."
 		"completed":
-			status = "任务完成，可查看学习护照。"
+			status = "Task complete, you can view the learning passport."
 		_:
 			status = str(FEEDBACK_MODE_LABELS.get(feedback_mode, "")) if feedback_mode != "scripted" else ""
 	if is_complete:
 		_set_controls_enabled(false)
 		rewind_button.disabled = true
 		if status.is_empty():
-			status = "任务完成，可查看学习护照。"
+			status = "Task complete, you can view the learning passport."
 	_set_status(status)
 
 func _update_text_input() -> void:
 	player_input.editable = allow_text and not is_complete
 	send_button.disabled = not player_input.editable
-	player_input.placeholder_text = "写下你的回答…" if allow_text else "这一节点只接受选项作答"
+	player_input.placeholder_text = "Write your answer…" if allow_text else "This node only accepts multiple-choice answers"
 	if player_input.editable:
 		player_input.grab_focus()
 

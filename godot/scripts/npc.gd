@@ -2,9 +2,9 @@
 extends CharacterBody2D  # ⭐ 改为CharacterBody2D
 
 # NPC信息
-@export var npc_name: String = "张三"
-@export var npc_title: String = "Python工程师"
-@export var learning_category: String = "伦理与合规"
+@export var npc_name: String = "NPC"
+@export var npc_title: String = "Staff"
+@export var learning_category: String = "Ethics & Compliance"
 
 # NPC外观配置
 @export var sprite_frames: SpriteFrames = null  # 自定义精灵帧资源
@@ -49,7 +49,7 @@ func _ready():
 	add_to_group("npcs")
 
 	# 设置NPC名字(收到 /town 数据后会再刷新一次)
-	name_label.text = "%s（%s）\n%s" % [npc_name, npc_title, learning_category]
+	name_label.text = "%s (%s)\n%s" % [npc_name, npc_title, learning_category]
 
 	# 连接交互区域信号
 	interaction_area.body_entered.connect(_on_body_entered)
@@ -64,7 +64,7 @@ func _ready():
 	# 尝试获取交互提示节点 (可选)
 	interaction_hint = get_node_or_null("InteractionHint")
 	if interaction_hint:
-		interaction_hint.text = "按E交互"
+		interaction_hint.text = "Press E"
 		interaction_hint.visible = false
 		print("[INFO] NPC交互提示已启用: ", npc_name)
 	else:
@@ -167,12 +167,12 @@ func refresh_label() -> void:
 	var marker := ""
 	match recommendation_state:
 		"recommended":
-			marker = " · 推荐"
+			marker = " · Recommended"
 		"review":
-			marker = " · 建议复习"
-	var text := "%s（%s）\n%s%s" % [npc_name, npc_title, learning_category, marker]
+			marker = " · Review suggested"
+	var text := "%s (%s)\n%s%s" % [npc_name, npc_title, learning_category, marker]
 	if not task_title.is_empty():
-		text += "\n%s · 约 %s 分钟" % [task_title, task_minutes]
+		text += "\n%s · about %s min" % [task_title, task_minutes]
 	name_label.text = text
 
 func get_npc_name() -> String:
