@@ -7,7 +7,7 @@
 #
 # app 名称需全局唯一，部署前改成你注册的名字。
 app = "skilltown"
-primary_region = "nrt"
+primary_region = "fra"
 
 [build]
   dockerfile = "Dockerfile"

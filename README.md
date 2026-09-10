@@ -50,12 +50,25 @@
   同样退回确定性评估并标注。
 - 等待模型的时间计入 `model_wait_seconds`，与活跃学习时长分开报告。
 
+凭据两种形状都支持：官方 key（`ANTHROPIC_API_KEY`，走 `x-api-key`）或兼容网关
+（`ANTHROPIC_AUTH_TOKEN` + `ANTHROPIC_BASE_URL`，走 Bearer）。上线前先用
+`tools/check_model.py` 打**一次**真实调用确认端点接受我们的请求形状——它会分别试
+最小文本调用和结构化输出，并在都失败时打印确定性评估器对同一段回答的判断：
+
+```bash
+set -a; . <你的环境变量文件>; set +a
+.venv/bin/python tools/check_model.py
+```
+
+并非所有"Claude 兼容"网关都放行应用侧调用；有的只服务特定客户端，会对我们的请求
+返回 403。遇到这种情况就换官方 key，或接受自由回答走 fallback 并在演示中说明。
+
 ## 本地运行
 
 ```bash
 python3 -m venv .venv
 .venv/bin/python -m pip install -r server/requirements.txt
-.venv/bin/python -m pytest server/tests -q                    # 12 passed
+.venv/bin/python -m pytest server/tests -q                    # 34 passed
 
 # 后端 + 已构建的网页（同源）
 .venv/bin/python -m uvicorn server.main:app --reload          # http://127.0.0.1:8000

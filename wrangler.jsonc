@@ -1,0 +1,18 @@
+{
+  // 一个 Worker 同时提供静态构建和 /api/v1，浏览器只看到一个来源。
+  // 静态目录是生成物：部署前先跑
+  //   godot --headless --path godot --export-release "Web" web/index.html
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "skilltown",
+  "main": "worker/index.ts",
+  "compatibility_date": "2026-09-01",
+  "assets": {
+    "directory": "./godot/web",
+    "binding": "ASSETS",
+    // 未命中的路径交给 Worker（/api/v1、/health），不要当成 SPA 回退。
+    "not_found_handling": "none"
+  },
+  "observability": {
+    "enabled": true
+  }
+}
