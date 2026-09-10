@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# 导出 Godot Web 构建，然后部署到 Fly.io（远程构建，本机不需要 Docker）。
+# Build the client and deploy it to Fly.io (remote builder, no local Docker needed).
 #
 #   tools/deploy_fly.sh [app-name]
 #
-# 首次部署前需要：flyctl auth login；卷和 app 由 launch/deploy 创建。
+# Before the first deploy: flyctl auth login. The app and volume are created separately.
 set -euo pipefail
 
 APP="${1:-$(awk -F'"' '/^app =/{print $2}' "$(dirname "$0")/../fly.toml")}"
@@ -11,22 +11,22 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 GODOT="${GODOT:-/Applications/Godot.app/Contents/MacOS/Godot}"
 
 if ! command -v flyctl >/dev/null 2>&1; then
-  echo "缺少 flyctl：brew install flyctl" >&2
+  echo "flyctl is missing: brew install flyctl" >&2
   exit 1
 fi
 if [ ! -x "$GODOT" ]; then
-  echo "找不到 Godot：$GODOT（可用 GODOT=... 覆盖）" >&2
+  echo "Godot not found: $GODOT (override with GODOT=...)" >&2
   exit 1
 fi
 
-echo "==> 导出 Web 构建（会被打进镜像，实现同源）"
+echo "==> Building the web client (baked into the image, same origin)"
 "$GODOT" --headless --path "$ROOT/godot" --export-release "Web" web/index.html
 test -f "$ROOT/godot/web/index.html"
 
-echo "==> 部署到 Fly app: $APP"
+echo "==> Deploying to Fly app: $APP"
 cd "$ROOT"
 flyctl deploy --app "$APP" --remote-only
 
 echo
-echo "==> 冒烟测试线上环境"
+echo "==> Smoke-testing the deployed URL"
 python3 tools/smoke_api.py "https://$APP.fly.dev"

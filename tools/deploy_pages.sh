@@ -13,30 +13,30 @@ GODOT="${GODOT:-/Applications/Godot.app/Contents/MacOS/Godot}"
 CREDS="${SKILLTOWN_CF_ENV:-$HOME/.config/skilltown/cloudflare.env}"
 
 if [ ! -f "$CREDS" ]; then
-  echo "缺少凭据文件 $CREDS（需含 CLOUDFLARE_API_TOKEN 与 CLOUDFLARE_ACCOUNT_ID）" >&2
+  echo "Missing credentials file $CREDS (needs CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID)" >&2
   exit 1
 fi
 # shellcheck disable=SC1090
 set -a; . "$CREDS"; set +a
 
 if [ ! -x "$GODOT" ]; then
-  echo "找不到 Godot 可执行文件：$GODOT（可用 GODOT=... 覆盖）" >&2
+  echo "Godot executable not found: $GODOT (override with GODOT=...)" >&2
   exit 1
 fi
 
-echo "==> 导出 Web 构建"
+echo "==> Building the web client"
 "$GODOT" --headless --path "$ROOT/godot" --export-release "Web" web/index.html
 
-echo "==> 放入 Pages 代理 worker"
+echo "==> Adding the Pages proxy worker"
 cp "$ROOT/cloudflare/_worker.js" "$ROOT/godot/web/_worker.js"
 
-echo "==> 部署到 Cloudflare Pages 项目 $PROJECT"
+echo "==> Deploying to Cloudflare Pages project $PROJECT"
 cd "$ROOT"
 npx --yes wrangler@latest pages deploy "godot/web" --project-name "$PROJECT" --commit-dirty=true
 
 cat <<'NOTE'
 
-部署完成后还需要一步：在 Pages 项目里设置环境变量 API_ORIGIN，指向能跑
-Python 的后端（VPS/容器宿主，或 cloudflared 隧道地址）。没有它页面会拿到
-503 api_origin_missing，无法创建会话。
+After deploying, set API_ORIGIN in the Pages project to a backend that runs
+Python (a VPS, a container host, or a cloudflared tunnel). Without it the page
+gets 503 api_origin_missing and cannot create a session.
 NOTE

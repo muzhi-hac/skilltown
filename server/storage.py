@@ -434,9 +434,9 @@ class Store:
             }
             evidence_by_skill.setdefault(item["skill_id"], []).append(item)
         labels = {
-            "clarify_context": "补齐判断所需信息",
-            "conflict_awareness": "识别利益冲突信号",
-            "communicate_boundary": "清晰表达边界和下一步",
+            "clarify_context": "Gather the key context before judging",
+            "conflict_awareness": "Spot conflict-of-interest signals",
+            "communicate_boundary": "State the boundary, the reason and the next step",
         }
         skills = [
             {

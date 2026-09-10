@@ -1,14 +1,14 @@
-# SkillTown: one origin serving both the learning API and the Godot Web build.
+# SkillTown: one origin serving both the learning API and the web client.
 #
-# The build must exist before `docker build` (it is generated, not committed):
-#   godot --headless --path godot --export-release "Web" web/index.html
+# The client build must exist before `docker build` (it is generated, not
+# committed):  cd client && npm ci && npm run build
 # Without it the image still runs, API-only. See docs/DEPLOY.md.
 FROM python:3.13-slim
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     DATABASE_PATH=/data/skilltown.sqlite3 \
-    WEB_DIR=/app/godot/web
+    WEB_DIR=/app/client/dist
 
 WORKDIR /app
 
@@ -16,8 +16,8 @@ COPY server/requirements.txt server/requirements.txt
 RUN pip install --no-cache-dir -r server/requirements.txt
 
 COPY server/ server/
-# .dockerignore keeps everything under godot/ out except the generated web build.
-COPY godot/ godot/
+# .dockerignore keeps client/ out except the generated build.
+COPY client/ client/
 
 # SQLite needs a persistent volume; without one every redeploy wipes learner
 # evidence, which would make the demo lie about memory.

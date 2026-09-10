@@ -157,7 +157,7 @@ def test_text_fallback_is_explicit_and_grounded(tmp_path):
                 "client_event_id": str(uuid4()),
                 "expected_revision": 0,
                 "kind": "text",
-                "text": "我想先确认谁付款，以及这是否和续约审批有关。",
+                "text": ASK_CONTEXT,
             },
         )
         assert response.status_code == 200, response.text
@@ -431,7 +431,7 @@ def test_api_labels_ai_feedback_and_falls_back_once_the_budget_is_spent(tmp_path
                     "client_event_id": str(_uuid()),
                     "expected_revision": attempt["revision"],
                     "kind": "text",
-                    "text": "我先确认谁付款以及是否涉及续约审批，再决定是否参加。",
+                    "text": ASK_CONTEXT,
                 },
             ).json()
 

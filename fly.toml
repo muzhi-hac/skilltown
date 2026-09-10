@@ -5,7 +5,7 @@
 # would either fail to mount the volume or serve a different, diverging copy of
 # the learners' evidence.
 #
-# app 名称需全局唯一，部署前改成你注册的名字。
+# The app name is globally unique; change it to the one you registered.
 app = "skilltown"
 primary_region = "fra"
 
@@ -14,8 +14,8 @@ primary_region = "fra"
 
 [env]
   DATABASE_PATH = "/data/skilltown.sqlite3"
-  WEB_DIR = "/app/godot/web"
-  # 同源部署，CORS 不参与；留空避免误配。
+  WEB_DIR = "/app/client/dist"
+  # Same-origin deployment, so CORS does not apply; empty avoids a misconfig.
   CORS_ORIGINS = ""
   # Real model evaluation is on. Verified 2026-09-10 with one live call through
   # the configured gateway: a plain text call and the structured rubric call both
@@ -30,7 +30,7 @@ primary_region = "fra"
 [http_service]
   internal_port = 8000
   force_https = true
-  # 演示期间保持常驻，避免冷启动出现在路演中间。
+  # Kept warm during the demo so a cold start never lands mid-pitch.
   auto_stop_machines = "off"
   auto_start_machines = true
   min_machines_running = 1
@@ -49,7 +49,8 @@ primary_region = "fra"
   initial_size = "1gb"
 
 [deploy]
-  # 单机 + 单卷无法蓝绿或滚动：部署时会有几秒不可用。
+  # One machine with one volume cannot blue-green: expect a few seconds of
+  # downtime per deploy.
   strategy = "immediate"
 
 [[vm]]

@@ -16,53 +16,40 @@ jobs:
       - run: pip install -r server/requirements.txt
       - name: pytest
         run: python -m pytest server/tests -q
-      - name: Godot 客户端静态一致性检查
-        run: python3 tools/check_godot_client.py
 
   client:
     runs-on: ubuntu-latest
-    env:
-      GODOT_VERSION: 4.5-stable
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: client/package-lock.json
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
-      - name: 缓存 Godot 与导出模板
-        id: godot-cache
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/godot
-            ~/.local/share/godot/export_templates
-          key: godot-${{ env.GODOT_VERSION }}
-      - name: 安装 Godot 与导出模板
-        if: steps.godot-cache.outputs.cache-hit != 'true'
+      - name: Install and typecheck the client
+        working-directory: client
         run: |
-          set -euo pipefail
-          base="https://github.com/godotengine/godot-builds/releases/download/${GODOT_VERSION}"
-          mkdir -p ~/godot ~/.local/share/godot/export_templates
-          curl -fsSL -o /tmp/godot.zip "$base/Godot_v${GODOT_VERSION}_linux.x86_64.zip"
-          unzip -q /tmp/godot.zip -d ~/godot
-          mv ~/godot/Godot_v${GODOT_VERSION}_linux.x86_64 ~/godot/godot
-          chmod +x ~/godot/godot
-          curl -fsSL -o /tmp/templates.tpz "$base/Godot_v${GODOT_VERSION}_export_templates.tpz"
-          unzip -q /tmp/templates.tpz -d /tmp/tpz
-          mv /tmp/tpz/templates ~/.local/share/godot/export_templates/${GODOT_VERSION/-/.}
-      - name: 导入项目（会暴露脚本解析错误）
-        run: ~/godot/godot --headless --path godot --import
-      - name: 单线程 Web 导出
+          npm ci
+          npx tsc --noEmit -p tsconfig.app.json
+      - name: Build the client
+        working-directory: client
+        run: npm run build
+      - name: Acceptance test in a real browser against a real server
+        env:
+          CHROME: google-chrome
+          DATABASE_PATH: /tmp/ci.sqlite3
+          WEB_DIR: client/dist
+          SKILLTOWN_MODEL_ENABLED: "false"
         run: |
-          mkdir -p godot/web
-          ~/godot/godot --headless --path godot --export-release "Web" web/index.html
-      - name: 无头集成冒烟（真实客户端打真实 API）
-        run: |
-          pip install -r server/requirements.txt
-          DATABASE_PATH=/tmp/ci.sqlite3 python -m uvicorn server.main:app --port 8000 &
+          pip install -r server/requirements.txt websocket-client
+          python -m uvicorn server.main:app --port 8000 &
           for i in $(seq 1 30); do curl -fsS http://127.0.0.1:8000/health && break || sleep 1; done
-          ~/godot/godot --headless --path godot res://tests/headless_flow.tscn
-          python3 tools/smoke_api.py http://127.0.0.1:8000
+          python tools/e2e_room.py http://127.0.0.1:8000
+          python tools/smoke_api.py http://127.0.0.1:8000
       - uses: actions/upload-artifact@v4
         with:
-          name: skilltown-web
-          path: godot/web
+          name: skilltown-client
+          path: client/dist

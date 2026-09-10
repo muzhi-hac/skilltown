@@ -1,9 +1,9 @@
-"""HTTP smoke test for the SkillTown API, in the order the Godot client calls it.
+"""HTTP smoke test for the SkillTown API, in the order the client calls it.
 
 Usage: python3 tools/smoke_api.py [base-url]   # default http://127.0.0.1:8000
 
 Run it against a local uvicorn process and again against the deployed URL. It
-asserts the fields the GDScript client reads, so a contract drift fails here
+asserts the fields the client reads, so a contract drift fails here
 before it silently breaks the web client.
 """
 import json, sys, urllib.error, urllib.request
@@ -32,11 +32,11 @@ def call(method, path, body=None, token=None, expect=200):
 def need(label, payload, fields):
     missing = [f for f in fields if f not in payload]
     if missing:
-        FAILS.append(f"{label}: missing fields the Godot client reads: {missing}")
+        FAILS.append(f"{label}: missing fields the client reads: {missing}")
 
 print("1) health / session / town")
 call("GET", "/health")
-s = call("POST", "/api/v1/session", {"display_name": "冒烟测试"}, expect=201)
+s = call("POST", "/api/v1/session", {"display_name": "Smoke test"}, expect=201)
 need("session", s, ["session_token", "session"])
 tok = s["session_token"]
 town = call("GET", "/api/v1/town", token=tok)
@@ -46,7 +46,7 @@ need("town.npc", alex, ["id", "name", "title", "category", "tasks", "recommendat
 need("town.task", alex["tasks"][0], ["scenario_id", "title", "estimated_minutes", "available_modes"])
 print(f"     Alex -> {alex['tasks'][0]['scenario_id']} modes={alex['tasks'][0]['available_modes']}")
 
-print("2) 龙虾任务：创建 attempt")
+print("2) lobster task: create an attempt")
 a = call("POST", "/api/v1/attempts",
          {"scenario_id": alex["tasks"][0]["scenario_id"], "mode": "practice"}, tok, expect=201)
 need("attempt", a, ["attempt_id", "scenario_id", "revision", "node", "effect",
@@ -55,7 +55,7 @@ need("attempt.node", a["node"], ["id", "text", "choices", "allow_text", "policy_
 aid = a["attempt_id"]
 print(f"     node={a['node']['id']} choices={a['node']['choices']} allow_text={a['node']['allow_text']}")
 
-print("3) 提交选择：先补齐信息，再答错以触发后果预演")
+print("3) answer in your own words: gather facts, then miss to trigger the preview")
 ANSWERS = {
     "ask_context": "Who pays for this, and is it tied to the renewal approval I own?",
     "blanket": "I refuse everything like this, no exceptions.",
@@ -78,12 +78,12 @@ def choice(kind, rev):
                  "expected_revision": rev, "kind": "text", "text": ANSWERS[kind]}, tok)
 
 r1 = choice("ask_context", a["revision"])
-print(f"     -> {r1['node']['id']} 证据={[ (u['skill_id'],u['state']) for u in r1['learning_updates']]}")
+print(f"     -> {r1['node']['id']} evidence={[ (u['skill_id'],u['state']) for u in r1['learning_updates']]}")
 need("feedback", r1["feedback"], ["title", "message", "mode", "policy_clauses"])
 r2 = choice("small_amount", r1["revision"])
 print(f"     -> {r2['node']['id']} effect={r2['effect']}")
 
-print("4) 倒回决策点并重答")
+print("4) rewind to the decision point and answer again")
 rw = call("POST", f"/api/v1/attempts/{aid}/rewind",
           {"client_event_id": __import__("uuid").uuid4().__str__(),
            "expected_revision": r2["revision"]}, tok)
@@ -91,9 +91,9 @@ print(f"     -> {rw['node']['id']} effect={rw['effect']}")
 if rw["node"]["id"] != "dinner_risk":
     FAILS.append(f"rewind landed on {rw['node']['id']}, expected dinner_risk")
 r3 = choice("spot_conflict", rw["revision"])
-print(f"     -> {r3['node']['id']} complete={r3['is_complete']} 证据={[(u['skill_id'],u['state']) for u in r3['learning_updates']]}")
+print(f"     -> {r3['node']['id']} complete={r3['is_complete']} evidence={[(u['skill_id'],u['state']) for u in r3['learning_updates']]}")
 
-print("5) 幂等重放 / 冲突 / 提示")
+print("5) idempotent replay, stale revision, hint")
 ev = __import__("uuid").uuid4().__str__()
 g = call("POST", "/api/v1/attempts", {"scenario_id": "supplier-gift", "mode": "verification"}, tok, expect=201)
 gid = g["attempt_id"]
@@ -116,18 +116,18 @@ h = call("POST", f"/api/v1/attempts/{b['attempt_id']}/hint",
 need("hint", h, ["attempt_id", "revision", "assisted", "hint", "policy_card"])
 t = call("POST", f"/api/v1/attempts/{b['attempt_id']}/respond",
          {"client_event_id": __import__("uuid").uuid4().__str__(), "expected_revision": h["revision"],
-          "kind": "text", "text": "我暂时不接受这个安排，需要先确认谁付款以及是否涉及续约审批，下一步我会按内部渠道咨询。"}, tok)
-print(f"     自由回答 mode={t['feedback_mode']} -> {t['node']['id']} 证据={[(u['skill_id'],u['state'],u['assisted']) for u in t['learning_updates']]}")
+          "kind": "text", "text": ANSWERS["boundary"]}, tok)
+print(f"     free text mode={t['feedback_mode']} -> {t['node']['id']} evidence={[(u['skill_id'],u['state'],u['assisted']) for u in t['learning_updates']]}")
 
-print("6) 护照 / 推荐 / 会话隔离")
+print("6) passport, plan, session isolation")
 p = call("GET", "/api/v1/passport", token=tok)
 need("passport", p, ["skills", "total_active_seconds", "total_model_wait_seconds"])
 for sk in p["skills"]:
-    print(f"     {sk['skill_id']}: {sk['state']} (证据 {len(sk['evidence'])} 条)")
+    print(f"     {sk['skill_id']}: {sk['state']} ({len(sk['evidence'])} answers)")
 rec = call("POST", "/api/v1/recommendations", {"max_items": 3}, tok)
 for item in rec["items"]:
-    print(f"     建议 -> {item['scenario_id']} / {item['skill_id']}: {item['reason'][:40]}")
-other = call("POST", "/api/v1/session", {"display_name": "另一个访客"}, expect=201)["session_token"]
+    print(f"     plan -> {item['scenario_id']} / {item['skill_id']}: {item['reason'][:40]}")
+other = call("POST", "/api/v1/session", {"display_name": "Another guest"}, expect=201)["session_token"]
 call("GET", f"/api/v1/attempts/{aid}", token=other, expect=404)
 call("GET", "/api/v1/town", expect=401)
 
@@ -137,4 +137,4 @@ if FAILS:
     for f in FAILS:
         print("  -", f)
     sys.exit(1)
-print("SMOKE OK — 会话→龙虾任务→选择→后果预演→倒带→完成→证据/护照/推荐 全部通过真实 HTTP")
+print("SMOKE OK - session, task, answers, consequence preview, rewind, completion, evidence, passport, plan")

@@ -1,6 +1,7 @@
-# 只把生成好的 Web 构建放进镜像，Godot 源工程和素材不进容器
-godot/*
-!godot/web
+# Only the built client goes into the image; sources and node_modules do not.
+client/*
+!client/dist
+godot
 
 .git
 .github
