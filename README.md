@@ -22,10 +22,10 @@ React + TypeScript + Phaser / Node + TypeScript / SQLite；同源网页与 API�
 
 | 角色 | 负责 | 目录 |
 |---|---|---|
-| A：前端与游戏体验 | 地图、交互、对话、结果、方案 UI、发布操作 | `web/`，根部署文件 |
-| B：AI 与后端 | 剧情、政策、API、评估、记忆、推荐、会话隔离 | `server/`，`shared/` 契约维护 |
+| A：@muzhi-hac | 地图、交互、对话、结果、方案 UI、发布操作 | `web/`，根部署文件 |
+| B：@Isso-W | 剧情、政策、API、评估、记忆、推荐、会话隔离 | `server/`，`shared/` 契约维护 |
 
-具体 GitHub 用户名待确认。请从 Issues 中按 owner:A / owner:B / owner:joint 筛选任务。
+请从 [Issues](https://github.com/muzhi-hac/skilltown/issues) 按 owner:A / owner:B / owner:joint 筛选任务。B 的仓库访问需先接受协作邀请。
 
 ## 协作文档
 

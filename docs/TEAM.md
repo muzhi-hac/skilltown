@@ -2,9 +2,9 @@
 
 ## 成员
 
-- A：前端与游戏负责人，GitHub 用户名待确认。
-- B：AI、后端与内容负责人，GitHub 用户名待确认。
-- 标签表示职责，不等于已绑定 GitHub Assignee；用户名确认后再绑定。
+- A：前端与游戏负责人，GitHub：[@muzhi-hac](https://github.com/muzhi-hac)。
+- B：AI、后端与内容负责人，GitHub：[@Isso-W](https://github.com/Isso-W)。
+- 已向 Isso-W 发出仓库 write 邀请；对方接受后具备协作访问权限。任务标签与正文同时明确责任人，GitHub Assignee 状态以 Issue 页面为准。
 
 ## 文件归属
 
@@ -46,3 +46,16 @@ B：跨 NPC 记忆、礼品迁移案例、方案生成、异常回退和隔离�
 ## 任务查找
 
 Issues 标签 owner:A、owner:B、owner:joint；milestone 分为 Day 1 与 Day 2。具体依赖和验收以各 Issue 为准。
+
+## 已创建任务
+
+| Issue | 负责人 | 内容 |
+|---|---|---|
+| [#1](https://github.com/muzhi-hac/skilltown/issues/1) | @muzhi-hac + @Isso-W | [共同][D1] 冻结主线剧本、能力标签与 API 契约 |
+| [#2](https://github.com/muzhi-hac/skilltown/issues/2) | @muzhi-hac | [A][D1] 网页小镇、分类与点击 / WASD 交互 |
+| [#3](https://github.com/muzhi-hac/skilltown/issues/3) | @Isso-W | [B][D1] 游客会话、场景 API 与持久任务状态 |
+| [#4](https://github.com/muzhi-hac/skilltown/issues/4) | @muzhi-hac | [A][D1] 培训对话、选项与可倒带后果预演 |
+| [#5](https://github.com/muzhi-hac/skilltown/issues/5) | @Isso-W | [B][D1] 合规主线内容与真实 AI 自由回答评估 |
+| [#6](https://github.com/muzhi-hac/skilltown/issues/6) | @Isso-W | [B][D2] 学习记忆、迁移复测与个性化推荐 |
+| [#7](https://github.com/muzhi-hac/skilltown/issues/7) | @muzhi-hac | [A][D2] 学习护照、证据与可点击个人方案 |
+| [#8](https://github.com/muzhi-hac/skilltown/issues/8) | @muzhi-hac + @Isso-W | [共同][D2] 联调、安全边界、部署与三分钟路演 |
