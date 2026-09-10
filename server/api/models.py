@@ -130,7 +130,11 @@ class PolicyCard(StrictModel):
     clause_id: str
     title: str
     text: str
-    fictional: Literal[True] = True
+    # True only for training-only stand-ins. Passages quoted from the EU corpus
+    # are real references and must not be dressed up as fiction.
+    fictional: bool = False
+    # Which document a real passage came from; empty for fictional stand-ins.
+    source: str = ""
 
 
 class ScenarioNode(StrictModel):

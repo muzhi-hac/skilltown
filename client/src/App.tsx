@@ -369,8 +369,9 @@ export default function App() {
       </div>
 
       <footer className="disclaimer">
-        Every scenario is a fictional training case and the policy is a fictional training policy;
-        nothing here is legal advice. Your record belongs to this guest session only.
+        Scenarios cite real EU regulation and practical thresholds as training reference. This is
+        not legal advice — for a specific case, ask compliance or legal. Your record belongs to
+        this guest session only and you can clear it at any time.
       </footer>
     </main>
   );

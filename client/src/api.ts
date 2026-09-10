@@ -12,7 +12,10 @@ export interface PolicyCard {
   clause_id: string;
   title: string;
   text: string;
-  fictional: true;
+  /** False for passages quoted from the real EU corpus. */
+  fictional: boolean;
+  /** Which document the passage came from, when it is a real source. */
+  source?: string;
 }
 
 export interface ScenarioNode {

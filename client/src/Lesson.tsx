@@ -2,7 +2,7 @@
 // server made of it. There are no options to pick.
 
 import { useEffect, useRef, useState } from "react";
-import type { Attempt, Passport, Recommendation } from "./api";
+import type { Attempt, Passport, PolicyCard, Recommendation } from "./api";
 
 const SKILL_LABELS: Record<string, string> = {
   clarify_context: "Gather key context",
@@ -16,6 +16,12 @@ const STATE_LABELS: Record<string, string> = {
   practiced: "Practiced",
   demonstrated: "Passed independently",
 };
+
+/** A card either quotes a real source or is a training-only stand-in; say which. */
+function cardLabel(card: PolicyCard): string {
+  if (card.fictional) return `Training policy (fictional) ${card.clause_id}`;
+  return card.source ? `${card.source} · ${card.clause_id}` : `Reference ${card.clause_id}`;
+}
 
 const MODE_LABELS: Record<string, string> = {
   scripted: "scripted feedback",
@@ -73,7 +79,7 @@ export function Lesson(props: LessonProps) {
 
       {node?.policy_cards?.map((card) => (
         <p key={card.clause_id} className="policy">
-          <strong>Fictional training policy {card.clause_id}</strong> · {card.title}: {card.text}
+          <strong>{cardLabel(card)}</strong> · {card.title}: {card.text}
         </p>
       ))}
 
@@ -88,8 +94,7 @@ export function Lesson(props: LessonProps) {
           <p>{attempt.feedback.message}</p>
           {attempt.feedback.policy_clauses.map((card) => (
             <p key={card.clause_id} className="policy">
-              <strong>Fictional training policy {card.clause_id}</strong> · {card.title}:{" "}
-              {card.text}
+              <strong>{cardLabel(card)}</strong> · {card.title}: {card.text}
             </p>
           ))}
         </div>

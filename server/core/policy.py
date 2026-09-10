@@ -1,4 +1,6 @@
-"""Small, audited policy-card registry for the hackathon scenario."""
+"""Training-only policy stand-ins, kept for scenarios not yet grounded in the
+real corpus. Anything from server/content/knowledge is a real reference and is
+served by server.core.knowledge instead."""
 
 POLICY_CARDS = {
     "ETH-01": {
