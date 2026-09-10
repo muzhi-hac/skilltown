@@ -2,9 +2,9 @@
 
 Live URL: https://skilltown.fly.dev
 
-Open the page once before the demo so the 36 MB WebAssembly build is cached;
-a cold first load is slow. Use a fresh browser profile (or clear site data) so
-you appear as a new guest and the opening skill check is offered.
+Use a fresh browser profile (or clear site data) so you appear as a new guest
+and the opening skill check is offered. The page itself loads in well under a
+second, so there is nothing to pre-warm.
 
 Every scenario is fictional and the policy is a fictional training policy. Say
 that once, early. Do not claim any educational outcome has been measured.
@@ -24,12 +24,14 @@ to them, and who knocks next is decided by the learner's own record.
 
 A visitor is already knocking: the ethics coach, here for a quick check.
 
-1. Click **Open the door** — the coach walks in.
-2. Answer question 1 correctly ("who pays, and whether it touches an approval
-   you own").
-3. Answer question 2 **wrong** on purpose — pick "only a small amount, so it's
-   fine". This is what makes the rest of the demo work.
-4. Answer question 3 with the reply that states boundary, reason and next step.
+1. Click **Open the door** (or press E) — the coach walks in and stands by the
+   table. The room stays visible next to the lesson.
+2. Type your own answer to question 1: who pays, and whether it touches an
+   approval you own. There is nothing to pick; you write it.
+3. Answer question 2 **weakly** on purpose — something like "it is a small
+   amount so it is fine". This is what makes the rest of the demo work.
+4. Answer question 3 with a reply that states the boundary, the reason and the
+   next step.
 
 > "Three questions is a starting point, not an assessment. The result is split
 > into evidence I have, practice suggested, and not yet verified."
@@ -39,10 +41,11 @@ A visitor is already knocking: the ethics coach, here for a quick check.
 Close the panel. The next teacher knocks on their own, and it is the partner
 whose skill you just answered wrong.
 
-1. Open the door, then take the invitation and **accept it straight away**.
+1. Open the door, then answer the invitation with a flat yes — "sounds great,
+   let's go" — and send it.
 2. The consequence preview appears — project eligibility suspended, clearly
    marked as a teaching simulation, not a real sanction.
-3. Click **Rewind to the decision point**.
+3. Click **Rewind to the decision**.
 
 > "It rewinds to the decision I actually got wrong, not to the start of the
 > story. The wrong answer stays in my record as a learning event — it is not an
@@ -56,8 +59,9 @@ whose skill you just answered wrong.
 Close the panel. The ethics coach knocks again — and now teaches the specific
 gap from step 0:20, not a generic lesson.
 
-Open **Passport**: the three skills, their state, and the evidence behind each,
-plus a learning plan whose entries are buttons that open the matching task.
+Open **My progress**: the three skills, their state, and the sentences you
+actually wrote behind each, plus a next step whose entries are buttons that open
+the matching task.
 
 > "Nothing here is a made-up memory. Every line points at an answer I actually
 > gave, and a learner with no evidence is told there is none rather than being
@@ -65,7 +69,8 @@ plus a learning plan whose entries are buttons that open the matching task.
 
 ## 2:15 — Transfer, and the counter-example (25s)
 
-Open the door for the supplier. Choose **"refuse everything, it's simplest"**.
+Open the door for the supplier. Answer with **"I refuse everything like this,
+no exceptions"**.
 
 > "It marks that as practice needed. A training system that teaches you to
 > refuse every invitation has taught you a slogan, not a judgement."
@@ -75,9 +80,9 @@ record it. Different conditions, different answer.
 
 ## 2:40 — Real AI on free text (20s)
 
-With the communication coach, type your own reply in the input box (not a
-listed option). The feedback names what your sentence covered and what it
-missed, quotes your own words, and cites the fictional policy clause.
+Every answer in this demo was already typed, so end on what that buys: the
+feedback names what your sentence covered and what it missed, quotes your own
+words back, and cites the fictional policy clause.
 
 > "The model proposes a verdict; the server checks it. A pass has to quote my
 > own words, and the server verifies that quote is really in my answer — which
