@@ -170,7 +170,7 @@ func _knock_next() -> void:
 		current = _first_present_coach()
 		door_action = "open"
 		door_button.disabled = false
-		door_button.text = "Open the door"
+		door_button.text = "Open the door  (E)"
 		_set_status("%s is knocking — here for a quick skill check." % current, _waiting_line())
 		_set_knocking(true)
 		_play_knock()
@@ -180,13 +180,13 @@ func _knock_next() -> void:
 		door_action = "invite"
 		door_button.disabled = false
 		_set_knocking(false)
-		door_button.text = "Invite the next teacher"
+		door_button.text = "Invite the next teacher  (E)"
 		_set_status("No one is waiting right now.", "Review your passport, or invite someone in.")
 		return
 	current = str(order.pop_front())
 	door_action = "open"
 	door_button.disabled = false
-	door_button.text = "Open the door"
+	door_button.text = "Open the door  (E)"
 	_set_status("%s is knocking at the door." % current, _waiting_line())
 	_set_knocking(true)
 	_play_knock()
