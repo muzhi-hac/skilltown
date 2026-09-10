@@ -101,12 +101,14 @@ class ClaudeTextEvaluator:
 
     def __init__(
         self,
-        api_key: str,
+        api_key: str | None = None,
         model: str = DEFAULT_MODEL,
         timeout_seconds: float = DEFAULT_TIMEOUT_SECONDS,
         fallback: FallbackTextEvaluator | None = None,
         client: object | None = None,
         effort: str = DEFAULT_EFFORT,
+        auth_token: str | None = None,
+        base_url: str | None = None,
     ) -> None:
         self._model = model
         self._timeout = timeout_seconds
@@ -114,12 +116,22 @@ class ClaudeTextEvaluator:
         self._fallback = fallback or FallbackTextEvaluator()
         if client is not None:
             self._client = client
-        else:  # pragma: no cover - requires the anthropic package and a key
+        else:  # pragma: no cover - requires the anthropic package and a credential
             import anthropic
 
-            self._client = anthropic.Anthropic(
-                api_key=api_key, timeout=timeout_seconds, max_retries=MAX_RETRIES
-            )
+            # Two credential shapes: a first-party key (sent as x-api-key) or a
+            # bearer token, which is what an Anthropic-compatible gateway wants.
+            options: dict[str, object] = {
+                "timeout": timeout_seconds,
+                "max_retries": MAX_RETRIES,
+            }
+            if api_key:
+                options["api_key"] = api_key
+            if auth_token:
+                options["auth_token"] = auth_token
+            if base_url:
+                options["base_url"] = base_url
+            self._client = anthropic.Anthropic(**options)
         self._supports_refusal_fallback = _accepts_refusal_fallback(self._client)
 
     def evaluate(self, rule: str, text: str, allow_model: bool = True) -> EvaluationResult:
@@ -243,14 +255,18 @@ def _looks_like_bad_request(exc: Exception) -> bool:
 
 
 def build_evaluator() -> FallbackTextEvaluator | ClaudeTextEvaluator:
-    """Model-backed evaluator when a key is configured, deterministic otherwise."""
+    """Model-backed evaluator when a credential is set, deterministic otherwise."""
     api_key = os.getenv("ANTHROPIC_API_KEY", "").strip()
+    auth_token = os.getenv("ANTHROPIC_AUTH_TOKEN", "").strip()
+    base_url = os.getenv("ANTHROPIC_BASE_URL", "").strip()
     fallback = FallbackTextEvaluator()
-    if not api_key:
-        logger.info("ANTHROPIC_API_KEY not set; free text uses the fallback evaluator")
+    if not api_key and not auth_token:
+        logger.info("no model credential set; free text uses the fallback evaluator")
         return fallback
     return ClaudeTextEvaluator(
-        api_key=api_key,
+        api_key=api_key or None,
+        auth_token=auth_token or None,
+        base_url=base_url or None,
         model=os.getenv("SKILLTOWN_MODEL", DEFAULT_MODEL).strip() or DEFAULT_MODEL,
         timeout_seconds=float(os.getenv("SKILLTOWN_MODEL_TIMEOUT", DEFAULT_TIMEOUT_SECONDS)),
         fallback=fallback,
