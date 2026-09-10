@@ -1,0 +1,48 @@
+name: deploy-fly
+
+# 导出 Godot Web 构建 → 打进镜像 → 部署到 Fly.io（同源，一台机器 + 一个持久卷）。
+# 需要仓库 Secret：FLY_API_TOKEN（flyctl tokens create deploy）。
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      GODOT_VERSION: 4.5-stable
+      FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/godot
+            ~/.local/share/godot/export_templates
+          key: godot-${{ env.GODOT_VERSION }}
+      - name: 安装 Godot（缓存未命中时）
+        run: |
+          set -euo pipefail
+          test -x ~/godot/godot && exit 0
+          base="https://github.com/godotengine/godot-builds/releases/download/${GODOT_VERSION}"
+          mkdir -p ~/godot ~/.local/share/godot/export_templates
+          curl -fsSL -o /tmp/godot.zip "$base/Godot_v${GODOT_VERSION}_linux.x86_64.zip"
+          unzip -q /tmp/godot.zip -d ~/godot
+          mv ~/godot/Godot_v${GODOT_VERSION}_linux.x86_64 ~/godot/godot
+          chmod +x ~/godot/godot
+          curl -fsSL -o /tmp/templates.tpz "$base/Godot_v${GODOT_VERSION}_export_templates.tpz"
+          unzip -q /tmp/templates.tpz -d /tmp/tpz
+          mv /tmp/tpz/templates ~/.local/share/godot/export_templates/${GODOT_VERSION/-/.}
+      - name: 导出 Web 构建
+        run: |
+          mkdir -p godot/web
+          ~/godot/godot --headless --path godot --import
+          ~/godot/godot --headless --path godot --export-release "Web" web/index.html
+          test -f godot/web/index.html
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+      - run: flyctl deploy --remote-only
+      - name: 线上冒烟
+        run: |
+          app=$(awk -F'"' '/^app =/{print $2}' fly.toml)
+          python3 tools/smoke_api.py "https://$app.fly.dev"

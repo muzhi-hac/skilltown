@@ -1,4 +1,6 @@
 # Godot 4+ specific ignores
 .godot/
 /android/
-/web/
+# 生成物不提交，但保留目录，让 docker build 上下文里 godot/web 始终存在
+/web/*
+!/web/.gitkeep

@@ -1,0 +1,18 @@
+# 只把生成好的 Web 构建放进镜像，Godot 源工程和素材不进容器
+godot/*
+!godot/web
+
+.git
+.github
+.venv
+__pycache__
+**/__pycache__
+.pytest_cache
+data
+docs
+tools
+cloudflare
+*.sqlite3
+*.md
+.env
+.env.*
