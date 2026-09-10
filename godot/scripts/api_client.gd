@@ -83,6 +83,28 @@ func npc_by_name(npc_name: String) -> Dictionary:
 			return item
 	return {}
 
+func npc_name_by_id(npc_id: String) -> String:
+	var npcs = town.get("npcs", [])
+	if typeof(npcs) == TYPE_ARRAY:
+		for item in npcs:
+			if item is Dictionary and str(item.get("id", "")) == npc_id:
+				return str(item.get("name", npc_id))
+	return npc_id
+
+func task_title(scenario_id: String) -> String:
+	var npcs = town.get("npcs", [])
+	if typeof(npcs) == TYPE_ARRAY:
+		for item in npcs:
+			if not item is Dictionary:
+				continue
+			var tasks = item.get("tasks", [])
+			if typeof(tasks) != TYPE_ARRAY:
+				continue
+			for task in tasks:
+				if task is Dictionary and str(task.get("scenario_id", "")) == scenario_id:
+					return str(task.get("title", scenario_id))
+	return scenario_id
+
 func category_label(category_id: String) -> String:
 	var categories = town.get("categories", [])
 	if typeof(categories) == TYPE_ARRAY:

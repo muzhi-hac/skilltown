@@ -51,6 +51,20 @@ class ScenarioEngine:
     def start_node_id(self, scenario_id: str) -> str:
         return str(self.get_scenario(scenario_id)["start_node"])
 
+    def start_node_selector(self, scenario_id: str) -> str | None:
+        """Scenarios may pick their opening node from the learner's own record."""
+        selector = self.get_scenario(scenario_id).get("start_node_selector")
+        return str(selector) if selector else None
+
+    def coaching_node_id(self, scenario_id: str, skill_id: str | None) -> str:
+        """Node that coaches `skill_id`, or the scenario's default opening node."""
+        scenario = self.get_scenario(scenario_id)
+        node_id = scenario.get("coaching_nodes", {}).get(skill_id or "")
+        if not node_id:
+            return self.start_node_id(scenario_id)
+        self.get_node(scenario_id, str(node_id))
+        return str(node_id)
+
     def choose(self, scenario_id: str, node_id: str, choice_id: str) -> BranchResult:
         node = self.get_node(scenario_id, node_id)
         allowed = {choice["id"] for choice in node.get("choices", [])}

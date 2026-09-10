@@ -181,12 +181,13 @@ def test_stale_revision_reports_conflict_so_the_client_can_resync(tmp_path):
     with TestClient(create_app(tmp_path / "test.sqlite3")) as client:
         _, headers = session(client)
         attempt = create_attempt(client, headers, "supplier-gift", "verification")
-        done = choice(client, headers, attempt, "pause_gift")
+        benign = choice(client, headers, attempt, "pause_gift").json()
+        done = choice(client, headers, benign, "accept_documented")
         assert done.status_code == 200, done.text
         assert done.json()["is_complete"] is True
         # A duplicated click carries a fresh event id but the old revision: the client
         # must be told to resync (409), not that its choice was invalid (400).
-        stale = choice(client, headers, attempt, "pause_gift")
+        stale = choice(client, headers, benign, "accept_documented")
         assert stale.status_code == 409, stale.text
         error = stale.json()["error"]
         assert error["code"] == "revision_conflict"
@@ -210,3 +211,47 @@ def test_web_build_is_served_from_the_same_origin_without_shadowing_the_api(tmp_
         # The API and health routes must still win over the static mount.
         assert client.get("/health").json()["status"] == "ok"
         assert client.get("/api/v1/town").status_code == 401
+
+
+def test_mira_coaches_the_weakest_skill_from_the_learners_own_evidence(tmp_path):
+    with TestClient(create_app(tmp_path / "test.sqlite3")) as client:
+        # No evidence yet: Mira must say so instead of inventing a gap.
+        _, fresh = session(client, "Fresh")
+        cold = create_attempt(client, fresh, "ethics-review", "practice")
+        assert cold["node"]["id"] == "review_no_evidence"
+
+        # A learner who missed the hidden-arrangement risk gets the conflict card.
+        _, conflict = session(client, "Conflict")
+        dinner = create_attempt(client, conflict)
+        risk = choice(client, conflict, dinner, "ask_context").json()
+        choice(client, conflict, risk, "accept_hidden")
+        coached = create_attempt(client, conflict, "ethics-review", "practice")
+        assert coached["node"]["id"] == "review_conflict"
+        assert [c["id"] for c in coached["node"]["choices"]] == [
+            "who_pays", "hide_record", "celebration"
+        ]
+
+        # A learner who over-generalised instead gets the context card.
+        _, broad = session(client, "Broad")
+        other = create_attempt(client, broad)
+        choice(client, broad, other, "reject_everything")
+        assert create_attempt(client, broad, "ethics-review", "practice")["node"]["id"] == (
+            "review_clarify"
+        )
+
+
+def test_gift_scenario_teaches_the_counter_example_not_blanket_refusal(tmp_path):
+    with TestClient(create_app(tmp_path / "test.sqlite3")) as client:
+        _, headers = session(client)
+        attempt = create_attempt(client, headers, "supplier-gift", "practice")
+        # Even the correct answer meets the counter-example before completing.
+        benign = choice(client, headers, attempt, "pause_gift").json()
+        assert benign["node"]["id"] == "gift_benign"
+        assert benign["is_complete"] is False
+        refused = choice(client, headers, benign, "refuse_anyway").json()
+        assert refused["node"]["id"] == "gift_benign"
+        assert refused["learning_updates"][0]["state"] == "needs_practice"
+        assert refused["learning_updates"][0]["skill_id"] == "clarify_context"
+        finished = choice(client, headers, refused, "accept_documented").json()
+        assert finished["node"]["id"] == "gift_complete"
+        assert finished["is_complete"] is True

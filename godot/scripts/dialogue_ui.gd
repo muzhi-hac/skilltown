@@ -50,6 +50,7 @@ func _ready() -> void:
 	APIClient.attempt_received.connect(_on_attempt_received)
 	APIClient.hint_received.connect(_on_hint_received)
 	APIClient.passport_received.connect(_on_passport_received)
+	APIClient.recommendations_received.connect(_on_recommendations_received)
 	APIClient.api_error.connect(_on_api_error)
 	_reset_controls()
 	Config.log_info("对话 UI 初始化完成")
@@ -333,6 +334,33 @@ func _on_passport_received(payload: Dictionary) -> void:
 		int(payload.get("total_active_seconds", 0)),
 		int(payload.get("total_model_wait_seconds", 0)),
 	])
+	# 方案由服务端按缺口选任务，客户端只负责显示去哪找谁。
+	_set_waiting(true, "正在生成学习方案…")
+	APIClient.get_recommendations(3)
+
+func _on_recommendations_received(payload: Dictionary) -> void:
+	if not visible:
+		return
+	_set_waiting(false, "")
+	var items = payload.get("items", [])
+	if typeof(items) != TYPE_ARRAY or items.is_empty():
+		_append_line("[color=gray]暂无学习建议。[/color]")
+		return
+	_append_line("[color=gray]—— 学习方案 ——[/color]")
+	for item in items:
+		if not item is Dictionary:
+			continue
+		var scenario_id := str(item.get("scenario_id", ""))
+		var evidence = item.get("evidence_ids", [])
+		var count := 0
+		if typeof(evidence) == TYPE_ARRAY:
+			count = evidence.size()
+		_append_line("[color=gray]去找 %s 做「%s」：%s（依据 %d 条证据）[/color]" % [
+			APIClient.npc_name_by_id(str(item.get("npc_id", ""))),
+			APIClient.task_title(scenario_id),
+			str(item.get("reason", "")),
+			count,
+		])
 
 func _on_close_pressed() -> void:
 	hide_dialogue()

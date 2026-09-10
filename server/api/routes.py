@@ -111,11 +111,29 @@ def create_attempt(body: CreateAttemptRequest, request: Request, session: Sessio
         from server.main import ApiError
 
         raise ApiError(400, "invalid_mode", "This mode is not available for the scenario.")
+    start_node_id = engine.start_node_id(body.scenario_id)
+    if engine.start_node_selector(body.scenario_id) == "weakest_skill":
+        skills, _ = store.passport(session["id"])
+        start_node_id = engine.coaching_node_id(body.scenario_id, _weakest_skill(skills))
     attempt = store.create_attempt(
         session["id"], body.scenario_id, scenario["version"], body.mode.value,
-        engine.start_node_id(body.scenario_id),
+        start_node_id,
     )
     return _attempt_response(engine, attempt)
+
+
+# Coaching targets the weakest skill the learner has actually answered on. Skills with
+# no evidence are not gaps: they are unverified, and inventing a gap for them would be
+# a fake memory.
+_STATE_PRIORITY = {"needs_practice": 0, "practiced": 1, "demonstrated": 2}
+
+
+def _weakest_skill(skills: list[dict]) -> str | None:
+    answered = [skill for skill in skills if skill.get("evidence")]
+    if not answered:
+        return None
+    answered.sort(key=lambda skill: _STATE_PRIORITY.get(str(skill.get("state")), 3))
+    return str(answered[0]["skill_id"])
 
 
 @router.get("/attempts/{attempt_id}", response_model=AttemptResponse, operation_id="getAttempt")

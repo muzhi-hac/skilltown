@@ -98,6 +98,9 @@ func _run() -> void:
 		states[str(skill.get("skill_id", ""))] = str(skill.get("state", ""))
 	_check("clarify_context 已练习", states.get("clarify_context", "") == "practiced", str(states))
 	_check("conflict_awareness 已练习", states.get("conflict_awareness", "") == "practiced", str(states))
+	var plan = await APIClient.recommendations_received
+	_check("方案给出可去的任务", plan.get("items", []).size() > 0, str(plan))
+	_check("方案已显示在对话框", ui.dialogue_text.get_parsed_text().contains("学习方案"))
 
 	print("6) 换 Jo 走自由回答支线，验证跨 NPC 会话延续")
 	ui.hide_dialogue()
@@ -114,9 +117,33 @@ func _run() -> void:
 		["scripted", "ai", "fallback"].has(str(written.get("feedback_mode", ""))),
 		str(written.get("feedback_mode", "")))
 
+	print("7) 找 Mira 复盘：辅导内容应来自本人证据")
+	ui.hide_dialogue()
+	ui.start_dialogue("Mira")
+	var coaching = await APIClient.attempt_received
+	var coaching_node := _node_id(coaching)
+	_check("按缺口选辅导节点，而不是说没有记录",
+		coaching_node != "review_no_evidence" and coaching_node.begins_with("review_"),
+		coaching_node)
+
+	print("8) 找 Sam 验证迁移：必须经过反例，一律拒绝要被纠正")
+	ui.hide_dialogue()
+	ui.start_dialogue("Sam")
+	var gift = await APIClient.attempt_received
+	_check("进入 gift_intro", _node_id(gift) == "gift_intro", _node_id(gift))
+	var benign = await _press("reject_all_gifts")
+	_check("一律拒绝被判为待练习",
+		str(benign.get("learning_updates", [{}])[0].get("state", "")) == "needs_practice",
+		str(benign.get("learning_updates", [])))
+	_check("进入反例节点 gift_benign", _node_id(benign) == "gift_benign", _node_id(benign))
+	var refused = await _press("refuse_anyway")
+	_check("在无风险情境里仍拒绝 → 留在原节点", _node_id(refused) == "gift_benign", _node_id(refused))
+	var migrated = await _press("accept_documented")
+	_check("说明条件差异后完成", bool(migrated.get("is_complete", false)), _node_id(migrated))
+
 	print("")
 	if failures.is_empty():
-		print("HEADLESS SMOKE OK — 客户端对真实 API 跑通了点击→选择→后果→倒带→完成→护照→支线")
+		print("HEADLESS SMOKE OK — 点击→选择→后果→倒带→完成→护照→方案→支线→按缺口辅导→迁移反例")
 		get_tree().quit(0)
 	else:
 		print("HEADLESS SMOKE FAILED（%d 项）：" % failures.size())
