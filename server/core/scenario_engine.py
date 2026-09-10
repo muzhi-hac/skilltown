@@ -65,10 +65,12 @@ class ScenarioEngine:
         self.get_node(scenario_id, str(node_id))
         return str(node_id)
 
-    def choose(self, scenario_id: str, node_id: str, choice_id: str) -> BranchResult:
+    def choose(
+        self, scenario_id: str, node_id: str, choice_id: str, allow_unlisted: bool = False
+    ) -> BranchResult:
         node = self.get_node(scenario_id, node_id)
         allowed = {choice["id"] for choice in node.get("choices", [])}
-        if choice_id not in allowed:
+        if not allow_unlisted and choice_id not in allowed:
             raise ScenarioError(f"Choice {choice_id!r} is not allowed at node {node_id!r}")
         try:
             branch = node["branches"][choice_id]
@@ -83,6 +85,25 @@ class ScenarioEngine:
             feedback=branch.get("feedback"),
             policy_clause_ids=list(branch.get("policy_clause_ids", [])),
         )
+
+    def resolve_text(self, scenario_id: str, node_id: str, outcome: str) -> BranchResult:
+        """Map a free-text outcome onto one of the node's audited branches.
+
+        The learner types their own answer, but the consequence still comes from
+        pre-reviewed content: the model only decides which of these branches the
+        answer landed on, never what the branch does.
+        """
+        node = self.get_node(scenario_id, node_id)
+        mapping = node.get("text_branches")
+        if not mapping:
+            raise ScenarioError(f"Node {node_id!r} does not accept free-text branching")
+        branch_id = mapping.get(outcome) or mapping.get("miss")
+        if not branch_id:
+            raise ScenarioError(f"No branch for outcome {outcome!r} at node {node_id!r}")
+        return self.choose(scenario_id, node_id, branch_id, allow_unlisted=True)
+
+    def has_text_branches(self, scenario_id: str, node_id: str) -> bool:
+        return bool(self.get_node(scenario_id, node_id).get("text_branches"))
 
     def rewind_target(self, scenario_id: str, node_id: str) -> str:
         node = self.get_node(scenario_id, node_id)

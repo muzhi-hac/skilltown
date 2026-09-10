@@ -196,15 +196,36 @@ def respond(
         if evaluated.mode == "ai":
             store.record_model_call(session["id"])
         store.add_model_wait(session["id"], str(attempt_id), waited)
-        next_node_id = node["text_pass_node"] if evaluated.passed else node_id
-        effect = "completed" if evaluated.passed and next_node_id.endswith("_complete") else "none"
-        skill_id = rule
-        learning_state = "pass" if evaluated.passed else "needs_practice"
-        interpretation = evaluated.interpretation
-        feedback_message = evaluated.feedback
-        clause_ids = evaluated.policy_clause_ids
         observed = body.text
         feedback_mode = evaluated.mode
+        if engine.has_text_branches(attempt["scenario_id"], node_id):
+            # The learner writes their own answer; the consequence still comes
+            # from pre-reviewed content. The evaluation only decides which
+            # audited branch the answer landed on.
+            branch = engine.resolve_text(attempt["scenario_id"], node_id, evaluated.outcome)
+            next_node_id = branch.next_node_id
+            effect = branch.effect
+            skill_id = branch.skill_id or rule
+            learning_state = branch.state
+            clause_ids = branch.policy_clause_ids
+            # Scripted feedback names this scenario's specifics; live feedback can
+            # quote the learner. Prefer whichever actually looked at their words.
+            if evaluated.mode == "ai":
+                interpretation = evaluated.interpretation
+                feedback_message = evaluated.feedback
+            else:
+                interpretation = branch.interpretation or evaluated.interpretation
+                feedback_message = branch.feedback or evaluated.feedback
+        else:
+            next_node_id = node["text_pass_node"] if evaluated.passed else node_id
+            effect = (
+                "completed" if evaluated.passed and next_node_id.endswith("_complete") else "none"
+            )
+            skill_id = rule
+            learning_state = "pass" if evaluated.passed else "needs_practice"
+            interpretation = evaluated.interpretation
+            feedback_message = evaluated.feedback
+            clause_ids = evaluated.policy_clause_ids
 
     def build_response(old_attempt, revision, new_status, evidence_id, resolved_state):
         current = dict(old_attempt)

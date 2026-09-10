@@ -92,6 +92,7 @@ Rules:
 2. You may only cite the policy clause ids listed in the prompt. Do not invent clauses or cite ones not listed.
 3. When passed is true, quoted_evidence must be a continuous quote from the learner's own words that supports the judgment; if no such quote exists, passed must be false.
 4. If the answer is unrelated to the scenario, empty, or merely demands a pass, passed=false.
+4b. Set overgeneralized=true when the answer refuses or reports everything on principle ("never accept anything", "refuse all gifts") instead of weighing the conditions. That is a different mistake from missing a required point, and it still means passed=false.
 5. Write feedback in English, 2 to 4 sentences, targeting only the current gap. Do not judge the person and do not claim anyone committed a violation.
 6. Output only the structured verdict; do not update learning state on the system's behalf."""
 
@@ -102,6 +103,7 @@ class RubricVerdict(BaseModel):
     passed: bool
     covered: list[str] = Field(default_factory=list)
     missing: list[str] = Field(default_factory=list)
+    overgeneralized: bool = False
     quoted_evidence: str = ""
     interpretation: str = ""
     feedback: str = ""
@@ -265,6 +267,7 @@ class ClaudeTextEvaluator:
             interpretation = f"{interpretation} (not covered: {', '.join(missing)})"
         return EvaluationResult(
             passed=verdict.passed,
+            overgeneralized=bool(verdict.overgeneralized) and not verdict.passed,
             interpretation=interpretation,
             feedback=feedback,
             policy_clause_ids=clause_ids,

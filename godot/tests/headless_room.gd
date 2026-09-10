@@ -5,6 +5,16 @@
 #       res://tests/headless_room.tscn
 extends Node
 
+# Answers are written by the learner, so the tests type sentences the
+# deterministic evaluator resolves onto the audited branches.
+const ASK_CONTEXT := "Who pays for this, and is it tied to the renewal approval I own?"
+const VAGUE := "Sounds fun, let's just go."
+const BLANKET := "I refuse everything like this, no exceptions."
+const SPOT_CONFLICT := "The renewal approval sits with me and they asked me to skip the expense record, so I will pause and consult compliance."
+const SMALL_AMOUNT := "It is a small amount so it is fine."
+const BOUNDARY_FULL := "I will decline for now because the renewal approval sits with me; I will consult compliance and we can meet once it is closed."
+const DOCUMENTED := "The renewal approval is already closed and the expense record is complete, so I can join and log it."
+
 const ROOM := preload("res://scenes/room.tscn")
 
 var failures: Array[String] = []
@@ -31,6 +41,13 @@ func _check(label: String, ok: bool, detail: String = "") -> void:
 
 func _dialogue() -> CanvasLayer:
 	return get_tree().get_first_node_in_group("dialogue_system")
+
+func _write(text: String) -> Dictionary:
+	var panel := _dialogue()
+	_check("the answer box is ready", panel.player_input.editable, panel.player_input.placeholder_text)
+	panel.player_input.text = text
+	panel.send_button.pressed.emit()
+	return await APIClient.attempt_received
 
 func _await_status(fragment: String, timeout := 15.0) -> bool:
 	var deadline := Time.get_ticks_msec() + int(timeout * 1000.0)
@@ -67,19 +84,18 @@ func _run() -> void:
 	_check("exactly one visitor is in the room", present.size() == 1, str(present))
 	_check("the panel is open", _dialogue().visible)
 
-	print("3) The skill check runs through the existing panel")
+	print("3) The skill check is answered in the learner's own words")
 	_dialogue().choice_container.get_child(0).pressed.emit()
 	var q1 = await APIClient.attempt_received
 	_check("question 1 arrives", str(q1.get("node", {}).get("id", "")) == "screen_clarify",
 		str(q1.get("node", {}).get("id", "")))
-	_press("who_pays_pending")
-	var q2 = await APIClient.attempt_received
-	_press("small_amount_ok")
-	var q3 = await APIClient.attempt_received
+	var q2 = await _write(ASK_CONTEXT)
+	_check("question 2 arrives", str(q2.get("node", {}).get("id", "")) == "screen_conflict",
+		str(q2.get("node", {}).get("id", "")))
+	var q3 = await _write(SMALL_AMOUNT)
 	_check("question 3 is the boundary one", str(q3.get("node", {}).get("id", "")) == "screen_boundary",
 		str(q3.get("node", {}).get("id", "")))
-	_press("reason_and_next")
-	var done = await APIClient.attempt_received
+	var done = await _write(BOUNDARY_FULL)
 	_check("the skill check completes", bool(done.get("is_complete", false)))
 
 	print("4) Closing the lesson sends the visitor out and queues the next knock")
@@ -142,9 +158,3 @@ func _fetch_passport() -> Dictionary:
 	APIClient.get_passport()
 	return await APIClient.passport_received
 
-func _press(choice_id: String) -> void:
-	for child in _dialogue().choice_container.get_children():
-		if child is Button and str(child.get_meta("choice_id", "")) == choice_id:
-			child.pressed.emit()
-			return
-	_check("choice %s is on screen" % choice_id, false, "button not rendered")

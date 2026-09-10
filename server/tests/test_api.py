@@ -24,7 +24,7 @@ def create_attempt(client, headers, scenario="dinner-invitation", mode="practice
     return response.json()
 
 
-def choice(client, headers, attempt, choice_id, event_id=None):
+def answer(client, headers, attempt, choice_id, event_id=None):
     return client.post(
         f"/api/v1/attempts/{attempt['attempt_id']}/respond",
         headers=headers,
@@ -33,6 +33,40 @@ def choice(client, headers, attempt, choice_id, event_id=None):
             "expected_revision": attempt["revision"],
             "kind": "choice",
             "choice_id": choice_id,
+        },
+    )
+
+
+# The learner types their own answer; the deterministic evaluator decides which
+# audited branch it lands on (no model is configured under test).
+ASK_CONTEXT = "Who pays for this, and is it tied to the renewal approval I own?"
+VAGUE = "Sounds fun, let's just go."
+BLANKET = "I refuse everything like this, no exceptions."
+SPOT_CONFLICT = (
+    "The renewal approval sits with me and they asked me to skip the expense record, "
+    "so I will pause and consult compliance."
+)
+SMALL_AMOUNT = "It is a small amount so it is fine."
+BOUNDARY_FULL = (
+    "I will decline for now because the renewal approval sits with me; I will consult "
+    "compliance and we can meet once it is closed."
+)
+DOCUMENTED = (
+    "The renewal approval is already closed and the expense record is complete, so I can "
+    "join and log it."
+)
+REPORT_IT = "I will report this celebration as a violation."
+
+
+def answer(client, headers, attempt, text, event_id=None):
+    return client.post(
+        f"/api/v1/attempts/{attempt['attempt_id']}/respond",
+        headers=headers,
+        json={
+            "client_event_id": event_id or str(uuid4()),
+            "expected_revision": attempt["revision"],
+            "kind": "text",
+            "text": text,
         },
     )
 
@@ -62,7 +96,7 @@ def test_wrong_choice_creates_evidence_and_can_rewind(tmp_path):
     with TestClient(create_app(tmp_path / "test.sqlite3")) as client:
         _, headers = session(client)
         attempt = create_attempt(client, headers)
-        result = choice(client, headers, attempt, "accept_now")
+        result = answer(client, headers, attempt, VAGUE)
         assert result.status_code == 200, result.text
         payload = result.json()
         assert payload["effect"] == "consequence_preview"
@@ -82,11 +116,11 @@ def test_respond_is_idempotent_and_rejects_payload_reuse(tmp_path):
         _, headers = session(client)
         attempt = create_attempt(client, headers)
         event_id = str(uuid4())
-        first = choice(client, headers, attempt, "ask_context", event_id)
-        second = choice(client, headers, attempt, "ask_context", event_id)
+        first = answer(client, headers, attempt, ASK_CONTEXT, event_id)
+        second = answer(client, headers, attempt, ASK_CONTEXT, event_id)
         assert first.status_code == second.status_code == 200
         assert first.json() == second.json()
-        conflict = choice(client, headers, attempt, "accept_now", event_id)
+        conflict = answer(client, headers, attempt, VAGUE, event_id)
         assert conflict.status_code == 409
         assert conflict.json()["error"]["code"] == "idempotency_conflict"
 
@@ -95,13 +129,13 @@ def test_practice_and_verification_have_distinct_states(tmp_path):
     with TestClient(create_app(tmp_path / "test.sqlite3")) as client:
         _, headers = session(client)
         dinner = create_attempt(client, headers)
-        step = choice(client, headers, dinner, "ask_context").json()
-        completed = choice(client, headers, step, "pause_consult")
+        step = answer(client, headers, dinner, ASK_CONTEXT).json()
+        completed = answer(client, headers, step, SPOT_CONFLICT)
         assert completed.status_code == 200, completed.text
         assert completed.json()["learning_updates"][0]["state"] == "practiced"
 
         gift = create_attempt(client, headers, "supplier-gift", "verification")
-        verified = choice(client, headers, gift, "pause_gift")
+        verified = answer(client, headers, gift, SPOT_CONFLICT)
         assert verified.status_code == 200, verified.text
         assert verified.json()["learning_updates"][0]["state"] == "demonstrated"
 
@@ -163,9 +197,9 @@ def test_rewind_returns_to_the_node_where_the_mistake_happened(tmp_path):
     with TestClient(create_app(tmp_path / "test.sqlite3")) as client:
         _, headers = session(client)
         attempt = create_attempt(client, headers)
-        risk = choice(client, headers, attempt, "ask_context").json()
+        risk = answer(client, headers, attempt, ASK_CONTEXT).json()
         assert risk["node"]["id"] == "dinner_risk"
-        preview = choice(client, headers, risk, "accept_hidden").json()
+        preview = answer(client, headers, risk, SMALL_AMOUNT).json()
         assert preview["effect"] == "consequence_preview"
         assert preview["node"]["id"] == "dinner_consequence"
         rewind = client.post(
@@ -181,13 +215,13 @@ def test_stale_revision_reports_conflict_so_the_client_can_resync(tmp_path):
     with TestClient(create_app(tmp_path / "test.sqlite3")) as client:
         _, headers = session(client)
         attempt = create_attempt(client, headers, "supplier-gift", "verification")
-        benign = choice(client, headers, attempt, "pause_gift").json()
-        done = choice(client, headers, benign, "accept_documented")
+        benign = answer(client, headers, attempt, SPOT_CONFLICT).json()
+        done = answer(client, headers, benign, DOCUMENTED)
         assert done.status_code == 200, done.text
         assert done.json()["is_complete"] is True
         # A duplicated click carries a fresh event id but the old revision: the client
         # must be told to resync (409), not that its choice was invalid (400).
-        stale = choice(client, headers, benign, "accept_documented")
+        stale = answer(client, headers, benign, DOCUMENTED)
         assert stale.status_code == 409, stale.text
         error = stale.json()["error"]
         assert error["code"] == "revision_conflict"
@@ -223,18 +257,18 @@ def test_mira_coaches_the_weakest_skill_from_the_learners_own_evidence(tmp_path)
         # A learner who missed the hidden-arrangement risk gets the conflict card.
         _, conflict = session(client, "Conflict")
         dinner = create_attempt(client, conflict)
-        risk = choice(client, conflict, dinner, "ask_context").json()
-        choice(client, conflict, risk, "accept_hidden")
+        risk = answer(client, conflict, dinner, ASK_CONTEXT).json()
+        answer(client, conflict, risk, SMALL_AMOUNT)
         coached = create_attempt(client, conflict, "ethics-review", "practice")
         assert coached["node"]["id"] == "review_conflict"
-        assert [c["id"] for c in coached["node"]["choices"]] == [
-            "who_pays", "hide_record", "celebration"
-        ]
+        # Coaching is answered in the learner's own words, not by picking an option.
+        assert coached["node"]["choices"] == []
+        assert coached["node"]["allow_text"] is True
 
         # A learner who over-generalised instead gets the context card.
         _, broad = session(client, "Broad")
         other = create_attempt(client, broad)
-        choice(client, broad, other, "reject_everything")
+        answer(client, broad, other, BLANKET)
         assert create_attempt(client, broad, "ethics-review", "practice")["node"]["id"] == (
             "review_clarify"
         )
@@ -245,14 +279,14 @@ def test_gift_scenario_teaches_the_counter_example_not_blanket_refusal(tmp_path)
         _, headers = session(client)
         attempt = create_attempt(client, headers, "supplier-gift", "practice")
         # Even the correct answer meets the counter-example before completing.
-        benign = choice(client, headers, attempt, "pause_gift").json()
+        benign = answer(client, headers, attempt, SPOT_CONFLICT).json()
         assert benign["node"]["id"] == "gift_benign"
         assert benign["is_complete"] is False
-        refused = choice(client, headers, benign, "refuse_anyway").json()
+        refused = answer(client, headers, benign, BLANKET).json()
         assert refused["node"]["id"] == "gift_benign"
         assert refused["learning_updates"][0]["state"] == "needs_practice"
         assert refused["learning_updates"][0]["skill_id"] == "clarify_context"
-        finished = choice(client, headers, refused, "accept_documented").json()
+        finished = answer(client, headers, refused, DOCUMENTED).json()
         assert finished["node"]["id"] == "gift_complete"
         assert finished["is_complete"] is True
 
@@ -313,13 +347,13 @@ def test_screening_is_offered_by_the_server_and_labels_each_question(tmp_path):
         attempt = create_attempt(client, headers, "screening", "screening")
         assert attempt["node"]["id"] == "screen_clarify"
         assert attempt["node"]["category"] == "ethics_compliance"
-        second = choice(client, headers, attempt, "who_pays_pending").json()
+        second = answer(client, headers, attempt, ASK_CONTEXT).json()
         assert second["node"]["id"] == "screen_conflict"
-        third = choice(client, headers, second, "small_amount_ok").json()
+        third = answer(client, headers, second, SMALL_AMOUNT).json()
         assert third["node"]["id"] == "screen_boundary"
         # The boundary question belongs to the other category, and says so.
         assert third["node"]["category"] == "personal_development"
-        done = choice(client, headers, third, "reason_and_next").json()
+        done = answer(client, headers, third, BOUNDARY_FULL).json()
         assert done["is_complete"] is True
 
         skills = {
@@ -346,9 +380,9 @@ def test_town_marks_npcs_from_the_learners_own_record(tmp_path):
         }
 
         attempt = create_attempt(client, headers, "screening", "screening")
-        second = choice(client, headers, attempt, "who_pays_pending").json()
-        third = choice(client, headers, second, "small_amount_ok").json()
-        choice(client, headers, third, "reason_and_next")
+        second = answer(client, headers, attempt, ASK_CONTEXT).json()
+        third = answer(client, headers, second, SMALL_AMOUNT).json()
+        answer(client, headers, third, BOUNDARY_FULL)
 
         marked = {
             npc["id"]: npc["recommendation_state"]
@@ -410,3 +444,47 @@ def test_api_labels_ai_feedback_and_falls_back_once_the_budget_is_spent(tmp_path
         second = answer(create_attempt(client, headers))
         assert second["feedback_mode"] == "fallback"
         assert stub.allowed == [True, False]
+
+
+def test_free_text_lands_on_an_audited_branch_including_over_refusal(tmp_path):
+    with TestClient(create_app(tmp_path / "test.sqlite3")) as client:
+        _, headers = session(client)
+        attempt = create_attempt(client, headers)
+        assert attempt["node"]["choices"] == []
+        assert attempt["node"]["allow_text"] is True
+
+        # Refusing everything on principle is its own branch, not a generic miss:
+        # it teaches the counter-example instead of just marking the answer wrong.
+        broad = answer(client, headers, attempt, BLANKET).json()
+        assert broad["node"]["id"] == "dinner_overgeneralized"
+        assert broad["learning_updates"][0]["state"] == "needs_practice"
+
+        # Gathering the missing facts moves the story on, in the learner's words.
+        asked = answer(client, headers, broad, ASK_CONTEXT).json()
+        assert asked["node"]["id"] == "dinner_risk"
+        assert asked["learning_updates"][0]["skill_id"] == "clarify_context"
+        assert asked["learning_updates"][0]["state"] == "practiced"
+
+        # A miss at the risk node still triggers the audited consequence preview.
+        missed = answer(client, headers, asked, SMALL_AMOUNT).json()
+        assert missed["node"]["id"] == "dinner_consequence"
+        assert missed["effect"] == "consequence_preview"
+
+        rewound = client.post(
+            f"/api/v1/attempts/{attempt['attempt_id']}/rewind",
+            headers=headers,
+            json={"client_event_id": str(uuid4()), "expected_revision": missed["revision"]},
+        ).json()
+        assert rewound["node"]["id"] == "dinner_risk"
+
+        done = answer(client, headers, rewound, SPOT_CONFLICT).json()
+        assert done["node"]["id"] == "dinner_complete"
+        assert done["is_complete"] is True
+        # The evidence is the learner's own sentence, not a choice id.
+        evidence = client.get("/api/v1/passport", headers=headers).json()["skills"]
+        observed = [
+            item["observed_response"]
+            for skill in evidence
+            for item in skill["evidence"]
+        ]
+        assert SPOT_CONFLICT in observed

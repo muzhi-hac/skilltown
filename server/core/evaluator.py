@@ -14,11 +14,31 @@ class EvaluationResult:
     feedback: str
     policy_clause_ids: list[str]
     mode: str = "fallback"
+    # True when the answer refuses everything on principle instead of judging the
+    # conditions. That is its own teachable mistake, not a generic miss.
+    overgeneralized: bool = False
+
+    @property
+    def outcome(self) -> str:
+        if self.passed:
+            return "pass"
+        return "overgeneralized" if self.overgeneralized else "miss"
 
 
 def _contains_any(text: str, terms: tuple[str, ...]) -> bool:
     lowered = text.casefold()
     return any(term.casefold() in lowered for term in terms)
+
+
+BLANKET_REFUSAL_TERMS = (
+    "refuse everything", "refuse all", "never accept", "always decline",
+    "decline everything", "no gifts ever", "reject all", "always refuse",
+)
+
+
+def _looks_like_blanket_refusal(text: str) -> bool:
+    lowered = text.casefold()
+    return any(term in lowered for term in BLANKET_REFUSAL_TERMS)
 
 
 class FallbackTextEvaluator:
@@ -34,7 +54,9 @@ class FallbackTextEvaluator:
                 _contains_any(text, ("政策", "制度", "记录", "policy", "record")),
             ]
             passed = sum(groups) >= 2
+            blanket = _looks_like_blanket_refusal(text)
             return EvaluationResult(
+                overgeneralized=blanket and not passed,
                 passed=passed,
                 interpretation=(
                     "The answer proactively added at least two kinds of key facts."
@@ -59,7 +81,9 @@ class FallbackTextEvaluator:
                 text, ("暂停", "不接受", "拒绝", "咨询", "报告", "查询", "pause", "decline", "consult")
             )
             passed = business_link and action and transparency
+            blanket = _looks_like_blanket_refusal(text)
             return EvaluationResult(
+                overgeneralized=blanket and not passed,
                 passed=passed,
                 interpretation=(
                     "The answer identified the pending business relationship and the transparency risk, and proposed pausing or consulting."

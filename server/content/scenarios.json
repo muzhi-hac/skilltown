@@ -82,20 +82,7 @@
           "npc_id": "alex",
           "text": "The project went great today. Let's go out for lobster to celebrate. I'll set it up!",
           "allow_text": true,
-          "choices": [
-            {
-              "id": "accept_now",
-              "label": "Sure, let's go right now."
-            },
-            {
-              "id": "ask_context",
-              "label": "First let me check who's paying, who's attending, and whether any pending approvals are involved."
-            },
-            {
-              "id": "reject_everything",
-              "label": "All business meals are bribery, so I refuse on principle."
-            }
-          ],
+          "choices": [],
           "branches": {
             "accept_now": {
               "next_node": "dinner_consequence",
@@ -132,22 +119,18 @@
             }
           },
           "text_rule": "clarify_context",
-          "text_pass_node": "dinner_risk"
+          "text_pass_node": "dinner_risk",
+          "text_branches": {
+            "pass": "ask_context",
+            "miss": "accept_now",
+            "overgeneralized": "reject_everything"
+          }
         },
         "dinner_overgeneralized": {
           "npc_id": "mira",
           "text": "Look at it another way: for an ordinary internal team celebration that's transparently recorded with no pending decisions, what else would you need to know before judging?",
           "allow_text": true,
-          "choices": [
-            {
-              "id": "ask_context",
-              "label": "Confirm who pays, who attends, the business relationship, and the applicable policy."
-            },
-            {
-              "id": "reject_everything",
-              "label": "No need to know anything. All meals are the same."
-            }
-          ],
+          "choices": [],
           "branches": {
             "ask_context": {
               "next_node": "dinner_risk",
@@ -173,26 +156,18 @@
             }
           },
           "text_rule": "clarify_context",
-          "text_pass_node": "dinner_risk"
+          "text_pass_node": "dinner_risk",
+          "text_branches": {
+            "pass": "ask_context",
+            "miss": "reject_everything",
+            "overgeneralized": "reject_everything"
+          }
         },
         "dinner_risk": {
           "npc_id": "alex",
           "text": "Our company pays. Also, you're about to approve our renewal soon; let's skip the expense report this time so it stays simple.",
           "allow_text": true,
-          "choices": [
-            {
-              "id": "accept_hidden",
-              "label": "Accept, and leave no record as they asked."
-            },
-            {
-              "id": "pause_consult",
-              "label": "Hold off for now, keep the facts, and consult through the designated internal channel."
-            },
-            {
-              "id": "split_bill",
-              "label": "I'll pay my share, so it must be fine."
-            }
-          ],
+          "choices": [],
           "branches": {
             "accept_hidden": {
               "next_node": "dinner_consequence",
@@ -232,7 +207,11 @@
             }
           },
           "text_rule": "conflict_awareness",
-          "text_pass_node": "dinner_complete"
+          "text_pass_node": "dinner_complete",
+          "text_branches": {
+            "pass": "pause_consult",
+            "miss": "accept_hidden"
+          }
         },
         "dinner_consequence": {
           "npc_id": "mira",
@@ -268,20 +247,7 @@
           "npc_id": "sam",
           "text": "This gift isn't worth much, but our bid results are announced tomorrow. How would you handle it?",
           "allow_text": true,
-          "choices": [
-            {
-              "id": "accept_low_value",
-              "label": "It's low value, so just accept it."
-            },
-            {
-              "id": "pause_gift",
-              "label": "Hold off on accepting, consider the pending procurement relationship, and check the policy."
-            },
-            {
-              "id": "reject_all_gifts",
-              "label": "Refuse all gifts across the board. That's simplest."
-            }
-          ],
+          "choices": [],
           "branches": {
             "accept_low_value": {
               "next_node": "gift_intro",
@@ -318,7 +284,12 @@
             }
           },
           "text_rule": "conflict_awareness",
-          "text_pass_node": "gift_benign"
+          "text_pass_node": "gift_benign",
+          "text_branches": {
+            "pass": "pause_gift",
+            "miss": "accept_low_value",
+            "overgeneralized": "reject_all_gifts"
+          }
         },
         "gift_complete": {
           "npc_id": "sam",
@@ -330,20 +301,7 @@
           "npc_id": "sam",
           "text": "Different case: last week's bid was already awarded and closed. The team wants a small-budget internal celebration, the cost goes through normal expense reporting, and the guest list and amount are recorded in the internal system. How do you judge this one?",
           "allow_text": true,
-          "choices": [
-            {
-              "id": "accept_documented",
-              "label": "The conditions are different: no pending decision and everything is recorded, so I can attend and log it per process."
-            },
-            {
-              "id": "refuse_anyway",
-              "label": "Refuse anyway. Never touch anything involving food, drink, or gifts."
-            },
-            {
-              "id": "report_violation",
-              "label": "Report this celebration as a violation."
-            }
-          ],
+          "choices": [],
           "branches": {
             "accept_documented": {
               "next_node": "gift_complete",
@@ -380,7 +338,12 @@
             }
           },
           "text_rule": "clarify_context",
-          "text_pass_node": "gift_complete"
+          "text_pass_node": "gift_complete",
+          "text_branches": {
+            "pass": "accept_documented",
+            "miss": "report_violation",
+            "overgeneralized": "refuse_anyway"
+          }
         }
       },
       "skills": [
@@ -408,20 +371,7 @@
           "npc_id": "mira",
           "text": "Your record shows you decided before confirming who pays or whether a pending approval was involved. Against clause ETH-03, answer one question: which of the following most changes whether 'this meal is acceptable'?",
           "allow_text": true,
-          "choices": [
-            {
-              "id": "amount",
-              "label": "How high or low the meal cost is."
-            },
-            {
-              "id": "pending_decision",
-              "label": "Whether the host is connected to something you're currently approving."
-            },
-            {
-              "id": "weekday",
-              "label": "Whether it's scheduled on a weekday."
-            }
-          ],
+          "choices": [],
           "branches": {
             "pending_decision": {
               "next_node": "review_complete",
@@ -458,26 +408,17 @@
             }
           },
           "text_rule": "clarify_context",
-          "text_pass_node": "review_complete"
+          "text_pass_node": "review_complete",
+          "text_branches": {
+            "pass": "pending_decision",
+            "miss": "amount"
+          }
         },
         "review_conflict": {
           "npc_id": "mira",
           "text": "Your record shows that when 'the other company pays + you're about to approve their renewal + they asked to skip the expense report' all appeared together, you accepted the arrangement. Against clauses ETH-01 and ETH-02, which of these three conditions should make you stop immediately?",
           "allow_text": true,
-          "choices": [
-            {
-              "id": "who_pays",
-              "label": "The other company pays."
-            },
-            {
-              "id": "hide_record",
-              "label": "The request to skip the expense report and leave no record."
-            },
-            {
-              "id": "celebration",
-              "label": "Using a celebration as the pretext."
-            }
-          ],
+          "choices": [],
           "branches": {
             "hide_record": {
               "next_node": "review_complete",
@@ -514,7 +455,11 @@
             }
           },
           "text_rule": "conflict_awareness",
-          "text_pass_node": "review_complete"
+          "text_pass_node": "review_complete",
+          "text_branches": {
+            "pass": "hide_record",
+            "miss": "who_pays"
+          }
         },
         "review_boundary": {
           "npc_id": "mira",
@@ -592,20 +537,7 @@
           "category": "ethics_compliance",
           "text": "Question 1 of 3. A colleague says: 'A client is taking us to dinner, you should come too.' Before deciding whether to go, what do you most need to figure out first?",
           "allow_text": true,
-          "choices": [
-            {
-              "id": "who_pays_pending",
-              "label": "Who pays, and whether it involves something you're currently approving."
-            },
-            {
-              "id": "restaurant_level",
-              "label": "The restaurant's tier and cost per head."
-            },
-            {
-              "id": "headcount",
-              "label": "How many colleagues are attending in total."
-            }
-          ],
+          "choices": [],
           "branches": {
             "who_pays_pending": {
               "next_node": "screen_conflict",
@@ -642,27 +574,18 @@
             }
           },
           "text_rule": "clarify_context",
-          "text_pass_node": "screen_conflict"
+          "text_pass_node": "screen_conflict",
+          "text_branches": {
+            "pass": "who_pays_pending",
+            "miss": "restaurant_level"
+          }
         },
         "screen_conflict": {
           "npc_id": "mira",
           "category": "ethics_compliance",
           "text": "Question 2. They add: 'Let's skip the expense report this time so it stays simple.' What does that mean?",
           "allow_text": true,
-          "choices": [
-            {
-              "id": "just_convenience",
-              "label": "They just want to save hassle, so it's fine to go along."
-            },
-            {
-              "id": "hidden_signal",
-              "label": "A request to hide it, which is a risk signal to pause and consult through the proper channel."
-            },
-            {
-              "id": "small_amount_ok",
-              "label": "As long as the amount is small, there's no problem."
-            }
-          ],
+          "choices": [],
           "branches": {
             "hidden_signal": {
               "next_node": "screen_boundary",
@@ -699,27 +622,18 @@
             }
           },
           "text_rule": "conflict_awareness",
-          "text_pass_node": "screen_boundary"
+          "text_pass_node": "screen_boundary",
+          "text_branches": {
+            "pass": "hidden_signal",
+            "miss": "just_convenience"
+          }
         },
         "screen_boundary": {
           "npc_id": "jo",
           "category": "personal_development",
           "text": "Question 3. You decide not to accept. Which reply both holds the boundary and preserves the working relationship?",
           "allow_text": true,
-          "choices": [
-            {
-              "id": "blunt",
-              "label": "'I can't be part of this, don't ask again.'"
-            },
-            {
-              "id": "reason_and_next",
-              "label": "'Thanks for the invite. The renewal is still under my approval, so I'll sit this one out; let's reconnect once the process is done, and I'll loop in my compliance colleague too.'"
-            },
-            {
-              "id": "defer_upward",
-              "label": "'Let me check with my manager and get back to you.'"
-            }
-          ],
+          "choices": [],
           "branches": {
             "reason_and_next": {
               "next_node": "screen_complete",
@@ -756,7 +670,11 @@
             }
           },
           "text_rule": "communicate_boundary",
-          "text_pass_node": "screen_complete"
+          "text_pass_node": "screen_complete",
+          "text_branches": {
+            "pass": "reason_and_next",
+            "miss": "blunt"
+          }
         },
         "screen_complete": {
           "npc_id": "mira",

@@ -53,18 +53,34 @@ need("attempt", a, ["attempt_id", "scenario_id", "revision", "node", "effect",
                     "learning_updates", "is_complete", "feedback_mode", "timing"])
 need("attempt.node", a["node"], ["id", "text", "choices", "allow_text", "policy_cards"])
 aid = a["attempt_id"]
-print(f"     node={a['node']['id']} choices={[c['id'] for c in a['node']['choices']]}")
+print(f"     node={a['node']['id']} choices={a['node']['choices']} allow_text={a['node']['allow_text']}")
 
 print("3) 提交选择：先补齐信息，再答错以触发后果预演")
-def choice(cid, rev):
+ANSWERS = {
+    "ask_context": "Who pays for this, and is it tied to the renewal approval I own?",
+    "blanket": "I refuse everything like this, no exceptions.",
+    "small_amount": "It is a small amount so it is fine.",
+    "spot_conflict": (
+        "The renewal approval sits with me and they asked me to skip the expense "
+        "record, so I will pause and consult compliance."
+    ),
+    "boundary": (
+        "I will decline for now because the renewal approval sits with me; I will "
+        "consult compliance and we can meet once it is closed."
+    ),
+}
+
+
+def choice(kind, rev):
+    """Answers are written by the learner now; kind names which sentence to send."""
     return call("POST", f"/api/v1/attempts/{aid}/respond",
                 {"client_event_id": __import__("uuid").uuid4().__str__(),
-                 "expected_revision": rev, "kind": "choice", "choice_id": cid}, tok)
+                 "expected_revision": rev, "kind": "text", "text": ANSWERS[kind]}, tok)
 
 r1 = choice("ask_context", a["revision"])
 print(f"     -> {r1['node']['id']} 证据={[ (u['skill_id'],u['state']) for u in r1['learning_updates']]}")
 need("feedback", r1["feedback"], ["title", "message", "mode", "policy_clauses"])
-r2 = choice("accept_hidden", r1["revision"])
+r2 = choice("small_amount", r1["revision"])
 print(f"     -> {r2['node']['id']} effect={r2['effect']}")
 
 print("4) 倒回决策点并重答")
@@ -74,7 +90,7 @@ rw = call("POST", f"/api/v1/attempts/{aid}/rewind",
 print(f"     -> {rw['node']['id']} effect={rw['effect']}")
 if rw["node"]["id"] != "dinner_risk":
     FAILS.append(f"rewind landed on {rw['node']['id']}, expected dinner_risk")
-r3 = choice("pause_consult", rw["revision"])
+r3 = choice("spot_conflict", rw["revision"])
 print(f"     -> {r3['node']['id']} complete={r3['is_complete']} 证据={[(u['skill_id'],u['state']) for u in r3['learning_updates']]}")
 
 print("5) 幂等重放 / 冲突 / 提示")
@@ -82,14 +98,16 @@ ev = __import__("uuid").uuid4().__str__()
 g = call("POST", "/api/v1/attempts", {"scenario_id": "supplier-gift", "mode": "verification"}, tok, expect=201)
 gid = g["attempt_id"]
 first = call("POST", f"/api/v1/attempts/{gid}/respond",
-             {"client_event_id": ev, "expected_revision": 0, "kind": "choice", "choice_id": "pause_gift"}, tok)
+             {"client_event_id": ev, "expected_revision": 0, "kind": "text",
+              "text": ANSWERS["spot_conflict"]}, tok)
 again = call("POST", f"/api/v1/attempts/{gid}/respond",
-             {"client_event_id": ev, "expected_revision": 0, "kind": "choice", "choice_id": "pause_gift"}, tok)
+             {"client_event_id": ev, "expected_revision": 0, "kind": "text",
+              "text": ANSWERS["spot_conflict"]}, tok)
 if first != again:
     FAILS.append("replaying the same client_event_id returned a different body")
 stale = call("POST", f"/api/v1/attempts/{gid}/respond",
              {"client_event_id": __import__("uuid").uuid4().__str__(), "expected_revision": 0,
-              "kind": "choice", "choice_id": "pause_gift"}, tok, expect=409)
+              "kind": "text", "text": ANSWERS["spot_conflict"]}, tok, expect=409)
 print(f"     stale revision -> {stale['error']['code']}")
 
 b = call("POST", "/api/v1/attempts", {"scenario_id": "boundary-response", "mode": "practice"}, tok, expect=201)

@@ -5,6 +5,16 @@
 #			 res://tests/headless_flow.tscn
 extends Node
 
+# Answers are written by the learner, so the tests type sentences the
+# deterministic evaluator resolves onto the audited branches.
+const ASK_CONTEXT := "Who pays for this, and is it tied to the renewal approval I own?"
+const VAGUE := "Sounds fun, let's just go."
+const BLANKET := "I refuse everything like this, no exceptions."
+const SPOT_CONFLICT := "The renewal approval sits with me and they asked me to skip the expense record, so I will pause and consult compliance."
+const SMALL_AMOUNT := "It is a small amount so it is fine."
+const BOUNDARY_FULL := "I will decline for now because the renewal approval sits with me; I will consult compliance and we can meet once it is closed."
+const DOCUMENTED := "The renewal approval is already closed and the expense record is complete, so I can join and log it."
+
 const DIALOGUE_UI := preload("res://scenes/dialogue_ui.tscn")
 
 var failures: Array[String] = []
@@ -29,20 +39,6 @@ func _check(label: String, ok: bool, detail: String = "") -> void:
 		failures.append(label)
 		print("	 BAD  ", label, " — ", detail)
 
-func _choice_button(choice_id: String) -> Button:
-	for child in ui.choice_container.get_children():
-		if child is Button and str(child.get_meta("choice_id", "")) == choice_id:
-			return child
-	return null
-
-func _press(choice_id: String) -> Dictionary:
-	var button := _choice_button(choice_id)
-	if button == null:
-		_check("找得到选项 " + choice_id, false, "选项按钮未渲染")
-		return {}
-	_check("选项 %s 可点击" % choice_id, not button.disabled)
-	button.pressed.emit()
-	return await APIClient.attempt_received
 
 func _press_action(fragment: String) -> void:
 	for child in ui.choice_container.get_children():
@@ -57,6 +53,12 @@ func _npc_states(town: Dictionary) -> Dictionary:
 		if npc is Dictionary:
 			states[str(npc.get("id", ""))] = str(npc.get("recommendation_state", ""))
 	return states
+
+func _write(text: String) -> Dictionary:
+	_check("输入框可作答", ui.player_input.editable, ui.player_input.placeholder_text)
+	ui.player_input.text = text
+	ui.send_button.pressed.emit()
+	return await APIClient.attempt_received
 
 func _node_id(payload: Dictionary) -> String:
 	var node = payload.get("node")
@@ -78,19 +80,21 @@ func _run() -> void:
 	ui.start_dialogue("Alex")
 	var start = await APIClient.attempt_received
 	_check("进入 dinner_invite", _node_id(start) == "dinner_invite", _node_id(start))
-	_check("渲染出 3 个选项", ui.choice_container.get_child_count() == 3)
-	_check("本节点允许自由回答", ui.player_input.editable)
+	_check("没有选项按钮，只能自己作答", ui.choice_container.get_child_count() == 0)
+	_check("输入框就是作答入口", ui.player_input.editable)
+	_check("提示写清了怎么作答",
+		ui.player_input.placeholder_text.contains("own words"), ui.player_input.placeholder_text)
 	_check("NPC 抬头带分类", ui.npc_title_label.text.contains("Compliance"), ui.npc_title_label.text)
 
 	print("3) 先补齐信息，再答错触发后果预演")
-	var risk = await _press("ask_context")
+	var risk = await _write(ASK_CONTEXT)
 	_check("推进到 dinner_risk", _node_id(risk) == "dinner_risk", _node_id(risk))
 	var updates = risk.get("learning_updates", [])
 	_check("记录 clarify_context 证据",
 		updates.size() == 1 and str(updates[0].get("skill_id", "")) == "clarify_context",
 		str(updates))
 	_check("反馈已显示在对话框", ui.dialogue_text.get_parsed_text().contains("Learning feedback"))
-	var consequence = await _press("accept_hidden")
+	var consequence = await _write(SMALL_AMOUNT)
 	_check("进入 dinner_consequence", _node_id(consequence) == "dinner_consequence", _node_id(consequence))
 	_check("effect 为 consequence_preview", str(consequence.get("effect", "")) == "consequence_preview")
 	_check("倒带按钮已点亮", not ui.rewind_button.disabled)
@@ -99,7 +103,7 @@ func _run() -> void:
 	ui.rewind_button.pressed.emit()
 	var rewound = await APIClient.attempt_received
 	_check("回到 dinner_risk（不是剧情开头）", _node_id(rewound) == "dinner_risk", _node_id(rewound))
-	var done = await _press("pause_consult")
+	var done = await _write(SPOT_CONFLICT)
 	_check("任务完成", bool(done.get("is_complete", false)))
 	_check("完成后禁用输入", ui.send_button.disabled and ui.player_input.editable == false)
 	_check("状态栏提示完成", ui.status_label.text.to_lower().contains("complete"), ui.status_label.text)
@@ -123,9 +127,7 @@ func _run() -> void:
 	_check("进入 boundary_intro", _node_id(boundary) == "boundary_intro", _node_id(boundary))
 	_check("该节点只接受自由回答",
 		ui.choice_container.get_child_count() == 0 and ui.player_input.editable)
-	ui.player_input.text = "我暂时不接受这个安排，需要先确认谁付款以及是否涉及续约审批，下一步我按内部渠道咨询。"
-	ui.send_button.pressed.emit()
-	var written = await APIClient.attempt_received
+	var written = await _write(BOUNDARY_FULL)
 	_check("自由回答被接受并完成", bool(written.get("is_complete", false)), _node_id(written))
 	_check("反馈标注了来源模式",
 		["scripted", "ai", "fallback"].has(str(written.get("feedback_mode", ""))),
@@ -145,14 +147,14 @@ func _run() -> void:
 	ui.start_dialogue("Sam")
 	var gift = await APIClient.attempt_received
 	_check("进入 gift_intro", _node_id(gift) == "gift_intro", _node_id(gift))
-	var benign = await _press("reject_all_gifts")
+	var benign = await _write(BLANKET)
 	_check("一律拒绝被判为待练习",
 		str(benign.get("learning_updates", [{}])[0].get("state", "")) == "needs_practice",
 		str(benign.get("learning_updates", [])))
 	_check("进入反例节点 gift_benign", _node_id(benign) == "gift_benign", _node_id(benign))
-	var refused = await _press("refuse_anyway")
+	var refused = await _write(BLANKET)
 	_check("在无风险情境里仍拒绝 → 留在原节点", _node_id(refused) == "gift_benign", _node_id(refused))
-	var migrated = await _press("accept_documented")
+	var migrated = await _write(DOCUMENTED)
 	_check("说明条件差异后完成", bool(migrated.get("is_complete", false)), _node_id(migrated))
 
 	print("9) 新访客：欢迎卡 → 三题筛查 → 地图按证据标记")
@@ -172,14 +174,14 @@ func _run() -> void:
 	_press_action("Quick skill check")
 	var q1 = await APIClient.attempt_received
 	_check("第 1 题 screen_clarify", _node_id(q1) == "screen_clarify", _node_id(q1))
-	var q2 = await _press("who_pays_pending")
+	var q2 = await _write(ASK_CONTEXT)
 	_check("第 2 题 screen_conflict", _node_id(q2) == "screen_conflict", _node_id(q2))
-	var q3 = await _press("small_amount_ok")
+	var q3 = await _write(SMALL_AMOUNT)
 	_check("第 3 题 screen_boundary", _node_id(q3) == "screen_boundary", _node_id(q3))
 	_check("第 3 题标为个人发展分类",
 		str(q3.get("node", {}).get("category", "")) == "personal_development",
 		str(q3.get("node", {}).get("category", "")))
-	var screened = await _press("reason_and_next")
+	var screened = await _write(BOUNDARY_FULL)
 	_check("三题筛查完成", bool(screened.get("is_complete", false)), _node_id(screened))
 	APIClient.get_town()
 	var marked_town = await APIClient.town_received

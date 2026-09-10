@@ -653,7 +653,13 @@ func _update_node_next_action(node: Dictionary) -> void:
 func _update_text_input() -> void:
 	player_input.editable = allow_text and not is_complete
 	send_button.disabled = not player_input.editable
-	player_input.placeholder_text = "Write your answer…" if allow_text else "This node only accepts multiple-choice answers"
+	# Answers are written, never picked from a list, so the input is the main
+	# affordance and says what a good answer needs.
+	player_input.placeholder_text = (
+		"Type your answer in your own words, then press Enter"
+		if player_input.editable
+		else "Nothing to answer here"
+	)
 	if player_input.editable:
 		player_input.grab_focus()
 
