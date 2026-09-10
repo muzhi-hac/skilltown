@@ -4,7 +4,7 @@
 
 - A：前端与游戏负责人，GitHub：[@muzhi-hac](https://github.com/muzhi-hac)。
 - B：AI、后端与内容负责人，GitHub：[@Isso-W](https://github.com/Isso-W)。
-- 已向 Isso-W 发出仓库 write 邀请；对方接受后具备协作访问权限。任务标签与正文同时明确责任人，GitHub Assignee 状态以 Issue 页面为准。
+- 已向 Isso-W 发出仓库 write 邀请，目前待接受。A 的 GitHub Assignee 已绑定；B 的 #3/#5/#6 已在标签和正文明确分工，但邀请未接受，实际 Assignee 暂为空；共同任务 #1/#8 当前仅绑定 A。接受邀请后再补绑 B。
 
 ## 文件归属
 
