@@ -2,12 +2,12 @@
   "categories": [
     {
       "id": "ethics_compliance",
-      "label": "伦理与合规",
+      "label": "Ethics & Compliance",
       "icon": "🛡️"
     },
     {
       "id": "personal_development",
-      "label": "个人发展",
+      "label": "Personal Development",
       "icon": "🌱"
     }
   ],
@@ -15,7 +15,7 @@
     {
       "id": "alex",
       "name": "Alex",
-      "title": "合作伙伴",
+      "title": "Business Partner",
       "category": "ethics_compliance",
       "position": {
         "x": 310,
@@ -28,7 +28,7 @@
     {
       "id": "sam",
       "name": "Sam",
-      "title": "供应商",
+      "title": "Supplier",
       "category": "ethics_compliance",
       "position": {
         "x": 760,
@@ -41,7 +41,7 @@
     {
       "id": "mira",
       "name": "Mira",
-      "title": "伦理教练",
+      "title": "Ethics Coach",
       "category": "ethics_compliance",
       "position": {
         "x": 610,
@@ -54,7 +54,7 @@
     {
       "id": "jo",
       "name": "Jo",
-      "title": "沟通教练",
+      "title": "Communication Coach",
       "category": "personal_development",
       "position": {
         "x": 965,
@@ -68,7 +68,7 @@
   "scenarios": {
     "dinner-invitation": {
       "version": "1.0.0",
-      "title": "庆功宴邀请",
+      "title": "Celebration Dinner Invitation",
       "category": "ethics_compliance",
       "estimated_minutes": 4,
       "available_modes": [
@@ -80,20 +80,20 @@
       "nodes": {
         "dinner_invite": {
           "npc_id": "alex",
-          "text": "今天项目很成功，我们去吃个龙虾庆祝吧，我来安排！",
+          "text": "The project went great today. Let's go out for lobster to celebrate. I'll set it up!",
           "allow_text": true,
           "choices": [
             {
               "id": "accept_now",
-              "label": "好啊，马上走。"
+              "label": "Sure, let's go right now."
             },
             {
               "id": "ask_context",
-              "label": "先确认谁付款、有哪些人参加，以及是否涉及待审批事项。"
+              "label": "First let me check who's paying, who's attending, and whether any pending approvals are involved."
             },
             {
               "id": "reject_everything",
-              "label": "所有商务聚餐都是受贿，我一律拒绝。"
+              "label": "All business meals are bribery, so I refuse on principle."
             }
           ],
           "branches": {
@@ -102,8 +102,8 @@
               "effect": "consequence_preview",
               "skill_id": "clarify_context",
               "state": "needs_practice",
-              "interpretation": "在关键信息不足时直接接受邀请。",
-              "feedback": "先别急着判断。付款方、参与者、业务决定和透明度都会影响下一步。",
+              "interpretation": "Accepted the invitation outright while key information was still missing.",
+              "feedback": "Don't rush the judgment. Who pays, who attends, the business decisions involved, and transparency all affect the next step.",
               "policy_clause_ids": [
                 "ETH-03"
               ]
@@ -113,8 +113,8 @@
               "effect": "none",
               "skill_id": "clarify_context",
               "state": "practiced",
-              "interpretation": "主动补充判断所需的关键情境。",
-              "feedback": "很好，你没有根据一顿饭直接下结论，而是先补齐事实。",
+              "interpretation": "Proactively gathered the key context needed to judge.",
+              "feedback": "Good. You didn't decide based on a single meal. You gathered the facts first.",
               "policy_clause_ids": [
                 "ETH-03"
               ]
@@ -124,8 +124,8 @@
               "effect": "none",
               "skill_id": "clarify_context",
               "state": "needs_practice",
-              "interpretation": "把所有商务聚餐一概判断为违规。",
-              "feedback": "谨慎是好的，但聚餐本身并不能完成判断。请说明需要考虑哪些事实。",
+              "interpretation": "Judged every business meal as a violation across the board.",
+              "feedback": "Caution is good, but the meal by itself doesn't complete the judgment. Say which facts you'd need to consider.",
               "policy_clause_ids": [
                 "ETH-03"
               ]
@@ -136,16 +136,16 @@
         },
         "dinner_overgeneralized": {
           "npc_id": "mira",
-          "text": "换个角度：普通团队内部庆祝、透明记录且没有待决事项时，你还需要了解什么再判断？",
+          "text": "Look at it another way: for an ordinary internal team celebration that's transparently recorded with no pending decisions, what else would you need to know before judging?",
           "allow_text": true,
           "choices": [
             {
               "id": "ask_context",
-              "label": "确认付款方、参与者、业务关系和适用政策。"
+              "label": "Confirm who pays, who attends, the business relationship, and the applicable policy."
             },
             {
               "id": "reject_everything",
-              "label": "不用了解，所有聚餐都一样。"
+              "label": "No need to know anything. All meals are the same."
             }
           ],
           "branches": {
@@ -154,8 +154,8 @@
               "effect": "none",
               "skill_id": "clarify_context",
               "state": "practiced",
-              "interpretation": "经反例后能识别需要结合情境判断。",
-              "feedback": "对，合规判断需要结合事实，既不是盲目接受，也不是机械拒绝。",
+              "interpretation": "After the counter-example, recognized that the judgment depends on context.",
+              "feedback": "Right. A compliance judgment has to combine the facts. It's neither blind acceptance nor mechanical refusal.",
               "policy_clause_ids": [
                 "ETH-03"
               ]
@@ -165,8 +165,8 @@
               "effect": "none",
               "skill_id": "clarify_context",
               "state": "needs_practice",
-              "interpretation": "仍将不同情境视为完全相同。",
-              "feedback": "请对比提供方、付款方、待决事项和是否透明，而不是只看活动名称。",
+              "interpretation": "Still treats different situations as identical.",
+              "feedback": "Compare the provider, who pays, pending decisions, and whether it's transparent, rather than just the name of the event.",
               "policy_clause_ids": [
                 "ETH-03"
               ]
@@ -177,20 +177,20 @@
         },
         "dinner_risk": {
           "npc_id": "alex",
-          "text": "我们公司付。你也快要审批续约了；这次别走报销，免得麻烦。",
+          "text": "Our company pays. Also, you're about to approve our renewal soon; let's skip the expense report this time so it stays simple.",
           "allow_text": true,
           "choices": [
             {
               "id": "accept_hidden",
-              "label": "接受，并按对方要求不留下记录。"
+              "label": "Accept, and leave no record as they asked."
             },
             {
               "id": "pause_consult",
-              "label": "暂不接受，保留事实并按给定内部渠道咨询。"
+              "label": "Hold off for now, keep the facts, and consult through the designated internal channel."
             },
             {
               "id": "split_bill",
-              "label": "我付一部分，所以一定没问题。"
+              "label": "I'll pay my share, so it must be fine."
             }
           ],
           "branches": {
@@ -199,8 +199,8 @@
               "effect": "consequence_preview",
               "skill_id": "conflict_awareness",
               "state": "needs_practice",
-              "interpretation": "忽略待审批关系和隐瞒要求。",
-              "feedback": "待审批关系与隐瞒要求同时出现，应暂停安排并按制度咨询。",
+              "interpretation": "Ignored the pending approval relationship and the request to hide it.",
+              "feedback": "A pending approval relationship and a request to hide it appear together, so you should pause the arrangement and consult per policy.",
               "policy_clause_ids": [
                 "ETH-01",
                 "ETH-02"
@@ -211,8 +211,8 @@
               "effect": "completed",
               "skill_id": "conflict_awareness",
               "state": "pass",
-              "interpretation": "识别待审批关系和隐瞒要求，并提出适当下一步。",
-              "feedback": "你识别了两个具体风险信号，并选择暂停和咨询，而不是只看餐费。",
+              "interpretation": "Recognized the pending approval relationship and the request to hide it, and proposed an appropriate next step.",
+              "feedback": "You spotted two concrete risk signals and chose to pause and consult, instead of only looking at the bill.",
               "policy_clause_ids": [
                 "ETH-01",
                 "ETH-02"
@@ -223,8 +223,8 @@
               "effect": "consequence_preview",
               "skill_id": "conflict_awareness",
               "state": "needs_practice",
-              "interpretation": "只关注分摊费用，遗漏业务决定和隐瞒要求。",
-              "feedback": "自付费用不会自动消除待审批关系和隐瞒要求。",
+              "interpretation": "Focused only on splitting the cost, missing the business decision and the request to hide it.",
+              "feedback": "Paying your own share doesn't automatically remove the pending approval relationship or the request to hide it.",
               "policy_clause_ids": [
                 "ETH-01",
                 "ETH-02"
@@ -236,14 +236,14 @@
         },
         "dinner_consequence": {
           "npc_id": "mira",
-          "text": "后果预演：项目资格被暂停。这里展示的是虚构教学结果，不是真实处分。查看风险点后可以倒带重选。",
+          "text": "Consequence preview: your project eligibility is suspended. This is a fictional teaching outcome, not a real penalty. After reviewing the risk points, you can rewind and choose again.",
           "allow_text": false,
           "choices": [],
           "rewind_to": "dinner_invite"
         },
         "dinner_complete": {
           "npc_id": "mira",
-          "text": "本轮完成。下一步去礼品店，用不同情境验证你是否真正掌握了判断方法。",
+          "text": "This round is complete. Next, head to the gift shop and verify with a different situation whether you've really mastered the approach.",
           "allow_text": false,
           "choices": []
         }
@@ -255,7 +255,7 @@
     },
     "supplier-gift": {
       "version": "1.0.0",
-      "title": "供应商礼品",
+      "title": "Supplier Gift",
       "category": "ethics_compliance",
       "estimated_minutes": 3,
       "available_modes": [
@@ -266,20 +266,20 @@
       "nodes": {
         "gift_intro": {
           "npc_id": "sam",
-          "text": "这份礼物价值不高，但我们的投标结果明天公布。你会怎么处理？",
+          "text": "This gift isn't worth much, but our bid results are announced tomorrow. How would you handle it?",
           "allow_text": true,
           "choices": [
             {
               "id": "accept_low_value",
-              "label": "价值不高，直接接受。"
+              "label": "It's low value, so just accept it."
             },
             {
               "id": "pause_gift",
-              "label": "先暂停接受，考虑待决采购关系并查询政策。"
+              "label": "Hold off on accepting, consider the pending procurement relationship, and check the policy."
             },
             {
               "id": "reject_all_gifts",
-              "label": "一律拒绝所有礼物，最省事。"
+              "label": "Refuse all gifts across the board. That's simplest."
             }
           ],
           "branches": {
@@ -288,8 +288,8 @@
               "effect": "none",
               "skill_id": "conflict_awareness",
               "state": "needs_practice",
-              "interpretation": "仅根据价值判断，遗漏待决采购关系。",
-              "feedback": "价值只是因素之一；这里更关键的是明天公布的投标结果。",
+              "interpretation": "Judged by value alone, missing the pending procurement relationship.",
+              "feedback": "Value is only one factor; what matters more here is the bid result announced tomorrow.",
               "policy_clause_ids": [
                 "ETH-01"
               ]
@@ -299,8 +299,8 @@
               "effect": "none",
               "skill_id": "conflict_awareness",
               "state": "pass",
-              "interpretation": "将待决采购关系纳入判断并选择查询政策。",
-              "feedback": "你把判断方法迁移到了不同情境。",
+              "interpretation": "Brought the pending procurement relationship into the judgment and chose to check the policy.",
+              "feedback": "You transferred the approach to a different situation.",
               "policy_clause_ids": [
                 "ETH-01"
               ]
@@ -310,8 +310,8 @@
               "effect": "none",
               "skill_id": "clarify_context",
               "state": "needs_practice",
-              "interpretation": "用一律拒绝代替按条件判断。",
-              "feedback": "一律拒绝会训练出错误规律，也会伤害正常协作。要看的是有没有待决决定、谁付款和是否留痕。",
+              "interpretation": "Replaced conditional judgment with a blanket refusal.",
+              "feedback": "A blanket refusal trains the wrong rule and also harms normal collaboration. What matters is whether there's a pending decision, who pays, and whether it's recorded.",
               "policy_clause_ids": [
                 "ETH-03"
               ]
@@ -322,26 +322,26 @@
         },
         "gift_complete": {
           "npc_id": "sam",
-          "text": "两个情境条件不同，判断也不同。你的学习护照已更新。",
+          "text": "The two situations had different conditions, so the judgments differ too. Your learning passport has been updated.",
           "allow_text": false,
           "choices": []
         },
         "gift_benign": {
           "npc_id": "sam",
-          "text": "换一件事：上周投标已经定标结束，团队想用小额预算做一次内部庆祝，费用走正常报销，名单和金额都记录在内部系统。这次你怎么判断？",
+          "text": "Different case: last week's bid was already awarded and closed. The team wants a small-budget internal celebration, the cost goes through normal expense reporting, and the guest list and amount are recorded in the internal system. How do you judge this one?",
           "allow_text": true,
           "choices": [
             {
               "id": "accept_documented",
-              "label": "条件不同：没有待决决定且全程留痕，可以参加并按流程记录。"
+              "label": "The conditions are different: no pending decision and everything is recorded, so I can attend and log it per process."
             },
             {
               "id": "refuse_anyway",
-              "label": "还是拒绝，凡是吃喝送礼都别碰。"
+              "label": "Refuse anyway. Never touch anything involving food, drink, or gifts."
             },
             {
               "id": "report_violation",
-              "label": "把这次庆祝当成违规上报。"
+              "label": "Report this celebration as a violation."
             }
           ],
           "branches": {
@@ -350,8 +350,8 @@
               "effect": "completed",
               "skill_id": "clarify_context",
               "state": "pass",
-              "interpretation": "指出待决决定已结束、付款与记录透明，因此判断随条件改变。",
-              "feedback": "对：改变判断的是待决决定和透明度，不是场合名义。",
+              "interpretation": "Noted the pending decision has ended and payment and records are transparent, so the judgment changes with the conditions.",
+              "feedback": "Right: what changes the judgment is the pending decision and transparency, not the name of the occasion.",
               "policy_clause_ids": [
                 "ETH-03"
               ]
@@ -361,8 +361,8 @@
               "effect": "none",
               "skill_id": "clarify_context",
               "state": "needs_practice",
-              "interpretation": "在没有风险条件的情境里仍然一律拒绝。",
-              "feedback": "这里没有待决决定，费用也留痕。一律拒绝不是更安全，而是把方法换成了口号。",
+              "interpretation": "Still refuses across the board in a situation with no risk conditions.",
+              "feedback": "There's no pending decision here and the cost is recorded. A blanket refusal isn't safer; it just swaps the method for a slogan.",
               "policy_clause_ids": [
                 "ETH-03"
               ]
@@ -372,8 +372,8 @@
               "effect": "none",
               "skill_id": "clarify_context",
               "state": "needs_practice",
-              "interpretation": "把符合流程的正常活动判为违规。",
-              "feedback": "把合规活动当违规上报同样有代价。先对照条件：有无待决决定、谁付款、是否记录。",
+              "interpretation": "Judged a normal, process-compliant activity as a violation.",
+              "feedback": "Reporting a compliant activity as a violation has costs too. First check the conditions: is there a pending decision, who pays, and is it recorded.",
               "policy_clause_ids": [
                 "ETH-03"
               ]
@@ -390,7 +390,7 @@
     },
     "ethics-review": {
       "version": "1.0.0",
-      "title": "伦理复盘",
+      "title": "Ethics Review",
       "category": "ethics_compliance",
       "estimated_minutes": 3,
       "available_modes": [
@@ -400,26 +400,26 @@
       "nodes": {
         "review_no_evidence": {
           "npc_id": "mira",
-          "text": "你还没有留下答题证据，我无法针对缺口讲解。先去餐厅完成一次庆功宴邀请任务，再回来。",
+          "text": "You haven't left any answer evidence yet, so I can't walk through your gaps. Go to the restaurant first and complete a Celebration Dinner Invitation task, then come back.",
           "allow_text": false,
           "choices": []
         },
         "review_clarify": {
           "npc_id": "mira",
-          "text": "你的记录显示：你在还没确认谁付款、是否涉及待决审批之前就下了判断。对照条款 ETH-03，回答一个问题：下面哪一项最能改变“这次聚餐是否可接受”的判断？",
+          "text": "Your record shows you decided before confirming who pays or whether a pending approval was involved. Against clause ETH-03, answer one question: which of the following most changes whether 'this meal is acceptable'?",
           "allow_text": true,
           "choices": [
             {
               "id": "amount",
-              "label": "餐费金额的高低。"
+              "label": "How high or low the meal cost is."
             },
             {
               "id": "pending_decision",
-              "label": "邀请方是否与你正在审批的事项有关。"
+              "label": "Whether the host is connected to something you're currently approving."
             },
             {
               "id": "weekday",
-              "label": "是不是安排在工作日。"
+              "label": "Whether it's scheduled on a weekday."
             }
           ],
           "branches": {
@@ -428,8 +428,8 @@
               "effect": "completed",
               "skill_id": "clarify_context",
               "state": "pass",
-              "interpretation": "指出待决业务关系是改变判断的关键条件。",
-              "feedback": "对：先看与待决决定的关系，再看其他因素。",
+              "interpretation": "Identified the pending business relationship as the key condition that changes the judgment.",
+              "feedback": "Right: look at the relationship to the pending decision first, then the other factors.",
               "policy_clause_ids": [
                 "ETH-03"
               ]
@@ -439,8 +439,8 @@
               "effect": "none",
               "skill_id": "clarify_context",
               "state": "needs_practice",
-              "interpretation": "把金额当作主要判断依据。",
-              "feedback": "金额只是因素之一，本培训政策不设通用金额阈值。",
+              "interpretation": "Treated the amount as the main basis for judgment.",
+              "feedback": "Amount is only one factor; this training policy sets no universal monetary threshold.",
               "policy_clause_ids": [
                 "ETH-03"
               ]
@@ -450,8 +450,8 @@
               "effect": "none",
               "skill_id": "clarify_context",
               "state": "needs_practice",
-              "interpretation": "选择了与利益关系无关的条件。",
-              "feedback": "时间安排不改变利益关系。要看的是待决决定、付款方和透明度。",
+              "interpretation": "Chose a condition unrelated to the conflict of interest.",
+              "feedback": "The scheduling doesn't change the conflict of interest. What matters is the pending decision, who pays, and transparency.",
               "policy_clause_ids": [
                 "ETH-03"
               ]
@@ -462,20 +462,20 @@
         },
         "review_conflict": {
           "npc_id": "mira",
-          "text": "你的记录显示：在“对方公司付款＋你即将审批续约＋要求别走报销”同时出现时，你接受了安排。对照条款 ETH-01 和 ETH-02，这三个条件里哪一个最应该让你立刻停下来？",
+          "text": "Your record shows that when 'the other company pays + you're about to approve their renewal + they asked to skip the expense report' all appeared together, you accepted the arrangement. Against clauses ETH-01 and ETH-02, which of these three conditions should make you stop immediately?",
           "allow_text": true,
           "choices": [
             {
               "id": "who_pays",
-              "label": "对方公司付款。"
+              "label": "The other company pays."
             },
             {
               "id": "hide_record",
-              "label": "要求不走报销、不留记录。"
+              "label": "The request to skip the expense report and leave no record."
             },
             {
               "id": "celebration",
-              "label": "用庆祝作为名义。"
+              "label": "Using a celebration as the pretext."
             }
           ],
           "branches": {
@@ -484,8 +484,8 @@
               "effect": "completed",
               "skill_id": "conflict_awareness",
               "state": "pass",
-              "interpretation": "识别出要求隐瞒是必须暂停的信号。",
-              "feedback": "对：要求隐瞒和绕过记录，是需要暂停并按渠道咨询的信号。",
+              "interpretation": "Identified the request to hide it as the signal that requires a pause.",
+              "feedback": "Right: a request to hide it and bypass the record is the signal to pause and consult through the proper channel.",
               "policy_clause_ids": [
                 "ETH-02"
               ]
@@ -495,8 +495,8 @@
               "effect": "none",
               "skill_id": "conflict_awareness",
               "state": "needs_practice",
-              "interpretation": "只盯付款方，忽略隐瞒要求。",
-              "feedback": "付款方是一项事实，但要求隐瞒才是最强的停止信号。",
+              "interpretation": "Fixated on who pays and overlooked the request to hide it.",
+              "feedback": "Who pays is one fact, but the request to hide it is the strongest stop signal.",
               "policy_clause_ids": [
                 "ETH-02"
               ]
@@ -506,8 +506,8 @@
               "effect": "none",
               "skill_id": "conflict_awareness",
               "state": "needs_practice",
-              "interpretation": "关注名义而非利益关系与透明度。",
-              "feedback": "名义不改变实质。看待决决定与是否留痕。",
+              "interpretation": "Focused on the pretext rather than the conflict of interest and transparency.",
+              "feedback": "The pretext doesn't change the substance. Look at the pending decision and whether it's recorded.",
               "policy_clause_ids": [
                 "ETH-01"
               ]
@@ -518,7 +518,7 @@
         },
         "review_boundary": {
           "npc_id": "mira",
-          "text": "你的回复还没同时说清三件事。对照条款 DEV-01，写一句同时包含边界、原因和下一步的回复。",
+          "text": "Your reply doesn't yet state all three things clearly. Against clause DEV-01, write one reply that includes the boundary, the reason, and the next step together.",
           "allow_text": true,
           "choices": [],
           "text_rule": "communicate_boundary",
@@ -526,7 +526,7 @@
         },
         "review_complete": {
           "npc_id": "mira",
-          "text": "这条缺口讲完了。下一步用没见过的新案例独立验证，比重做原题更能说明你掌握了方法。",
+          "text": "That gap is covered. Next, verify independently with a new case you haven't seen; that shows you've mastered the approach better than redoing the original question.",
           "allow_text": false,
           "choices": []
         }
@@ -545,7 +545,7 @@
     },
     "boundary-response": {
       "version": "1.0.0",
-      "title": "表达合规边界",
+      "title": "Setting a Compliance Boundary",
       "category": "personal_development",
       "estimated_minutes": 2,
       "available_modes": [
@@ -555,7 +555,7 @@
       "nodes": {
         "boundary_intro": {
           "npc_id": "jo",
-          "text": "写一句回复：说明你暂不接受安排、需要确认的原因，以及合适的下一步。",
+          "text": "Write one reply: state that you're holding off on the arrangement, the reason you need to confirm first, and an appropriate next step.",
           "allow_text": true,
           "choices": [],
           "text_rule": "communicate_boundary",
@@ -563,7 +563,7 @@
         },
         "boundary_complete": {
           "npc_id": "jo",
-          "text": "你的回复同时表达了边界、原因和下一步。可以在学习护照查看证据。",
+          "text": "Your reply expressed the boundary, the reason, and the next step all at once. You can view the evidence in your learning passport.",
           "allow_text": false,
           "choices": []
         }
@@ -574,7 +574,7 @@
     },
     "screening": {
       "version": "1.0.0",
-      "title": "先试试我会什么",
+      "title": "Quick Skill Check",
       "category": "ethics_compliance",
       "estimated_minutes": 2,
       "available_modes": [
@@ -590,20 +590,20 @@
         "screen_clarify": {
           "npc_id": "mira",
           "category": "ethics_compliance",
-          "text": "第 1 题（共 3 题）。同事说：“客户请我们吃饭，你也一起来吧。”在决定去不去之前，你最需要先弄清哪一项？",
+          "text": "Question 1 of 3. A colleague says: 'A client is taking us to dinner, you should come too.' Before deciding whether to go, what do you most need to figure out first?",
           "allow_text": true,
           "choices": [
             {
               "id": "who_pays_pending",
-              "label": "谁付款，以及是否涉及你正在审批的事项。"
+              "label": "Who pays, and whether it involves something you're currently approving."
             },
             {
               "id": "restaurant_level",
-              "label": "餐厅档次和人均消费。"
+              "label": "The restaurant's tier and cost per head."
             },
             {
               "id": "headcount",
-              "label": "一共有多少同事参加。"
+              "label": "How many colleagues are attending in total."
             }
           ],
           "branches": {
@@ -612,8 +612,8 @@
               "effect": "none",
               "skill_id": "clarify_context",
               "state": "pass",
-              "interpretation": "先补齐付款方与待决事项，再做判断。",
-              "feedback": "对：先看付款方和与待决决定的关系。",
+              "interpretation": "Gathered who pays and pending matters first, then judged.",
+              "feedback": "Right: look at who pays and the relationship to a pending decision first.",
               "policy_clause_ids": [
                 "ETH-03"
               ]
@@ -623,8 +623,8 @@
               "effect": "none",
               "skill_id": "clarify_context",
               "state": "needs_practice",
-              "interpretation": "以消费水平作为主要依据。",
-              "feedback": "金额只是因素之一，本培训政策不设通用金额阈值。",
+              "interpretation": "Used the spending level as the main basis.",
+              "feedback": "Amount is only one factor; this training policy sets no universal monetary threshold.",
               "policy_clause_ids": [
                 "ETH-03"
               ]
@@ -634,8 +634,8 @@
               "effect": "none",
               "skill_id": "clarify_context",
               "state": "needs_practice",
-              "interpretation": "关注人数而非利益关系。",
-              "feedback": "人数不改变利益关系。要看付款方、待决决定和透明度。",
+              "interpretation": "Focused on the headcount rather than the conflict of interest.",
+              "feedback": "The headcount doesn't change the conflict of interest. Look at who pays, the pending decision, and transparency.",
               "policy_clause_ids": [
                 "ETH-03"
               ]
@@ -647,20 +647,20 @@
         "screen_conflict": {
           "npc_id": "mira",
           "category": "ethics_compliance",
-          "text": "第 2 题。对方补了一句：“这次别走报销流程，免得麻烦。”这句话意味着什么？",
+          "text": "Question 2. They add: 'Let's skip the expense report this time so it stays simple.' What does that mean?",
           "allow_text": true,
           "choices": [
             {
               "id": "just_convenience",
-              "label": "只是想省事，可以照办。"
+              "label": "They just want to save hassle, so it's fine to go along."
             },
             {
               "id": "hidden_signal",
-              "label": "要求隐瞒，是需要暂停并按渠道咨询的风险信号。"
+              "label": "A request to hide it, which is a risk signal to pause and consult through the proper channel."
             },
             {
               "id": "small_amount_ok",
-              "label": "只要金额不大就没问题。"
+              "label": "As long as the amount is small, there's no problem."
             }
           ],
           "branches": {
@@ -669,8 +669,8 @@
               "effect": "none",
               "skill_id": "conflict_awareness",
               "state": "pass",
-              "interpretation": "把隐瞒要求识别为停止信号。",
-              "feedback": "对：要求绕过记录是最强的停止信号之一。",
+              "interpretation": "Recognized the request to hide it as a stop signal.",
+              "feedback": "Right: a request to bypass the record is one of the strongest stop signals.",
               "policy_clause_ids": [
                 "ETH-02"
               ]
@@ -680,8 +680,8 @@
               "effect": "none",
               "skill_id": "conflict_awareness",
               "state": "needs_practice",
-              "interpretation": "把隐瞒要求当成流程便利。",
-              "feedback": "绕过报销不是省事，而是让这笔安排无法被核对。",
+              "interpretation": "Treated the request to hide it as mere process convenience.",
+              "feedback": "Bypassing the expense report isn't saving hassle; it makes the arrangement impossible to verify.",
               "policy_clause_ids": [
                 "ETH-02"
               ]
@@ -691,8 +691,8 @@
               "effect": "none",
               "skill_id": "conflict_awareness",
               "state": "needs_practice",
-              "interpretation": "用金额门槛替代对隐瞒要求的判断。",
-              "feedback": "金额小不能抵消隐瞒；本政策不设通用金额阈值。",
+              "interpretation": "Substituted an amount threshold for judging the request to hide it.",
+              "feedback": "A small amount can't offset hiding it; this policy sets no universal monetary threshold.",
               "policy_clause_ids": [
                 "ETH-01"
               ]
@@ -704,20 +704,20 @@
         "screen_boundary": {
           "npc_id": "jo",
           "category": "personal_development",
-          "text": "第 3 题。你决定不接受。哪一句回复既守住边界，又保住合作关系？",
+          "text": "Question 3. You decide not to accept. Which reply both holds the boundary and preserves the working relationship?",
           "allow_text": true,
           "choices": [
             {
               "id": "blunt",
-              "label": "“这事我不能参与，别再问了。”"
+              "label": "'I can't be part of this, don't ask again.'"
             },
             {
               "id": "reason_and_next",
-              "label": "“谢谢邀请。续约还在我这边审批，我先不参加；流程结束后我们再约，我也会同步给合规同事。”"
+              "label": "'Thanks for the invite. The renewal is still under my approval, so I'll sit this one out; let's reconnect once the process is done, and I'll loop in my compliance colleague too.'"
             },
             {
               "id": "defer_upward",
-              "label": "“我请示一下领导再说吧。”"
+              "label": "'Let me check with my manager and get back to you.'"
             }
           ],
           "branches": {
@@ -726,8 +726,8 @@
               "effect": "completed",
               "skill_id": "communicate_boundary",
               "state": "pass",
-              "interpretation": "同时说明边界、原因和下一步。",
-              "feedback": "对：边界、原因、下一步三件事都说清了。",
+              "interpretation": "States the boundary, the reason, and the next step together.",
+              "feedback": "Right: boundary, reason, and next step are all stated clearly.",
               "policy_clause_ids": [
                 "DEV-01"
               ]
@@ -737,8 +737,8 @@
               "effect": "completed",
               "skill_id": "communicate_boundary",
               "state": "needs_practice",
-              "interpretation": "只有拒绝，没有原因和下一步。",
-              "feedback": "守住了边界，但没给原因和下一步，合作关系会受影响。",
+              "interpretation": "Only a refusal, with no reason or next step.",
+              "feedback": "You held the boundary, but gave no reason or next step, so the working relationship suffers.",
               "policy_clause_ids": [
                 "DEV-01"
               ]
@@ -748,8 +748,8 @@
               "effect": "completed",
               "skill_id": "communicate_boundary",
               "state": "needs_practice",
-              "interpretation": "把判断整体外包，没有表达自己的边界与原因。",
-              "feedback": "请示不等于表达边界；先说明你为什么暂不参加，再说下一步。",
+              "interpretation": "Outsourced the whole judgment without expressing your own boundary or reason.",
+              "feedback": "Checking with a manager isn't the same as setting a boundary; first say why you're sitting out, then give the next step.",
               "policy_clause_ids": [
                 "DEV-01"
               ]
@@ -761,7 +761,7 @@
         "screen_complete": {
           "npc_id": "mira",
           "category": "ethics_compliance",
-          "text": "摸底完成。这只有 3 道题，只能作为起点，不是完整能力测评：结果分为“已有理解证据 / 建议练习 / 尚未验证”。地图上会标出建议先去的 NPC。",
+          "text": "Skill check complete. These are only 3 questions, so treat it as a starting point, not a full assessment: results are grouped as 'evidence of understanding / practice suggested / not yet verified.' The map will mark which NPC to visit first.",
           "allow_text": false,
           "choices": []
         }
@@ -770,7 +770,7 @@
   },
   "screening_task": {
     "scenario_id": "screening",
-    "title": "先试试我会什么",
+    "title": "Quick Skill Check",
     "category": "ethics_compliance",
     "estimated_minutes": 2,
     "available_modes": [

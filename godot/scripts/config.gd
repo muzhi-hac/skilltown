@@ -6,10 +6,10 @@ const API_PREFIX := "/api/v1"
 
 const NPC_NAMES := ["Alex", "Sam", "Mira", "Jo"]
 const NPC_TITLES := {
-	"Alex": "合作伙伴 · 伦理与合规",
-	"Sam": "供应商 · 伦理与合规",
-	"Mira": "伦理教练 · 伦理与合规",
-	"Jo": "沟通教练 · 个人发展"
+	"Alex": "Business Partner · Ethics & Compliance",
+	"Sam": "Supplier · Ethics & Compliance",
+	"Mira": "Ethics Coach · Ethics & Compliance",
+	"Jo": "Communication Coach · Personal Development"
 }
 const NPC_SCENARIOS := {
 	"Alex": "dinner-invitation",

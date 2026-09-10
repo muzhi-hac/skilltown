@@ -215,3 +215,42 @@ def test_repeated_failures_stop_paying_for_a_dead_endpoint():
     now[0] += 121
     assert subject.evaluate("clarify_context", "去就去吧。").mode == "ai"
     assert len(client.messages.calls) == calls_after_threshold + 1
+
+
+def test_user_agent_override_is_opt_in_and_reaches_the_client(monkeypatch):
+    """The header is only sent when an operator asks for it."""
+    built = {}
+
+    class FakeAnthropicModule:
+        @staticmethod
+        def Anthropic(**kwargs):  # noqa: N802 - mirrors the SDK's class name
+            built.update(kwargs)
+            return FakeClient(FakeResponse(RubricVerdict(passed=False, feedback="x")))
+
+    monkeypatch.setitem(__import__("sys").modules, "anthropic", FakeAnthropicModule)
+
+    ClaudeTextEvaluator(api_key="test")
+    assert "default_headers" not in built
+
+    built.clear()
+    ClaudeTextEvaluator(api_key="test", user_agent="curl/8.4.0")
+    assert built["default_headers"] == {"User-Agent": "curl/8.4.0"}
+
+
+def test_a_verdict_cut_off_by_the_output_cap_is_not_trusted():
+    # Measured behaviour: adaptive thinking can spend most of the budget, and a
+    # truncated verdict must not be presented as evaluated feedback.
+    verdict = RubricVerdict(passed=True, quoted_evidence="对方要求别走报销", feedback="很好")
+    response = FakeResponse(verdict, stop_reason="max_tokens")
+    result = evaluator(FakeClient(response)).evaluate("conflict_awareness", GOOD_ANSWER)
+    assert result.mode == "fallback"
+
+
+def test_the_request_leaves_room_for_thinking_plus_the_verdict():
+    from server.core.model_evaluator import MAX_OUTPUT_TOKENS
+
+    verdict = RubricVerdict(passed=False, feedback="先确认谁付款。", policy_clause_ids=["ETH-03"])
+    client = FakeClient(FakeResponse(verdict))
+    evaluator(client).evaluate("clarify_context", "去就去吧。")
+    assert client.messages.calls[0]["max_tokens"] == MAX_OUTPUT_TOKENS
+    assert MAX_OUTPUT_TOKENS >= 4096

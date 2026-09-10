@@ -70,6 +70,7 @@ def main() -> int:
         print("没有配置 ANTHROPIC_API_KEY / ANTHROPIC_AUTH_TOKEN，无法检查。")
         return 2
 
+    user_agent = os.getenv("SKILLTOWN_MODEL_USER_AGENT", "").strip()
     options: dict[str, object] = {"timeout": 60.0, "max_retries": 1}
     if api_key:
         options["api_key"] = api_key
@@ -77,11 +78,14 @@ def main() -> int:
         options["auth_token"] = auth_token
     if base_url:
         options["base_url"] = base_url
+    if user_agent:
+        options["default_headers"] = {"User-Agent": user_agent}
     client = anthropic.Anthropic(**options)
 
     print(f"端点: {'自定义 base_url' if base_url else 'Anthropic 官方'}")
     print(f"凭据: {'auth_token (Bearer)' if auth_token else 'api_key (x-api-key)'}")
-    print(f"模型: {model}\n")
+    print(f"模型: {model}")
+    print(f"User-Agent: {user_agent or 'SDK 默认'}\n")
 
     # Baseline first: if even a plain text call is refused, the endpoint is not
     # usable for this app at all, and no amount of request shaping will help.
@@ -99,9 +103,11 @@ def main() -> int:
         print(f"[失败] 最小文本调用: {type(exc).__name__}: {str(exc)[:400]}\n")
         baseline_ok = False
 
+    from server.core.model_evaluator import MAX_OUTPUT_TOKENS
+
     request = {
         "model": model,
-        "max_tokens": 1024,
+        "max_tokens": MAX_OUTPUT_TOKENS,
         "system": SYSTEM_PROMPT,
         "messages": [{"role": "user", "content": build_prompt()}],
         "output_format": RubricVerdict,

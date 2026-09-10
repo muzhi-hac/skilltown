@@ -45,6 +45,10 @@ DEFAULT_EFFORT = "medium"
 # deterministic evaluator for a cooldown, then try once more.
 FAILURE_THRESHOLD = 3
 COOLDOWN_SECONDS = 120.0
+# Adaptive thinking is on by default on current models and spends output tokens
+# before the verdict is written: one measured call used 901 thinking tokens and
+# hit a 1024 cap, which truncates the JSON. Leave room for both.
+MAX_OUTPUT_TOKENS = 4096
 
 
 @dataclass(frozen=True)
@@ -117,6 +121,7 @@ class ClaudeTextEvaluator:
         auth_token: str | None = None,
         base_url: str | None = None,
         clock: Callable[[], float] = time.monotonic,
+        user_agent: str | None = None,
     ) -> None:
         self._model = model
         self._timeout = timeout_seconds
@@ -142,6 +147,14 @@ class ClaudeTextEvaluator:
                 options["auth_token"] = auth_token
             if base_url:
                 options["base_url"] = base_url
+            if user_agent:
+                # Some Anthropic-compatible gateways filter on the client's
+                # User-Agent and refuse the SDK's default. Setting this is a
+                # deliberate operator choice with a real cost: it depends on the
+                # gateway's client policy, which can change without notice, and
+                # the account holder carries that risk. Unset means the SDK's own
+                # identity, which is the right default for a first-party key.
+                options["default_headers"] = {"User-Agent": user_agent}
             self._client = anthropic.Anthropic(**options)
         self._supports_refusal_fallback = _accepts_refusal_fallback(self._client)
 
@@ -187,7 +200,7 @@ class ClaudeTextEvaluator:
         prompt = self._prompt(rubric, text)
         request = {
             "model": self._model,
-            "max_tokens": 1024,
+            "max_tokens": MAX_OUTPUT_TOKENS,
             "system": SYSTEM_PROMPT,
             "messages": [{"role": "user", "content": prompt}],
             "output_format": RubricVerdict,
@@ -195,8 +208,14 @@ class ClaudeTextEvaluator:
             "output_config": {"effort": self._effort},
         }
         response = self._parse_with_refusal_fallback(request)
-        if getattr(response, "stop_reason", None) == "refusal":
+        stop_reason = getattr(response, "stop_reason", None)
+        if stop_reason == "refusal":
             logger.warning("model declined to evaluate; falling back")
+            return None
+        if stop_reason == "max_tokens":
+            # The verdict may be cut off mid-JSON; a partially-read judgement is
+            # not something to show a learner as evaluated feedback.
+            logger.warning("verdict hit the output cap; falling back")
             return None
         verdict = getattr(response, "parsed_output", None)
         return verdict if isinstance(verdict, RubricVerdict) else None
@@ -303,4 +322,5 @@ def build_evaluator() -> FallbackTextEvaluator | ClaudeTextEvaluator:
         timeout_seconds=float(os.getenv("SKILLTOWN_MODEL_TIMEOUT", DEFAULT_TIMEOUT_SECONDS)),
         fallback=fallback,
         effort=os.getenv("SKILLTOWN_MODEL_EFFORT", DEFAULT_EFFORT).strip() or DEFAULT_EFFORT,
+        user_agent=os.getenv("SKILLTOWN_MODEL_USER_AGENT", "").strip() or None,
     )

@@ -2,20 +2,20 @@
 extends CanvasLayer
 
 const FEEDBACK_MODE_LABELS := {
-	"scripted": "固定剧情反馈",
-	"ai": "AI 实时反馈",
-	"fallback": "模型不可用，已回退为固定反馈",
+	"scripted": "scripted feedback",
+	"ai": "live AI feedback",
+	"fallback": "model unavailable, fell back to scripted feedback",
 }
 const SKILL_LABELS := {
-	"clarify_context": "补齐关键信息",
-	"conflict_awareness": "识别利益冲突",
-	"communicate_boundary": "表达合规边界",
+	"clarify_context": "Gather key context",
+	"conflict_awareness": "Spot conflicts of interest",
+	"communicate_boundary": "Communicate a boundary",
 }
 const STATE_LABELS := {
-	"unseen": "尚未验证",
-	"needs_practice": "建议练习",
-	"practiced": "已练习",
-	"demonstrated": "独立通过",
+	"unseen": "Not yet verified",
+	"needs_practice": "Practice suggested",
+	"practiced": "Practiced",
+	"demonstrated": "Passed independently",
 }
 
 @onready var npc_name_label: Label = $Panel/NPCName
@@ -98,17 +98,17 @@ func start_dialogue(npc_name: String) -> void:
 	_reset_controls()
 	show_dialogue()
 	if not APIClient.has_session():
-		_set_status("会话尚未就绪，请稍后重试")
-		_append_line("[color=gray]还没有服务端会话，请稍后重新点击 NPC。[/color]")
+		_set_status("Session not ready yet, please try again shortly")
+		_append_line("[color=gray]No server session yet. Please click the NPC again in a moment.[/color]")
 		return
 	if npc_data.is_empty():
-		_set_status("小镇数据未加载")
-		_append_line("[color=gray]尚未取到小镇数据（GET /town），请稍后重试。[/color]")
+		_set_status("Town data not loaded")
+		_append_line("[color=gray]Town data (GET /town) hasn't loaded yet, please try again shortly.[/color]")
 		return
 	var task := _pick_task(npc_data)
 	if task.is_empty():
-		_set_status("暂无任务")
-		_append_line("[color=gray]这位 NPC 目前没有可用任务。[/color]")
+		_set_status("No tasks available")
+		_append_line("[color=gray]This NPC has no available tasks right now.[/color]")
 		return
 	start_scenario(
 		str(task.get("scenario_id", "")),
@@ -120,7 +120,7 @@ func start_dialogue(npc_name: String) -> void:
 # 由 NPC 任务、开场筛查或学习方案共用：只认服务端下发的 scenario_id。
 func start_scenario(scenario_id: String, mode: String, title: String, minutes: String) -> void:
 	if scenario_id.is_empty():
-		_set_status("任务标识缺失")
+		_set_status("Task id is missing")
 		return
 	current_scenario_id = scenario_id
 	attempt_id = ""
@@ -128,12 +128,12 @@ func start_scenario(scenario_id: String, mode: String, title: String, minutes: S
 	is_complete = false
 	allow_text = false
 	_clear_choices()
-	_append_line("[color=gray]任务：%s · 约 %s 分钟 · 模式 %s[/color]" % [
+	_append_line("[color=gray]Task: %s · about %s min · mode %s[/color]" % [
 		title if not title.is_empty() else scenario_id,
 		minutes,
 		mode,
 	])
-	_set_waiting(true, "正在创建任务…")
+	_set_waiting(true, "Creating task…")
 	APIClient.start_attempt(scenario_id, mode)
 
 # 开场欢迎卡：先摸底还是直接逛，由学习者决定。
@@ -144,15 +144,15 @@ func show_welcome(screening: Dictionary) -> void:
 	is_complete = false
 	allow_text = false
 	npc_name_label.text = "SkillTown"
-	npc_title_label.text = "🛡️ 伦理与合规 · 🌱 个人发展"
+	npc_title_label.text = "🛡️ Ethics & Compliance · 🌱 Personal Development"
 	dialogue_text.clear()
 	_clear_choices()
 	_reset_controls()
 	show_dialogue()
-	_append_line("[color=gray]全部情境都是虚构的培训案例，政策为虚构培训政策，不构成法律结论。你的记录只属于本次访客会话，可以随时清除。[/color]")
-	_append_line("先花约 %s 分钟做 3 道摸底题，还是直接探索小镇？" % str(screening.get("estimated_minutes", "2")))
-	_add_action_button("先试试我会什么（3 题）", _on_welcome_screening.bind(screening))
-	_add_action_button("直接探索小镇", hide_dialogue)
+	_append_line("[color=gray]All scenarios are fictional training cases and the policy is a fictional training policy; nothing here is legal advice. Your record belongs only to this guest session and can be cleared at any time.[/color]")
+	_append_line("Spend about %s min on a 3-question skill check first, or explore the town directly?" % str(screening.get("estimated_minutes", "2")))
+	_add_action_button("Quick skill check (3 questions)", _on_welcome_screening.bind(screening))
+	_add_action_button("Explore the town", hide_dialogue)
 	_update_text_input()
 
 func _on_welcome_screening(screening: Dictionary) -> void:
@@ -254,8 +254,8 @@ func _render_feedback(feedback) -> void:
 	if typeof(feedback) != TYPE_DICTIONARY:
 		return
 	var mode := str(feedback.get("mode", "scripted"))
-	_append_line("[color=orange]%s[/color]（%s）：%s" % [
-		str(feedback.get("title", "学习反馈")),
+	_append_line("[color=orange]%s[/color] (%s): %s" % [
+		str(feedback.get("title", "Learning feedback")),
 		str(FEEDBACK_MODE_LABELS.get(mode, mode)),
 		str(feedback.get("message", "")),
 	])
@@ -263,7 +263,7 @@ func _render_feedback(feedback) -> void:
 	if typeof(clauses) == TYPE_ARRAY:
 		for clause in clauses:
 			if clause is Dictionary:
-				_append_line("[color=aqua]虚构培训政策 %s · %s[/color]：%s" % [
+				_append_line("[color=aqua]Fictional training policy %s · %s[/color]: %s" % [
 					str(clause.get("clause_id", "")),
 					str(clause.get("title", "")),
 					str(clause.get("text", "")),
@@ -277,8 +277,8 @@ func _render_learning_updates(updates) -> void:
 			continue
 		var skill := str(update.get("skill_id", ""))
 		var state := str(update.get("state", ""))
-		var suffix := "（提示后完成，不计入独立验证）" if bool(update.get("assisted", false)) else ""
-		_append_line("[color=lightgreen]学习证据已记录：%s → %s%s[/color]" % [
+		var suffix := " (completed after a hint, not counted as independent verification)" if bool(update.get("assisted", false)) else ""
+		_append_line("[color=lightgreen]Learning evidence recorded: %s → %s%s[/color]" % [
 			str(SKILL_LABELS.get(skill, skill)),
 			str(STATE_LABELS.get(state, state)),
 			suffix,
@@ -290,7 +290,7 @@ func _render_node(node) -> void:
 		allow_text = false
 		_update_text_input()
 		return
-	_append_line("[color=yellow]%s：[/color]%s" % [
+	_append_line("[color=yellow]%s:[/color] %s" % [
 		npc_name_label.text,
 		str(node.get("text", "")),
 	])
@@ -305,12 +305,12 @@ func _render_node(node) -> void:
 	if typeof(cards) == TYPE_ARRAY:
 		for card in cards:
 			if card is Dictionary:
-				_append_line("[color=aqua]虚构培训政策 %s：%s[/color]" % [
+				_append_line("[color=aqua]Fictional training policy %s: %s[/color]" % [
 					str(card.get("clause_id", "")),
 					str(card.get("text", "")),
 				])
 	if choice_container.get_child_count() == 0 and not allow_text and not is_complete:
-		_append_line("[color=gray]该节点暂无可交互内容。[/color]")
+		_append_line("[color=gray]This node has no interactive content right now.[/color]")
 
 func _add_choice_button(choice_id: String, label: String) -> void:
 	if choice_id.is_empty():
@@ -342,8 +342,8 @@ func _clear_choices() -> void:
 func _on_choice_pressed(choice_id: String, label: String) -> void:
 	if waiting or attempt_id.is_empty() or is_complete:
 		return
-	_append_line("[color=cyan]你的选择：[/color]%s" % label)
-	_set_waiting(true, "正在提交选择…")
+	_append_line("[color=cyan]Your choice:[/color] %s" % label)
+	_set_waiting(true, "Submitting choice…")
 	APIClient.respond_choice(attempt_id, revision, choice_id)
 
 func _on_send_pressed() -> void:
