@@ -5,41 +5,32 @@
 ## 当前状态
 
 **已部署：https://skilltown.fly.dev** （Fly.io，法兰克福单机 + 1GB 持久卷，页面与
-`/api/v1` 同源）。线上已验证：`tools/smoke_api.py` 对该 URL 全绿；真实 Chrome 打开
-后引擎启动、4 名 NPC 初始化、`POST /api/v1/session` 与 `GET /api/v1/town` 成功、
-新访客欢迎卡弹出。部署由 GitHub Actions 执行（`deploy-fly.yml`）。
+`/api/v1` 同源）。
 
-第一个纵切可在本机跑通，且**网页构建已实测**：
+前端已从 Godot Web 换成 **React**（`client/`，Vite + TypeScript）：房间是一间家徒四壁
+的小屋，四位老师依次敲门进来、在房间里授课，作答**全部由学习者自己打字**，没有任何
+选择题。构建产物 233KB JS（gzip 73KB）+ 5KB CSS，页面秒开；旧的 Godot 客户端保留在
+`godot/` 但已不构建、不部署。
 
-- FastAPI 提供全部 12 个接口，SQLite 保存匿名会话；`server/tests` 39 项通过。
-- Godot 4.5.stable Web 导出成功（GL Compatibility + 单线程模板，已核对导出的
-  `index.wasm` 与 `web_nothreads_release/godot.wasm` 哈希一致，因此不需要
-  COOP/COEP 跨源隔离头）。
-- FastAPI 同源挂载该构建：`/` 返回页面、`/index.wasm` 带 `application/wasm`、
-  `/api/v1/*` 不被静态挂载遮挡。
-- 无头集成冒烟用真实 GDScript 客户端打通：点击 Alex → 龙虾任务 → 补齐信息记录证据
-  → 答错触发后果预演 → 倒回出错的决策点 → 完成 → 学习护照与学习方案 → 换 Jo 走自由回答
-  支线 → 找 Mira 按本人缺口拿到不同辅导卡 → 找 Sam 经过迁移反例。
-- 页面已在真实 Chrome（无头、软件 WebGL）里启动引擎、加载 4 名 NPC，并同源发出
-  `POST /api/v1/session`、`GET /api/v1/town`。同源方式是 FastAPI 直接挂载构建，
-  部署到 Fly.io 时沿用同一条路径（镜像内含构建 + `/data` 持久卷）。
-- 内容侧防错误规律：礼品店必经一个“条件不同”的反例，一律拒绝和把合规活动当违规
-  上报都会被判为待练习；Mira 只讲你真正答过的最弱一项，没有证据时明确说没有证据。
+已验证的部分：
+
+- `server/tests` 41 项通过；FastAPI 提供全部 12 个接口，SQLite 保存匿名会话。
+- `tools/e2e_room.py` 用真实 Chrome 对真实服务端跑完整验收（21 项断言）：敲门 → 开门
+  → 老师走进来 → 三题摸底全部打字作答 → 证据落库 → 学习护照回显你自己的原话 → 清除
+  记录后确实归零。
+- `tools/smoke_api.py` 对线上 URL 全绿（幂等重放、过期 revision 得 409、会话隔离）。
+- 自由回答走真实模型：线上实测 `feedback_mode=ai`，约 5 秒，判定引用学习者原文并经
+  服务端核对。
+- 内容侧防错误规律：礼品店必经一个“条件不同”的反例，一律拒绝会被单独识别为
+  `overgeneralized` 并给出反例教学；Mira 只讲你真正答过的最弱一项。
 
 尚未验证的部分（不要当成已完成）：
 
-- **没有人工点过**：引擎启动、API 调用和欢迎卡已在无头 Chrome（含线上环境）验证，
-  但移动/E 键交互、窄屏、刷新恢复、鼠标点击 NPC 仍只有无头断言背书。
-- 自由回答走 Anthropic Claude（`server/core/model_evaluator.py`，默认
-  `claude-opus-5`），线上已启用（`fly.toml` 里 `SKILLTOWN_MODEL_ENABLED=true`）。
-  2026-09-10 实测：配置的兼容网关拒绝 SDK 默认客户端标识（403 `Your request was
-  blocked`，且无效 token 返回同样结果，说明拦在鉴权之前），但接受普通 HTTPS 客户端；
-  设置 `SKILLTOWN_MODEL_USER_AGENT` 后一次真实调用返回 200，结构化输出被接受，
-  判定引用了学习者原文并通过服务端核对。该网关的客户端策略可能随时变化，换官方
-  `ANTHROPIC_API_KEY` 时应删掉这个变量。
-- 时长只统计活动事件之间的间隔（每段上限 30 秒，pause/end 关闭区间）。没有客户端
-  心跳的会话，`active_seconds` 就是 0，这是设计如此，不是缺陷。
-- 单机部署没有高可用；每次部署有几秒不可用（单机单卷无法蓝绿）。
+- **没有人工点过 React 版**：浏览器里的手感、窄屏、刷新恢复只有自动化断言背书。
+- 每次作答都要等一次模型评估（约 5 秒）。模型不可用时由确定性关键词规则决定分支，
+  比选项弱，并且一定标注 `fallback`。
+- 单机部署没有高可用；每次部署有几秒不可用。
+- `godot/` 里仍有中文注释与日志字符串（该目录已退役，未部署）。
 
 ## 自由回答评估：模型能做什么、不能做什么
 
@@ -71,26 +62,23 @@ set -a; . <你的环境变量文件>; set +a
 
 ```bash
 python3 -m venv .venv
-.venv/bin/python -m pip install -r server/requirements.txt
-.venv/bin/python -m pytest server/tests -q                    # 39 passed
+.venv/bin/python -m pip install -r server/requirements.txt websocket-client
+.venv/bin/python -m pytest server/tests -q                     # 41 passed
 
-# 后端 + 已构建的网页（同源）
-.venv/bin/python -m uvicorn server.main:app --reload          # http://127.0.0.1:8000
-python3 tools/smoke_api.py                                    # 真实 HTTP 冒烟，部署后换成线上 URL
+cd client && npm ci && npm run build && cd ..
+
+# 后端 + 前端构建，同源（和线上完全一致的路径）
+WEB_DIR="$PWD/client/dist" .venv/bin/python -m uvicorn server.main:app --port 8000
+
+.venv/bin/python tools/e2e_room.py http://127.0.0.1:8000     # 真实浏览器验收
+python3 tools/smoke_api.py http://127.0.0.1:8000             # HTTP 冒烟
+.venv/bin/python tools/shoot_page.py http://127.0.0.1:8000 shot.png   # 截图
 ```
 
-Godot 客户端在 `godot/`（Godot 4.5.stable，`GODOT` 指向本机可执行文件）：
+前端开发时用 `cd client && npm run dev`（5173 端口，`/api` 自动代理到 8000）。
 
-```bash
-GODOT=/Applications/Godot.app/Contents/MacOS/Godot
-$GODOT --headless --path godot --import                        # 导入资源，检查脚本解析
-$GODOT --headless --path godot --export-release "Web" web/index.html
-$GODOT --headless --path godot res://tests/headless_flow.tscn  # 需后端已在 8000 端口
-python3 tools/check_godot_client.py                            # 静态一致性检查（不需要 Godot）
-```
-
-`godot/web/` 是生成物，不提交、不手工编辑。`tools/check_godot_client.py` 只查节点路径、
-`APIClient`/`Config` 成员和信号参数个数，替代不了上面两条 Godot 命令。
+`client/dist` 是生成物，不提交。旧的 Godot 客户端在 `godot/`，已退役：不构建、不部署，
+保留以便回滚。
 
 ## 目标体验
 
@@ -102,13 +90,14 @@ python3 tools/check_godot_client.py                            # 静态一致性
 
 ## 技术方向
 
-Godot 4.5（GDScript，Compatibility renderer，单线程 Web Export）/ FastAPI + Pydantic / SQLite。Godot 构建产物与 `/api` 同源发布，模型密钥仅存服务端。
+React + Vite + TypeScript（`client/`）/ FastAPI + Pydantic / SQLite。前端构建产物由
+FastAPI 同源托管，模型密钥仅存服务端。
 
 ## 两人分工
 
 | 角色 | 负责 | 目录 |
 |---|---|---|
-| A：@muzhi-hac | Godot Web、地图、交互、对话、结果、方案 UI、发布操作 | `godot/`，根部署文件 |
+| A：@muzhi-hac | React 前端、房间、交互、对话、结果、方案 UI、发布操作 | `client/`，根部署文件 |
 | B：@Isso-W | FastAPI、剧情、政策、评估、记忆、推荐、会话隔离 | `server/`，API 模型维护 |
 
 请从 [Issues](https://github.com/muzhi-hac/skilltown/issues) 按 owner:A / owner:B / owner:joint 筛选任务。两名协作者均已获得仓库写入权限。
