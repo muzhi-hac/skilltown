@@ -1,0 +1,28 @@
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Dependencies and builds
+node_modules/
+dist/
+build/
+coverage/
+playwright-report/
+test-results/
+
+# Runtime and local state
+*.sqlite
+*.sqlite3
+*.db
+*.db-shm
+*.db-wal
+*.sqlite-wal
+*.sqlite-shm
+data/
+*.log
+.DS_Store
+.venv/
+__pycache__/
