@@ -83,13 +83,15 @@ func _style_dialogue_panel() -> void:
 	style.content_margin_bottom = 10
 	panel.add_theme_stylebox_override("panel", style)
 	npc_name_label.add_theme_color_override("font_color", Color(1, 1, 1, 1))
+	npc_name_label.add_theme_font_size_override("font_size", 30)
+	npc_title_label.add_theme_font_size_override("font_size", 21)
 	npc_title_label.add_theme_color_override("font_color", Color(0.78, 0.84, 0.90, 1))
 	dialogue_text.add_theme_color_override("default_color", Color(0.92, 0.94, 0.96, 1))
-	dialogue_text.add_theme_font_size_override("normal_font_size", 22)
-	player_input.add_theme_font_size_override("font_size", 20)
-	status_label.add_theme_font_size_override("font_size", 17)
+	dialogue_text.add_theme_font_size_override("normal_font_size", 28)
+	player_input.add_theme_font_size_override("font_size", 25)
+	status_label.add_theme_font_size_override("font_size", 21)
 	for button in [send_button, close_button, hint_button, rewind_button, passport_button]:
-		button.add_theme_font_size_override("font_size", 18)
+		button.add_theme_font_size_override("font_size", 22)
 
 # 对话框可见时拦截移动与交互按键，避免输入文字时角色跑动。
 func _input(event: InputEvent) -> void:
@@ -369,7 +371,7 @@ func _add_choice_button(choice_id: String, label: String) -> void:
 	button.clip_text = true
 	button.alignment = HORIZONTAL_ALIGNMENT_LEFT
 	button.custom_minimum_size = Vector2(0, 50)
-	button.add_theme_font_size_override("font_size", 19)
+	button.add_theme_font_size_override("font_size", 23)
 	button.set_meta("choice_id", choice_id)
 	button.disabled = waiting or is_complete
 	button.pressed.connect(_on_choice_pressed.bind(choice_id, label))
@@ -381,7 +383,7 @@ func _add_action_button(label: String, handler: Callable) -> void:
 	button.clip_text = true
 	button.alignment = HORIZONTAL_ALIGNMENT_LEFT
 	button.custom_minimum_size = Vector2(0, 50)
-	button.add_theme_font_size_override("font_size", 19)
+	button.add_theme_font_size_override("font_size", 23)
 	button.pressed.connect(handler)
 	choice_container.add_child(button)
 

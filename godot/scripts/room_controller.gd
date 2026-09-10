@@ -7,9 +7,11 @@
 # queue is a view of the learner's own record, not a script.
 extends Node2D
 
-const OFFSCREEN_POSITION := Vector2(394.0, 830.0)
-const DOOR_POSITION := Vector2(394.0, 645.0)
-const LESSON_POSITION := Vector2(565.0, 505.0)
+# The room is one small screen: visitors wait above the door, step through it,
+# and stop beside the table where the learner is.
+const OFFSCREEN_POSITION := Vector2(645.0, 120.0)
+const DOOR_POSITION := Vector2(645.0, 285.0)
+const LESSON_POSITION := Vector2(700.0, 420.0)
 const WALK_IN_SECONDS := 1.0
 const WALK_OUT_SECONDS := 0.8
 const BEAT_SECONDS := 0.9
@@ -19,6 +21,7 @@ const BEAT_SECONDS := 0.9
 @onready var door_button: Button = $RoomHUD/DoorButton
 @onready var passport_button: Button = $RoomHUD/PassportButton
 @onready var clear_button: Button = $RoomHUD/ClearButton
+@onready var knock_hint: Label = $RoomHUD/KnockHint
 @onready var knock_sound: AudioStreamPlayer = $Knock
 
 var order: Array = []
@@ -32,6 +35,7 @@ var _screening_pending := false
 var _visitor_checked := false
 var _reauth_attempted := false
 var _clear_armed := false
+var _door_pulse: Tween = null
 
 func _ready() -> void:
 	Config.log_info("Room scene ready")
@@ -51,12 +55,53 @@ func _ready() -> void:
 		npc.global_position = OFFSCREEN_POSITION
 		if npc.has_method("set_present"):
 			npc.set_present(false)
+	_style_door_button()
+	knock_hint.visible = false
 	_set_status("Getting the room ready…", "")
 	door_button.disabled = true
 	if APIClient.has_session():
 		APIClient.get_town()
 	else:
 		APIClient.create_session("Demo learner")
+
+# The door is the only thing to do while someone is knocking, so it should look
+# like it: a wide button under the door, a prompt above it, and the E key.
+func _style_door_button() -> void:
+	var normal := StyleBoxFlat.new()
+	normal.bg_color = Color(0.95, 0.78, 0.32, 1.0)
+	normal.set_corner_radius_all(10)
+	normal.set_border_width_all(3)
+	normal.border_color = Color(1, 0.92, 0.6, 1)
+	var hover := normal.duplicate()
+	hover.bg_color = Color(1.0, 0.86, 0.45, 1.0)
+	var disabled := normal.duplicate()
+	disabled.bg_color = Color(0.32, 0.30, 0.26, 1.0)
+	disabled.border_color = Color(0.42, 0.40, 0.36, 1)
+	door_button.add_theme_stylebox_override("normal", normal)
+	door_button.add_theme_stylebox_override("hover", hover)
+	door_button.add_theme_stylebox_override("pressed", hover)
+	door_button.add_theme_stylebox_override("disabled", disabled)
+
+func _unhandled_input(event: InputEvent) -> void:
+	if _dialogue != null and _dialogue.visible:
+		return
+	if event is InputEventKey and event.pressed and not event.echo:
+		if event.keycode in [KEY_E, KEY_ENTER, KEY_KP_ENTER, KEY_SPACE] and not door_button.disabled:
+			_on_door_pressed()
+			get_viewport().set_input_as_handled()
+
+func _set_knocking(knocking: bool) -> void:
+	knock_hint.visible = knocking
+	if knocking:
+		var pulse := create_tween().set_loops()
+		pulse.tween_property(door_button, "modulate:a", 0.55, 0.45)
+		pulse.tween_property(door_button, "modulate:a", 1.0, 0.45)
+		_door_pulse = pulse
+	else:
+		if _door_pulse != null and _door_pulse.is_valid():
+			_door_pulse.kill()
+		_door_pulse = null
+		door_button.modulate.a = 1.0
 
 func _on_session_created(_payload: Dictionary) -> void:
 	_reauth_attempted = false
@@ -127,12 +172,14 @@ func _knock_next() -> void:
 		door_button.disabled = false
 		door_button.text = "Open the door"
 		_set_status("%s is knocking — here for a quick skill check." % current, _waiting_line())
+		_set_knocking(true)
 		_play_knock()
 		return
 	if order.is_empty():
 		current = ""
 		door_action = "invite"
 		door_button.disabled = false
+		_set_knocking(false)
 		door_button.text = "Invite the next teacher"
 		_set_status("No one is waiting right now.", "Review your passport, or invite someone in.")
 		return
@@ -141,6 +188,7 @@ func _knock_next() -> void:
 	door_button.disabled = false
 	door_button.text = "Open the door"
 	_set_status("%s is knocking at the door." % current, _waiting_line())
+	_set_knocking(true)
 	_play_knock()
 
 func _on_door_pressed() -> void:
@@ -153,6 +201,7 @@ func _on_door_pressed() -> void:
 		return
 	busy = true
 	door_button.disabled = true
+	_set_knocking(false)
 	var npc := _find_npc(current)
 	if npc == null:
 		busy = false
