@@ -200,6 +200,14 @@ func _short_task_title(title: String) -> String:
 		_:
 			return title
 
+# Room mode: a visitor is only clickable while actually in the room.
+func set_present(present: bool) -> void:
+	visible = present
+	if interaction_area != null:
+		interaction_area.input_pickable = present
+	if not present:
+		hide_interaction_hint()
+
 func get_npc_name() -> String:
 	return npc_name
 

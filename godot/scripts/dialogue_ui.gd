@@ -1,6 +1,9 @@
 # 对话 UI：只负责展示与输入。任务分支、判定和学习状态全部由 FastAPI 决定。
 extends CanvasLayer
 
+# Emitted when a lesson panel closes, carrying the NPC it belonged to ("" if none).
+signal closed(npc_name: String)
+
 const FEEDBACK_MODE_LABELS := {
 	"scripted": "scripted feedback",
 	"ai": "live AI feedback",
@@ -217,6 +220,7 @@ func show_dialogue() -> void:
 
 func hide_dialogue() -> void:
 	_end_activity()
+	var was_with := current_npc_name
 	visible = false
 	if current_npc_name != "":
 		var npc = get_npc_by_name(current_npc_name)
@@ -229,6 +233,8 @@ func hide_dialogue() -> void:
 	var player = get_tree().get_first_node_in_group("player")
 	if player and player.has_method("set_interacting"):
 		player.set_interacting(false)
+	# Lets a scene controller know the lesson ended, so the visitor can leave.
+	closed.emit(was_with)
 
 func _npc_subtitle(npc_data: Dictionary, npc_name: String) -> String:
 	var title := str(npc_data.get("title", Config.NPC_TITLES.get(npc_name, "")))
