@@ -17,7 +17,7 @@
 
 已验证的部分：
 
-- `server/tests` 67 项通过；FastAPI 提供 `/ready` RAG 探针和 13 个接口操作，SQLite 保存匿名会话。
+- `server/tests` 69 项通过；FastAPI 提供 `/ready` RAG 探针和 13 个接口操作，SQLite 保存匿名会话。
 - `tools/e2e_room.py` 用真实 Chrome 对真实服务端跑完整验收：敲门 → 开门 → 人走进来
   → 三题摸底全部打字作答 → Alex 施压时**不泄露判定也不给答案**（断言页面上没有
   "evidence recorded"/"learning feedback"，只有对方的下一句话和"Round 1 of 4"）→
@@ -50,6 +50,11 @@
   同样退回确定性评估并标注。
 - 等待模型的时间计入 `model_wait_seconds`，与活跃学习时长分开报告。
 
+本机配置：`cp .env.example .env`，把 key 填进 `ANTHROPIC_API_KEY`（或网关的
+`ANTHROPIC_AUTH_TOKEN` + `ANTHROPIC_BASE_URL`），启动服务端即可 —— `server/main.py`
+会自动读 `.env`，而且**已经存在的环境变量优先**，所以线上配置不会被一个误留的文件盖掉。
+不填凭据时自动走确定性评估，不会报错。
+
 凭据两种形状都支持：官方 key（`ANTHROPIC_API_KEY`，走 `x-api-key`）或兼容网关
 （`ANTHROPIC_AUTH_TOKEN` + `ANTHROPIC_BASE_URL`，走 Bearer）。上线前先用
 `tools/check_model.py` 打**一次**真实调用确认端点接受我们的请求形状——它会分别试
@@ -68,7 +73,7 @@ set -a; . <你的环境变量文件>; set +a
 ```bash
 python3 -m venv .venv
 .venv/bin/python -m pip install -r server/requirements.txt websocket-client
-.venv/bin/python -m pytest server/tests -q                     # 67 passed
+.venv/bin/python -m pytest server/tests -q                     # 69 passed
 
 cd client && npm ci && npm run build && cd ..
 

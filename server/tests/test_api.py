@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from uuid import uuid4
 
 from fastapi.testclient import TestClient
@@ -299,3 +300,28 @@ def test_town_never_ships_the_pressure_script(tmp_path):
         assert all("persona" not in npc for npc in town["npcs"])
         # The tactic wording must not reach the browser in any field at all.
         assert "conceal" not in str(town)
+
+
+def test_local_env_file_fills_gaps_without_overriding_the_real_environment(tmp_path, monkeypatch):
+    from server.main import load_local_env
+
+    env_file = tmp_path / ".env"
+    env_file.write_text(
+        "# a comment\n\nANTHROPIC_API_KEY=from-file\nSKILLTOWN_MODEL=\"claude-sonnet-5\"\nbroken line\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("SKILLTOWN_MODEL", "already-set")
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+
+    loaded = load_local_env(env_file)
+
+    assert loaded == ["ANTHROPIC_API_KEY"]
+    assert os.environ["ANTHROPIC_API_KEY"] == "from-file"
+    # A value the deployment already set must survive a stray local file.
+    assert os.environ["SKILLTOWN_MODEL"] == "already-set"
+
+
+def test_missing_env_file_is_not_an_error(tmp_path):
+    from server.main import load_local_env
+
+    assert load_local_env(tmp_path / "nope.env") == []

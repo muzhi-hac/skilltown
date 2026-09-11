@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import mimetypes
 from contextlib import asynccontextmanager
 import os
@@ -26,6 +27,37 @@ from server.storage import (
     RevisionConflictError,
     Store,
 )
+
+
+logger = logging.getLogger(__name__)
+
+ENV_FILE = Path(__file__).parents[1] / ".env"
+
+
+def load_local_env(path: Path = ENV_FILE) -> list[str]:
+    """Read a local .env so a developer only has to paste a key into a file.
+
+    A real environment variable always wins, so this can never quietly override
+    what a deployment set. The file is gitignored and excluded from the image;
+    production gets its configuration from the platform, not from here. Names of
+    what was loaded are logged, never values.
+    """
+    if not path.exists():
+        return []
+    loaded: list[str] = []
+    for raw in path.read_text(encoding="utf-8").splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, _, value = line.partition("=")
+        key, value = key.strip(), value.strip().strip('"').strip("'")
+        if not key or key in os.environ:
+            continue
+        os.environ[key] = value
+        loaded.append(key)
+    if loaded:
+        logger.info("loaded %d names from %s: %s", len(loaded), path.name, ", ".join(loaded))
+    return loaded
 
 
 class ApiError(RuntimeError):
@@ -60,6 +92,7 @@ async def _lifespan(app: FastAPI):
 def create_app(
     database_path: str | Path | None = None, web_dir: str | Path | None = None
 ) -> FastAPI:
+    load_local_env()
     app = FastAPI(title="SkillTown Learning API", version="1.0.0", lifespan=_lifespan)
     app.state.store = Store(database_path or os.getenv("DATABASE_PATH", "data/skilltown.sqlite3"))
     app.state.engine = ScenarioEngine()
@@ -120,13 +153,13 @@ def create_app(
 
 
 def _mount_web_client(app: FastAPI, web_dir: str | Path | None) -> None:
-    """Serve the Godot Web build from the same origin as /api/v1, when it exists.
+    """Serve the built web client from the same origin as /api/v1, when it exists.
 
     Same-origin means the client reads its API base from window.location.origin and
-    no CORS applies. The build is generated (godot/web), so a missing directory is
+    no CORS applies. The build is generated (client/dist), so a missing directory is
     normal during backend-only work.
     """
-    default = Path(__file__).parents[1] / "godot" / "web"
+    default = Path(__file__).parents[1] / "client" / "dist"
     directory = Path(web_dir or os.getenv("WEB_DIR", default))
     if not (directory / "index.html").is_file():
         return
