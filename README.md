@@ -17,7 +17,7 @@
 
 已验证的部分：
 
-- `server/tests` 69 项通过；FastAPI 提供 `/ready` RAG 探针和 13 个接口操作，SQLite 保存匿名会话。
+- `server/tests` 77 项通过；FastAPI 提供 `/ready` RAG 探针和 13 个接口操作，SQLite 保存匿名会话。
 - `tools/e2e_room.py` 用真实 Chrome 对真实服务端跑完整验收：敲门 → 开门 → 人走进来
   → 三题摸底全部打字作答 → Alex 施压时**不泄露判定也不给答案**（断言页面上没有
   "evidence recorded"/"learning feedback"，只有对方的下一句话和"Round 1 of 4"）→
@@ -50,22 +50,35 @@
   同样退回确定性评估并标注。
 - 等待模型的时间计入 `model_wait_seconds`，与活跃学习时长分开报告。
 
-本机配置：`cp .env.example .env`，把 key 填进 `ANTHROPIC_API_KEY`（或网关的
-`ANTHROPIC_AUTH_TOKEN` + `ANTHROPIC_BASE_URL`），启动服务端即可 —— `server/main.py`
+本机配置：`cp .env.example .env`，把 key 填进去，启动服务端即可 —— `server/main.py`
 会自动读 `.env`，而且**已经存在的环境变量优先**，所以线上配置不会被一个误留的文件盖掉。
 不填凭据时自动走确定性评估，不会报错。
 
-凭据两种形状都支持：官方 key（`ANTHROPIC_API_KEY`，走 `x-api-key`）或兼容网关
-（`ANTHROPIC_AUTH_TOKEN` + `ANTHROPIC_BASE_URL`，走 Bearer）。上线前先用
-`tools/check_model.py` 打**一次**真实调用确认端点接受我们的请求形状——它会分别试
-最小文本调用和结构化输出，并在都失败时打印确定性评估器对同一段回答的判断：
+**OpenAI 和 Anthropic 两条路都支持，填哪种 key 就走哪种**，不需要额外声明：
+
+| 填这个 | 走的接口 |
+|---|---|
+| `OPENAI_API_KEY`（可选 `OPENAI_BASE_URL`） | `POST {base}/chat/completions`，直接用 httpx，没有新依赖 |
+| `ANTHROPIC_API_KEY` | Anthropic Messages API（`x-api-key`） |
+| `ANTHROPIC_AUTH_TOKEN` + `ANTHROPIC_BASE_URL` | Anthropic 兼容网关（Bearer） |
+
+两类都填了才需要 `SKILLTOWN_MODEL_PROVIDER=openai|claude` 来指定。`SKILLTOWN_MODEL`
+留空时按 provider 取默认值，建议明确填成这把 key 真有权限的模型。
+
+OpenAI 那条路对"兼容网关"的两处常见分歧会自适应，每个进程只学一次：token 上限字段是
+`max_completion_tokens` 还是 `max_tokens`，以及是否支持 `response_format: json_schema`
+（不支持就降级成 `json_object`，解析器本来就容忍带围栏的输出）。
+
+**判定与台词的全部服务端校验在两条路上完全共用** —— 换 provider 不会放宽任何一条。
+
+上线前先用 `tools/check_model.py` 打**一次**真实调用确认端点接受我们的请求形状——它会
+打印用的哪个 provider、哪个模型、判定结果，以及角色那句台词是否可用：
 
 ```bash
-set -a; . <你的环境变量文件>; set +a
-.venv/bin/python tools/check_model.py
+.venv/bin/python tools/check_model.py     # 自动读 .env，不需要先 export
 ```
 
-并非所有"Claude 兼容"网关都放行 SDK 的默认客户端标识。配置新端点后先运行探测脚本；
+并非所有"兼容"网关都放行 SDK 的默认客户端标识。配置新端点后先运行探测脚本；
 成功再把 `SKILLTOWN_MODEL_ENABLED=true` 写入部署环境（本项目已写在 `fly.toml`）。
 
 ## 本地运行
@@ -73,7 +86,7 @@ set -a; . <你的环境变量文件>; set +a
 ```bash
 python3 -m venv .venv
 .venv/bin/python -m pip install -r server/requirements.txt websocket-client
-.venv/bin/python -m pytest server/tests -q                     # 69 passed
+.venv/bin/python -m pytest server/tests -q                     # 77 passed
 
 cd client && npm ci && npm run build && cd ..
 

@@ -20,6 +20,10 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 DEFAULT_MODEL = "claude-opus-5"
+# Only used when the credential is an OpenAI one and SKILLTOWN_MODEL is unset.
+# Set SKILLTOWN_MODEL to whatever the key actually has access to.
+DEFAULT_OPENAI_MODEL = "gpt-4o-mini"
+DEFAULT_OPENAI_BASE_URL = "https://api.openai.com/v1"
 DEFAULT_TIMEOUT_SECONDS = 20.0
 MAX_RETRIES = 1
 MAX_FEEDBACK_CHARS = 400
@@ -63,29 +67,24 @@ def _normalise(text: str) -> str:
     return re.sub(r"\s+", "", text).casefold()
 
 
-class ClaudeTextEvaluator:
-    """Structured model verdicts that are rechecked against the node context."""
+class RubricModelEvaluator:
+    """Structured model verdicts that are rechecked against the node context.
+
+    Transports differ between providers; the checks below never do. A subclass
+    supplies `_ask` and nothing else, so no provider can widen what a verdict is
+    allowed to claim or what the character is allowed to say.
+    """
 
     def __init__(
-        self, api_key: str | None = None, model: str = DEFAULT_MODEL,
-        timeout_seconds: float = DEFAULT_TIMEOUT_SECONDS, fallback: FallbackTextEvaluator | None = None,
-        client: object | None = None, effort: str = DEFAULT_EFFORT,
-        auth_token: str | None = None, base_url: str | None = None,
-        clock: Callable[[], float] = time.monotonic, user_agent: str | None = None,
+        self, model: str, timeout_seconds: float, effort: str,
+        fallback: FallbackTextEvaluator | None, clock: Callable[[], float],
     ) -> None:
         self._model, self._timeout, self._effort = model, timeout_seconds, effort
         self._fallback = fallback or FallbackTextEvaluator()
         self._clock, self._failures, self._cooldown_until = clock, 0, 0.0
-        if client is not None:
-            self._client = client
-        else:  # pragma: no cover - requires credentials
-            import anthropic
-            options: dict[str, object] = {"timeout": timeout_seconds, "max_retries": MAX_RETRIES}
-            if api_key: options["api_key"] = api_key
-            if auth_token: options["auth_token"] = auth_token
-            if base_url: options["base_url"] = base_url
-            if user_agent: options["default_headers"] = {"User-Agent": user_agent}
-            self._client = anthropic.Anthropic(**options)
+
+    def _ask(self, text: str, context: EvaluationContext) -> RubricVerdict | None:
+        raise NotImplementedError
 
     def evaluate(self, rule: str, text: str, allow_model: bool = True, *, context: EvaluationContext) -> EvaluationResult:
         if not allow_model or self._in_cooldown():
@@ -112,16 +111,6 @@ class ClaudeTextEvaluator:
         if self._failures >= FAILURE_THRESHOLD:
             self._cooldown_until = self._clock() + COOLDOWN_SECONDS
             self._failures = 0
-
-    def _ask(self, text: str, context: EvaluationContext) -> RubricVerdict | None:
-        response = self._client.messages.create(
-            model=self._model, max_tokens=MAX_OUTPUT_TOKENS, system=SYSTEM_PROMPT,
-            messages=[{"role": "user", "content": self._prompt(text, context)}],
-            output_config={"effort": self._effort, "format": {"type": "json_schema", "schema": _verdict_schema()}},
-        )
-        if getattr(response, "stop_reason", None) in {"refusal", "max_tokens"}:
-            return None
-        return _verdict_from_response(response)
 
     def _prompt(self, text: str, context: EvaluationContext) -> str:
         payload = {
@@ -204,6 +193,132 @@ class ClaudeTextEvaluator:
         return len(cleaned) >= 4 and _normalise(cleaned) in _normalise(text)
 
 
+class ClaudeTextEvaluator(RubricModelEvaluator):
+    """Anthropic Messages API, first-party key or an Anthropic-shaped gateway."""
+
+    def __init__(
+        self, api_key: str | None = None, model: str = DEFAULT_MODEL,
+        timeout_seconds: float = DEFAULT_TIMEOUT_SECONDS, fallback: FallbackTextEvaluator | None = None,
+        client: object | None = None, effort: str = DEFAULT_EFFORT,
+        auth_token: str | None = None, base_url: str | None = None,
+        clock: Callable[[], float] = time.monotonic, user_agent: str | None = None,
+    ) -> None:
+        super().__init__(model, timeout_seconds, effort, fallback, clock)
+        if client is not None:
+            self._client = client
+        else:  # pragma: no cover - requires credentials
+            import anthropic
+            options: dict[str, object] = {"timeout": timeout_seconds, "max_retries": MAX_RETRIES}
+            if api_key: options["api_key"] = api_key
+            if auth_token: options["auth_token"] = auth_token
+            if base_url: options["base_url"] = base_url
+            if user_agent: options["default_headers"] = {"User-Agent": user_agent}
+            self._client = anthropic.Anthropic(**options)
+
+    def _ask(self, text: str, context: EvaluationContext) -> RubricVerdict | None:
+        response = self._client.messages.create(
+            model=self._model, max_tokens=MAX_OUTPUT_TOKENS, system=SYSTEM_PROMPT,
+            messages=[{"role": "user", "content": self._prompt(text, context)}],
+            output_config={"effort": self._effort, "format": {"type": "json_schema", "schema": _verdict_schema()}},
+        )
+        if getattr(response, "stop_reason", None) in {"refusal", "max_tokens"}:
+            return None
+        return _verdict_from_text(_response_text(response))
+
+
+class OpenAITextEvaluator(RubricModelEvaluator):
+    """OpenAI chat completions, or anything that speaks the same shape.
+
+    Gateways calling themselves OpenAI-compatible disagree about two things, so
+    this learns each once per process instead of failing every answer: whether
+    the token cap is `max_completion_tokens` or `max_tokens`, and whether
+    `response_format: json_schema` is understood or only `json_object` is. The
+    verdict parser already tolerates a fenced or chatty reply, which is what the
+    weaker `json_object` mode gives.
+    """
+
+    def __init__(
+        self, api_key: str | None = None, model: str = DEFAULT_OPENAI_MODEL,
+        base_url: str | None = None, timeout_seconds: float = DEFAULT_TIMEOUT_SECONDS,
+        fallback: FallbackTextEvaluator | None = None, client: object | None = None,
+        effort: str = DEFAULT_EFFORT, clock: Callable[[], float] = time.monotonic,
+        organization: str | None = None,
+    ) -> None:
+        super().__init__(model, timeout_seconds, effort, fallback, clock)
+        self._url = (base_url or DEFAULT_OPENAI_BASE_URL).rstrip("/") + "/chat/completions"
+        self._headers = {"Content-Type": "application/json"}
+        if api_key:
+            self._headers["Authorization"] = f"Bearer {api_key}"
+        if organization:
+            self._headers["OpenAI-Organization"] = organization
+        self._token_field = "max_completion_tokens"
+        self._schema_mode = "json_schema"
+        if client is not None:
+            self._client = client
+        else:  # pragma: no cover - requires credentials
+            import httpx
+            self._client = httpx.Client(timeout=timeout_seconds)
+
+    def _response_format(self) -> dict:
+        if self._schema_mode == "json_schema":
+            return {"type": "json_schema", "json_schema": {
+                "name": "rubric_verdict", "strict": True, "schema": _openai_schema()}}
+        return {"type": "json_object"}
+
+    def _post(self, text: str, context: EvaluationContext):
+        payload = {
+            "model": self._model,
+            "messages": [
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "user", "content": self._prompt(text, context)},
+            ],
+            "response_format": self._response_format(),
+            self._token_field: MAX_OUTPUT_TOKENS,
+        }
+        return self._client.post(self._url, headers=self._headers, json=payload), payload
+
+    def _ask(self, text: str, context: EvaluationContext) -> RubricVerdict | None:
+        response, payload = self._post(text, context)
+        body_text = _body_text(response)
+        if _status(response) == 400 and self._token_field in body_text and self._token_field != "max_tokens":
+            logger.info("endpoint wants max_tokens; switching for the rest of this process")
+            self._token_field = "max_tokens"
+            response, payload = self._post(text, context)
+            body_text = _body_text(response)
+        if _status(response) == 400 and "response_format" in body_text and self._schema_mode == "json_schema":
+            logger.info("endpoint does not take a json schema; falling back to json_object mode")
+            self._schema_mode = "json_object"
+            response, payload = self._post(text, context)
+            body_text = _body_text(response)
+        if _status(response) >= 400:
+            raise RuntimeError(f"chat/completions {_status(response)}: {body_text[:300]}")
+        choice = ((response.json().get("choices") or [{}])[0]) or {}
+        message = choice.get("message") or {}
+        if message.get("refusal") or choice.get("finish_reason") == "length":
+            return None
+        return _verdict_from_text(str(message.get("content") or ""))
+
+
+def _status(response: object) -> int:
+    return int(getattr(response, "status_code", 0))
+
+
+def _body_text(response: object) -> str:
+    return str(getattr(response, "text", "") or "")
+
+
+def _openai_schema() -> dict:
+    """Strict mode rejects annotations Pydantic adds, so drop them."""
+    def strip(node):
+        if isinstance(node, dict):
+            return {k: strip(v) for k, v in node.items() if k not in {"default", "title"}}
+        if isinstance(node, list):
+            return [strip(item) for item in node]
+        return node
+
+    return strip(_verdict_schema())
+
+
 def _verdict_schema() -> dict:
     schema = RubricVerdict.model_json_schema()
     schema["additionalProperties"] = False
@@ -223,8 +338,8 @@ def _extract_json(text: str) -> str | None:
     return cleaned[start:end + 1] if start >= 0 and end > start else None
 
 
-def _verdict_from_response(response: object) -> RubricVerdict | None:
-    payload = _extract_json(_response_text(response))
+def _verdict_from_text(text: str) -> RubricVerdict | None:
+    payload = _extract_json(text)
     if payload is None:
         return None
     try:
@@ -233,19 +348,54 @@ def _verdict_from_response(response: object) -> RubricVerdict | None:
         return None
 
 
-def build_evaluator() -> FallbackTextEvaluator | ClaudeTextEvaluator:
+def chosen_provider() -> str:
+    """Which transport the current environment selects: openai, claude or none.
+
+    Named credentials decide it, so nobody has to remember a provider switch.
+    SKILLTOWN_MODEL_PROVIDER only matters when both kinds of key are present.
+    """
+    openai_key = os.getenv("OPENAI_API_KEY", "").strip()
+    anthropic_key = os.getenv("ANTHROPIC_API_KEY", "").strip() or os.getenv("ANTHROPIC_AUTH_TOKEN", "").strip()
+    asked = os.getenv("SKILLTOWN_MODEL_PROVIDER", "").strip().lower()
+    if asked in {"openai", "claude", "anthropic"}:
+        wanted = "openai" if asked == "openai" else "claude"
+        if wanted == "openai" and openai_key:
+            return "openai"
+        if wanted == "claude" and anthropic_key:
+            return "claude"
+        return "none"
+    if openai_key:
+        return "openai"
+    return "claude" if anthropic_key else "none"
+
+
+def default_model_for(provider: str) -> str:
+    configured = os.getenv("SKILLTOWN_MODEL", "").strip()
+    if configured:
+        return configured
+    return DEFAULT_OPENAI_MODEL if provider == "openai" else DEFAULT_MODEL
+
+
+def build_evaluator() -> FallbackTextEvaluator | RubricModelEvaluator:
     enabled = os.getenv("SKILLTOWN_MODEL_ENABLED", "false").strip().lower()
     if enabled not in {"1", "true", "yes", "on"}:
         return FallbackTextEvaluator()
-    api_key = os.getenv("ANTHROPIC_API_KEY", "").strip()
-    auth_token = os.getenv("ANTHROPIC_AUTH_TOKEN", "").strip()
-    if not api_key and not auth_token:
-        return FallbackTextEvaluator()
-    return ClaudeTextEvaluator(
-        api_key=api_key or None, auth_token=auth_token or None,
-        base_url=os.getenv("ANTHROPIC_BASE_URL", "").strip() or None,
-        model=os.getenv("SKILLTOWN_MODEL", DEFAULT_MODEL).strip() or DEFAULT_MODEL,
-        timeout_seconds=float(os.getenv("SKILLTOWN_MODEL_TIMEOUT", DEFAULT_TIMEOUT_SECONDS)),
-        effort=os.getenv("SKILLTOWN_MODEL_EFFORT", DEFAULT_EFFORT).strip() or DEFAULT_EFFORT,
-        user_agent=os.getenv("SKILLTOWN_MODEL_USER_AGENT", "").strip() or None,
-    )
+    provider = chosen_provider()
+    timeout = float(os.getenv("SKILLTOWN_MODEL_TIMEOUT", DEFAULT_TIMEOUT_SECONDS))
+    effort = os.getenv("SKILLTOWN_MODEL_EFFORT", DEFAULT_EFFORT).strip() or DEFAULT_EFFORT
+    if provider == "openai":
+        return OpenAITextEvaluator(
+            api_key=os.getenv("OPENAI_API_KEY", "").strip() or None,
+            base_url=os.getenv("OPENAI_BASE_URL", "").strip() or None,
+            organization=os.getenv("OPENAI_ORGANIZATION", "").strip() or None,
+            model=default_model_for("openai"), timeout_seconds=timeout, effort=effort,
+        )
+    if provider == "claude":
+        return ClaudeTextEvaluator(
+            api_key=os.getenv("ANTHROPIC_API_KEY", "").strip() or None,
+            auth_token=os.getenv("ANTHROPIC_AUTH_TOKEN", "").strip() or None,
+            base_url=os.getenv("ANTHROPIC_BASE_URL", "").strip() or None,
+            model=default_model_for("claude"), timeout_seconds=timeout, effort=effort,
+            user_agent=os.getenv("SKILLTOWN_MODEL_USER_AGENT", "").strip() or None,
+        )
+    return FallbackTextEvaluator()

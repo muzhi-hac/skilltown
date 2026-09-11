@@ -1,51 +1,75 @@
 """Run one explicitly requested paid model evaluation against a grounded node.
 
-The script reads configured credentials but never writes them. It sends the same
-immutable EvaluationContext used by the API, then prints the verified result.
+The script reads configured credentials but never writes them. It picks the same
+provider the server would, sends the same immutable EvaluationContext the API
+uses, and prints the verified result - including the line the character would
+have spoken, so a provider that grades well but cannot stay in character is
+visible before a demo rather than during one.
 
-    set -a; . <your env file>; set +a
-    .venv/bin/python tools/check_model.py
+    .venv/bin/python tools/check_model.py          # reads .env like the server
+
 """
 
 from __future__ import annotations
 
-import os
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from server.core.grounding import build_context  # noqa: E402
-from server.core.model_evaluator import ClaudeTextEvaluator  # noqa: E402
+from server.core.grounding import PressureState, build_context  # noqa: E402
+from server.core.model_evaluator import (  # noqa: E402
+    build_evaluator, chosen_provider, default_model_for,
+)
+from server.core.evaluator import FallbackTextEvaluator  # noqa: E402
+from server.main import load_local_env  # noqa: E402
 from server.core.scenario_engine import ScenarioEngine  # noqa: E402
 
 
 def main() -> int:
-    api_key = os.getenv("ANTHROPIC_API_KEY", "").strip()
-    auth_token = os.getenv("ANTHROPIC_AUTH_TOKEN", "").strip()
-    if not api_key and not auth_token:
-        print("No model credential is set; probe not run.")
+    load_local_env()
+    provider = chosen_provider()
+    if provider == "none":
+        print("No model credential is set. Paste one into .env:")
+        print("  OPENAI_API_KEY=...      (or OPENAI_BASE_URL for a compatible gateway)")
+        print("  ANTHROPIC_API_KEY=...   (or ANTHROPIC_AUTH_TOKEN + ANTHROPIC_BASE_URL)")
+        return 2
+
+    evaluator = build_evaluator()
+    if isinstance(evaluator, FallbackTextEvaluator):
+        print(f"Credential found for {provider}, but SKILLTOWN_MODEL_ENABLED is not true.")
         return 2
 
     engine = ScenarioEngine()
     scenario = engine.get_scenario("dinner-invitation")
-    node = scenario["nodes"]["alex_public_gift"]
-    context = build_context("dinner-invitation", scenario["version"], "alex_public_gift", node)
-    answer = next(item.text for item in context.reference_answers if item.outcome == "pass")
-    evaluator = ClaudeTextEvaluator(
-        api_key=api_key or None,
-        auth_token=auth_token or None,
-        base_url=os.getenv("ANTHROPIC_BASE_URL", "").strip() or None,
-        model=os.getenv("SKILLTOWN_MODEL", "claude-opus-5").strip() or "claude-opus-5",
-        user_agent=os.getenv("SKILLTOWN_MODEL_USER_AGENT", "").strip() or None,
+    node_id = "alex_public_gift"
+    node = scenario["nodes"][node_id]
+    context = build_context(
+        "dinner-invitation", scenario["version"], node_id, node,
+        persona=engine.persona(node["npc_id"]),
+        pressure=PressureState(turn=1, max_turns=4, history=(("npc", node["line"]),)),
     )
+    # A weak answer, so the character has a reason to push and the verdict has
+    # something to catch. One call, one paid request.
+    answer = next(item.text for item in context.reference_answers if item.outcome == "miss")
+
+    print(f"provider={provider}")
+    print(f"model={default_model_for(provider)}")
+    print(f"answer={answer!r}")
     result = evaluator.evaluate(node["text_rule"], answer, context=context)
     print(f"mode={result.mode}")
     print(f"assessed={result.assessed}")
     print(f"outcome={result.outcome}")
     print(f"cited_ids={result.policy_clause_ids}")
     print(f"feedback={result.feedback}")
-    return 0 if result.mode == "ai" and result.assessed else 1
+    print(f"character_line={result.character_line!r}")
+    if result.mode != "ai":
+        print("\nThe endpoint did not produce a usable verdict; the log line above says why.")
+        return 1
+    if not result.character_line:
+        print("\nGraded, but the spoken line was rejected or empty: the authored ladder")
+        print("will be used instead. Usable, just less specific to what the learner wrote.")
+    return 0
 
 
 if __name__ == "__main__":
