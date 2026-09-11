@@ -52,7 +52,47 @@
           }
         ],
         "concede": "Fine, fine. Put it in your register if that is how you want to play it.",
-        "closing": "Good. See? Nothing happened. I will drop it by your desk."
+        "closing": "Good. See? Nothing happened. I will drop it by your desk.",
+        "adaptive_policy": {
+          "strategies": [
+            {
+              "id": "clarify_decision",
+              "fallback_line": "So what are you actually proposing we do with the offer?"
+            },
+            {
+              "id": "probe_conditions",
+              "fallback_line": "Is that your answer in every case, or is there something about this offer that matters?"
+            },
+            {
+              "id": "probe_reason",
+              "fallback_line": "What is it about this offer that makes you say that?"
+            },
+            {
+              "id": "probe_action",
+              "fallback_line": "All right. What would you actually do next?"
+            },
+            {
+              "id": "probe_gap",
+              "fallback_line": "Talk me through how you reached that decision."
+            },
+            {
+              "id": "concede",
+              "fallback_line": "All right. I hear your decision. Let's leave it there."
+            },
+            {
+              "id": "close_violation",
+              "fallback_line": "Then we have a decision."
+            },
+            {
+              "id": "close_review",
+              "fallback_line": "We are not getting any further. Let's pause here."
+            },
+            {
+              "id": "retry",
+              "fallback_line": ""
+            }
+          ]
+        }
       }
     },
     {
@@ -501,7 +541,7 @@
       "completion_summary": "You completed three starting situations. Your recorded answers show where to practise next."
     },
     "dinner-invitation": {
-      "version": "2.0.0",
+      "version": "2.1.0",
       "title": "Gifts and hospitality",
       "category": "ethics_compliance",
       "estimated_minutes": 6,
@@ -614,6 +654,28 @@
             "pass": "pass",
             "miss": "miss",
             "overgeneralized": "overgeneralized"
+          },
+          "adaptive_rubric": {
+            "reasons": [
+              "recipient_role",
+              "applicable_limit"
+            ],
+            "decision": [
+              "decline_or_surrender"
+            ],
+            "execution": [
+              "record"
+            ],
+            "action_rules": [
+              {
+                "id": "accept_over_limit",
+                "description": "Says plainly they will keep this gift, which is over the stated limit."
+              },
+              {
+                "id": "conceal_record",
+                "description": "Says plainly they will keep it off the record or not declare it."
+              }
+            ]
           }
         },
         "alex_public_gift_consequence": {
@@ -722,6 +784,22 @@
             "pass": "pass",
             "miss": "miss",
             "overgeneralized": "overgeneralized"
+          },
+          "adaptive_rubric": {
+            "reasons": [
+              "benchmark_not_safe_harbour",
+              "context"
+            ],
+            "decision": [],
+            "execution": [
+              "register"
+            ],
+            "action_rules": [
+              {
+                "id": "conceal_record",
+                "description": "Says plainly they will keep it off the register."
+              }
+            ]
           }
         },
         "alex_private_gift_consequence": {
@@ -829,6 +907,22 @@
             "pass": "pass",
             "miss": "miss",
             "overgeneralized": "overgeneralized"
+          },
+          "adaptive_rubric": {
+            "reasons": [
+              "per_person",
+              "business_purpose"
+            ],
+            "decision": [],
+            "execution": [
+              "approval_and_record"
+            ],
+            "action_rules": [
+              {
+                "id": "bypass_required_approval",
+                "description": "Says plainly they will go ahead without the approval this case requires."
+              }
+            ]
           }
         },
         "alex_business_meal_consequence": {
@@ -932,6 +1026,23 @@
             "pass": "pass",
             "miss": "miss",
             "overgeneralized": "overgeneralized"
+          },
+          "adaptive_rubric": {
+            "reasons": [
+              "cash_gift_distinction"
+            ],
+            "decision": [
+              "prohibited_action"
+            ],
+            "execution": [
+              "next_step"
+            ],
+            "action_rules": [
+              {
+                "id": "accept_cash_gift",
+                "description": "Says plainly they will take the cash."
+              }
+            ]
           }
         },
         "alex_cash_gift_consequence": {
@@ -1042,6 +1153,23 @@
             "pass": "pass",
             "miss": "miss",
             "overgeneralized": "overgeneralized"
+          },
+          "adaptive_rubric": {
+            "reasons": [
+              "no_pending_decision"
+            ],
+            "decision": [
+              "allow_with_conditions"
+            ],
+            "execution": [
+              "record"
+            ],
+            "action_rules": [
+              {
+                "id": "conceal_record",
+                "description": "Says plainly they will leave it out of the record."
+              }
+            ]
           }
         },
         "alex_permitted_meal_consequence": {
