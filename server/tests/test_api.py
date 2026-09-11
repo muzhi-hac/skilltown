@@ -188,6 +188,43 @@ def test_runtime_dense_failure_updates_readiness_and_honours_required_mode(tmp_p
         assert client.app.state.rag_status.retrieval_mode == "sparse"
 
 
+def test_ready_reports_hybrid_only_when_dense_actually_answers(tmp_path, dense_available):
+    with TestClient(create_app(tmp_path / "test.sqlite3")) as client:
+        assert client.get("/ready").json()["retrieval_mode"] == "hybrid"
+
+
+def test_ready_stops_claiming_hybrid_once_dense_fails_at_runtime(tmp_path, monkeypatch, dense_available):
+    """A probe that keeps saying hybrid after dense broke is worse than no probe.
+
+    The status is a snapshot taken at startup and deliberately not re-warmed, so
+    a dense failure recorded later has to be reflected from what is already
+    known rather than by running retrieval inside the probe.
+    """
+    import server.main as main
+    from server.core import knowledge
+
+    warmups = []
+    original = main.warmup_rag
+    monkeypatch.setattr(main, "warmup_rag", lambda required: warmups.append(required) or original(required))
+
+    with TestClient(main.create_app(tmp_path / "test.sqlite3")) as client:
+        assert client.get("/ready").json()["retrieval_mode"] == "hybrid"
+        knowledge.mark_dense_runtime_failed("query_encode_error:RuntimeError")
+
+        degraded = client.get("/ready")
+        assert degraded.status_code == 200
+        assert degraded.json()["retrieval_mode"] == "sparse"
+        assert "dense_runtime_failure" in degraded.json()["reason"]
+
+        # A deployment that demands dense should fail this probe, not pass it.
+        client.app.state.require_dense = True
+        failed = client.get("/ready")
+        assert failed.status_code == 503
+        assert failed.json()["retrieval_mode"] == "unavailable"
+
+        assert warmups == [False], "the probe re-warmed instead of reporting what it knew"
+
+
 def test_ready_reads_lifespan_snapshot_without_rewarming(tmp_path, monkeypatch):
     import server.main as main
     from server.core.rag_runtime import RagStatus
