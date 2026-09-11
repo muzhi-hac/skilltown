@@ -17,6 +17,7 @@ from server.api.models import (
     RecommendationResponse, SessionView, TownResponse,
 )
 from server.core import knowledge
+from server.core.alex_strategy import select_strategy
 from server.core.grounding import PressureState, build_context
 from server.core.policy import get_policy_cards
 from server.core.recommendations import recommend
@@ -268,12 +269,53 @@ def respond(attempt_id: UUID, body: AnswerRequest, request: Request, session: Se
         store.add_model_wait(session["id"], str(attempt_id), waited)
         observed, feedback_mode = body.text, evaluated.mode
 
+        # One visitor decides what to ask from the evidence rather than the round.
+        # The strategy is the server's: the model only proposed one, and the
+        # deterministic path proposes none at all.
+        adaptive = context.adaptive
+        strategy = evaluated.strategy_id if adaptive else ""
+        if adaptive and not strategy and evaluated.assessed:
+            # Nothing trustworthy to locate the gap with, so ask the neutral
+            # question - and never read a violation into an ordinary miss.
+            strategy = select_strategy(
+                assessed=True, passed=evaluated.passed,
+                overgeneralized=evaluated.overgeneralized, committed_violation=False,
+                is_last_turn=bool(pressure_state and pressure_state.is_last_turn),
+                covered=set(), missing=set(context.required),
+                reasons=set(adaptive.reasons), decision=set(adaptive.decision),
+            )
+        closing_strategies = {"concede", "close_violation", "close_review"}
+
         if not evaluated.assessed:
             next_node_id, effect = node_id, "none"
             skill_id = learning_state = None
             interpretation, feedback_message = evaluated.interpretation, evaluated.feedback
             clause_ids = evaluated.policy_clause_ids
             assessment_status = "deferred"
+        elif adaptive and strategy not in closing_strategies:
+            # Alex keeps the situation open and asks for the part that is absent.
+            next_node_id, effect = node_id, "none"
+            skill_id = learning_state = None
+            interpretation, feedback_message = evaluated.interpretation, None
+            clause_ids = evaluated.policy_clause_ids
+            spoken = evaluated.character_line or adaptive.fallback_line(strategy)
+            dialogue_rows = [("learner", body.text), ("npc", spoken)]
+        elif adaptive:
+            branch = engine.resolve_text(
+                attempt["scenario_id"], node_id, "pass" if strategy == "concede" else "miss"
+            )
+            next_node_id, effect = branch.next_node_id, branch.effect
+            skill_id, learning_state = branch.skill_id or rule, branch.state
+            interpretation, feedback_message = evaluated.interpretation, evaluated.feedback
+            clause_ids = evaluated.policy_clause_ids or branch.policy_clause_ids
+            if strategy == "close_review":
+                # Running out of rounds says the evidence was short. It does not
+                # say the learner accepted anything, which they may never have.
+                interpretation = "The practice ended without sufficient evidence of mastery."
+                feedback_message = branch.feedback or evaluated.feedback
+            spoken = evaluated.character_line or adaptive.fallback_line(strategy)
+            dialogue_rows = [("learner", body.text), ("npc", spoken)]
+            resolve_dialogue = True
         elif pressure_state and evaluated.outcome != "pass" and not pressure_state.is_last_turn:
             # Mid-arc: the character presses again. No verdict is revealed and no
             # evidence is written, because the learner has not finished deciding.

@@ -21,6 +21,13 @@ class EvaluationResult:
     # What the person in the room says next. Empty when no model wrote a line,
     # in which case the route falls back to the authored escalation ladder.
     character_line: str = ""
+    # Only the adaptive visitor fills these: the validated rubric signals the
+    # route needs to choose what he asks next, the strategy the server chose,
+    # and whether the learner committed to the action this node forbids.
+    covered: tuple[str, ...] = ()
+    missing: tuple[str, ...] = ()
+    strategy_id: str = ""
+    committed_violation: bool = False
 
     @property
     def outcome(self) -> str:

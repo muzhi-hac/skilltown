@@ -410,3 +410,174 @@ def test_missing_env_file_is_not_an_error(tmp_path):
     from server.main import load_local_env
 
     assert load_local_env(tmp_path / "nope.env") == []
+
+
+# --- Alex, adaptive ----------------------------------------------------------
+
+class StubEvaluator:
+    """Stands in for the model so a route test can pin one verdict at a time."""
+
+    def __init__(self, *results):
+        self.results, self.calls = list(results), []
+
+    def evaluate(self, rule, text, allow_model=True, *, context):
+        self.calls.append(text)
+        result = self.results[min(len(self.calls) - 1, len(self.results) - 1)]
+        return result
+
+
+def adaptive_client(tmp_path, monkeypatch, *results):
+    monkeypatch.setenv("SKILLTOWN_ALEX_ADAPTIVE_ENABLED", "true")
+    app = create_app(tmp_path / "test.sqlite3")
+    client = TestClient(app)
+    client.__enter__()
+    if results:
+        app.state.evaluator = StubEvaluator(*results)
+    return client
+
+
+def alex_result(**changes):
+    from server.core.evaluator import EvaluationResult
+    values = {
+        "passed": False, "interpretation": "Stated a decision, not the conditions.",
+        "feedback": "Say which limit applies.", "policy_clause_ids": ["ANNEX-1.2"],
+        "mode": "ai", "covered": ("decline_or_surrender",),
+        "missing": ("recipient_role", "applicable_limit", "record"),
+        "strategy_id": "probe_reason", "character_line": "So why not, exactly?",
+    }
+    values.update(changes)
+    return EvaluationResult(**values)
+
+
+def test_alex_presses_on_the_gap_and_stays_in_the_situation(tmp_path, monkeypatch):
+    client = adaptive_client(tmp_path, monkeypatch, alex_result())
+    try:
+        _, headers = session(client)
+        attempt = create_attempt(client, headers)
+        replied = answer(client, headers, attempt, "I will not take it.").json()
+        assert replied["node"]["id"] == "alex_public_gift"
+        assert replied["learning_updates"] == [], "no verdict is revealed mid-arc"
+        assert replied["dialogue"][-1]["text"] == "So why not, exactly?"
+        assert replied["pressure"]["turn"] == 1
+    finally:
+        client.__exit__(None, None, None)
+
+
+def test_alex_concedes_on_the_first_round_when_the_answer_is_complete(tmp_path, monkeypatch):
+    client = adaptive_client(tmp_path, monkeypatch, alex_result(
+        passed=True, strategy_id="concede", covered=("recipient_role", "applicable_limit",
+        "decline_or_surrender", "record"), missing=(), character_line="All right. I hear you."))
+    try:
+        _, headers = session(client)
+        attempt = create_attempt(client, headers)
+        replied = answer(client, headers, attempt, "Declined and logged.").json()
+        assert replied["node"]["id"] == "alex_private_gift", "a pass moves the situation on"
+        assert replied["learning_updates"][0]["state"] != "needs_practice"
+    finally:
+        client.__exit__(None, None, None)
+
+
+def test_a_committed_violation_ends_the_situation_on_the_first_round(tmp_path, monkeypatch):
+    client = adaptive_client(tmp_path, monkeypatch, alex_result(
+        strategy_id="close_violation", committed_violation=True,
+        character_line="Then we have a decision.",
+        interpretation="Committed to keeping an unrecorded gift."))
+    try:
+        _, headers = session(client)
+        attempt = create_attempt(client, headers)
+        replied = answer(client, headers, attempt, "I will keep it and say nothing.").json()
+        assert replied["node"]["id"] == "alex_public_gift_consequence"
+        assert replied["effect"] == "consequence_preview"
+        assert replied["learning_updates"][0]["state"] == "needs_practice"
+    finally:
+        client.__exit__(None, None, None)
+
+
+def test_running_out_of_rounds_says_the_evidence_was_short_not_that_alex_won(tmp_path, monkeypatch):
+    client = adaptive_client(tmp_path, monkeypatch, alex_result(),
+                             alex_result(), alex_result(), alex_result(strategy_id="close_review"))
+    try:
+        _, headers = session(client)
+        attempt = create_attempt(client, headers)
+        result = attempt
+        for _ in range(4):
+            result = answer(client, headers, result, "I will not take it.").json()
+        assert result["node"]["id"] == "alex_public_gift_consequence"
+        passport = client.get("/api/v1/passport", headers=headers).json()
+        evidence = [item for skill in passport["skills"] for item in skill["evidence"]]
+        assert any("without sufficient evidence" in str(item["interpretation"]) for item in evidence)
+        assert not any("gave way" in str(item["interpretation"]) for item in evidence)
+    finally:
+        client.__exit__(None, None, None)
+
+
+def test_a_deferred_answer_costs_alex_nothing(tmp_path, monkeypatch):
+    client = adaptive_client(tmp_path, monkeypatch, alex_result(
+        passed=False, mode="fallback", assessed=False, strategy_id="", character_line="",
+        covered=(), missing=()))
+    try:
+        _, headers = session(client)
+        attempt = create_attempt(client, headers)
+        replied = answer(client, headers, attempt, "Something unreviewed.").json()
+        assert replied["node"]["id"] == "alex_public_gift"
+        assert replied["pressure"]["turn"] == 0, "a round nobody graded is not a round"
+        assert replied["learning_updates"] == []
+    finally:
+        client.__exit__(None, None, None)
+
+
+def test_the_other_visitors_keep_the_fixed_ladder(tmp_path, monkeypatch):
+    """Sam is untouched by the switch: same rungs, same order."""
+    monkeypatch.setenv("SKILLTOWN_ALEX_ADAPTIVE_ENABLED", "true")
+    with TestClient(create_app(tmp_path / "test.sqlite3")) as client:
+        _, headers = session(client)
+        attempt = create_attempt(client, headers, scenario="supplier-gift")
+        miss = reference(client, "supplier-gift", attempt["node"]["id"], "miss")
+        replied = answer(client, headers, attempt, miss).json()
+        spoken = [turn["text"] for turn in replied["dialogue"] if turn["speaker"] == "npc"]
+        engine = client.app.state.engine
+        ladder = [tactic.line for tactic in engine.persona("sam").tactics]
+        assert spoken[-1] in ladder
+
+
+def test_replaying_the_same_event_costs_no_round_and_no_model_call(tmp_path, monkeypatch):
+    client = adaptive_client(tmp_path, monkeypatch, alex_result())
+    try:
+        _, headers = session(client)
+        attempt = create_attempt(client, headers)
+        event = str(uuid4())
+        first = answer(client, headers, attempt, "I will not take it.", event).json()
+        again = answer(client, headers, attempt, "I will not take it.", event).json()
+        assert first == again
+        assert first["pressure"]["turn"] == 1
+        assert len(client.app.state.evaluator.calls) == 1
+    finally:
+        client.__exit__(None, None, None)
+
+
+def test_a_rewound_situation_starts_its_pressure_again(tmp_path, monkeypatch):
+    """The old rounds are gone: they were answered about a decision undone."""
+    client = adaptive_client(tmp_path, monkeypatch, alex_result())
+    try:
+        _, headers = session(client)
+        attempt = create_attempt(client, headers)
+        result = answer(client, headers, attempt, "I will not take it.").json()
+        result = answer(client, headers, result, "Still no.").json()
+        assert result["pressure"]["turn"] == 2
+
+        client.app.state.evaluator = StubEvaluator(alex_result(
+            strategy_id="close_violation", committed_violation=True,
+            character_line="Then we have a decision."))
+        landed = answer(client, headers, result, "I will keep it and say nothing.").json()
+        assert landed["node"]["id"] == "alex_public_gift_consequence"
+
+        rewound = client.post(
+            f"/api/v1/attempts/{attempt['attempt_id']}/rewind", headers=headers,
+            json={"client_event_id": str(uuid4()), "expected_revision": landed["revision"]},
+        ).json()
+        assert rewound["node"]["id"] == "alex_public_gift"
+        assert rewound["pressure"]["turn"] == 0
+        learner_turns = [t for t in rewound["dialogue"] if t["speaker"] == "learner"]
+        assert learner_turns == [], "the old arc is not evidence for the new one"
+    finally:
+        client.__exit__(None, None, None)
