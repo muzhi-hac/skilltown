@@ -133,6 +133,9 @@ def main() -> int:
         check("someone knocks", page.wait_for("knocking"), page.text()[:120])
         check("no warm-up quiz", "skill check" not in page.text().lower())
         check("the door prompt is on screen", "open the door" in page.text().lower())
+        check("the visitor's module can be inspected", page.click_text("what alex covers"))
+        check("the module explains its scope", page.wait_for("gifts and hospitality"), page.text()[:200])
+        check("the module panel closes", page.click_text("what alex covers"))
 
         print("2) The first person in the room wants something")
         check("the door opens", page.click_text("open the door"))
@@ -172,7 +175,10 @@ def main() -> int:
 
         print("5) Holding the line ends the situation and records evidence")
         page.answer(ANSWER_ALEX_PASS)
-        check("evidence is recorded", page.wait_for("evidence recorded", 25), page.text()[:200])
+        check("holding the line gets an explicit success", page.wait_for("decision accepted", 25), page.text()[:200])
+        check("evidence is recorded", "evidence recorded" in page.text().lower(), page.text()[:200])
+        check("the same visitor is offered", "continue with alex" in page.text().lower())
+        check("the next visitor is offered", "next visitor" in page.text().lower())
         check("progress opens", page.click_text("my progress"))
         check("progress view is visible", page.wait_for("what you have shown"), page.text()[:200])
         check("the passport lists a skill", page.wait_for("gather relevant facts"), page.text()[:200])
@@ -180,6 +186,7 @@ def main() -> int:
         check("a next step is offered", "what to do next" in page.text().lower())
         check("progress closes", page.click_text("close"))
         check("progress returns to the conversation", page.wait_for("situation: gifts and hospitality", 20), page.text()[:160])
+        check("the learner continues with Alex", page.click_text("continue with alex"))
         check("the situation closes", page.click_text("close"))
 
         print("6) Every visitor has their own tasks")

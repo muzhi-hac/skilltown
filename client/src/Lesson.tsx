@@ -165,12 +165,18 @@ export function Lesson(props: LessonProps) {
   const transcriptEnd = useRef<HTMLDivElement>(null);
   const lastAttempt = useRef<string | null>(null);
   const lastRevision = useRef<number | null>(null);
+  const [acknowledgedSuccess, setAcknowledgedSuccess] = useState<number | null>(null);
 
   const node = attempt?.node ?? null;
-  const canAnswer = Boolean(node?.allow_text) && !attempt?.is_complete && !busy;
   const beats = node?.consequence ?? [];
   const [revealed, setRevealed] = useState(1);
   const moreToCome = revealed < beats.length;
+  const successfulUpdate = attempt?.assessment_status === "assessed"
+    ? attempt.learning_updates.find((update) => update.state === "practiced" || update.state === "demonstrated")
+    : undefined;
+  const showSuccess = Boolean(successfulUpdate) && !attempt?.is_complete
+    && attempt?.effect !== "consequence_preview" && acknowledgedSuccess !== attempt?.revision;
+  const canAnswer = Boolean(node?.allow_text) && !attempt?.is_complete && !busy && !showSuccess;
   const said = transcript(attempt);
   const atRest = verdictKind(attempt) !== null;
   const pressure = attempt?.pressure ?? null;
@@ -197,6 +203,7 @@ export function Lesson(props: LessonProps) {
     const assessedReply = lastRevision.current !== null && lastRevision.current !== attempt.revision
       && attempt.assessment_status === "assessed";
     if (changedAttempt || assessedReply || attempt.is_complete) setDraft("");
+    if (changedAttempt) setAcknowledgedSuccess(null);
     lastAttempt.current = attempt.attempt_id;
     lastRevision.current = attempt.revision;
   }, [attempt?.attempt_id, attempt?.revision, attempt?.assessment_status, attempt?.is_complete]);
@@ -322,6 +329,23 @@ export function Lesson(props: LessonProps) {
           onRewind={props.onRewind}
           onClose={props.onClose}
         />
+      ) : showSuccess && attempt && successfulUpdate ? (
+        <section className="success-handoff" aria-label="Successful decision" role="status">
+          <div>
+            <p className="success-kicker">Success</p>
+            <h3>Decision accepted.</h3>
+            <p>
+              Evidence recorded for {SKILL_LABELS[successfulUpdate.skill_id] ?? successfulUpdate.skill_id}.
+              Choose whether to continue this module or meet the next visitor.
+            </p>
+          </div>
+          <div className="verdict-actions">
+            <button className="ghost" onClick={props.onClose}>Next visitor</button>
+            <button className="primary" onClick={() => setAcknowledgedSuccess(attempt.revision)}>
+              Continue with {props.teacher} →
+            </button>
+          </div>
+        </section>
       ) : (
       <div className="answer">
         <label htmlFor="answer-box">

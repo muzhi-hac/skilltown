@@ -121,6 +121,68 @@ body {
   gap: 8px;
 }
 
+.module-trigger[aria-expanded="true"] {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.module-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 14px 18px;
+  border: 1px solid #cfe2ef;
+  border-radius: 10px;
+  background: var(--accent-soft);
+}
+
+.module-card h2,
+.module-card p {
+  margin: 0;
+}
+
+.module-card h2 {
+  margin-top: 2px;
+  font-size: 18px;
+}
+
+.module-card p:not(.module-owner) {
+  margin-top: 4px;
+  color: var(--ink-soft);
+  line-height: 1.45;
+}
+
+.module-owner,
+.success-kicker {
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.module-card ul {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+  max-width: 460px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.module-card li {
+  padding: 5px 9px;
+  border: 1px solid #c5dce9;
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink-soft);
+  font-size: 12px;
+}
+
 button {
   font: inherit;
   border-radius: 8px;
@@ -880,6 +942,7 @@ details.policy[open] > summary {
   color: var(--ink-soft);
   border-top: 1px solid #e3d5bc;
   padding-top: 10px;
+}
 
 /* --- the verdict, and keeping it in view --------------------------------- */
 
@@ -947,6 +1010,36 @@ details.policy[open] > summary {
   border-radius: 10px;
   padding: 14px 16px;
   animation: verdict-settle 220ms ease-out;
+}
+
+.success-handoff {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 14px;
+  padding: 14px 16px;
+  border: 1px solid #bfe0cd;
+  border-radius: 10px;
+  background: var(--good-soft);
+  animation: verdict-settle 220ms ease-out;
+}
+
+.success-handoff h3,
+.success-handoff p {
+  margin: 0;
+}
+
+.success-handoff h3 {
+  margin-top: 2px;
+  color: var(--good);
+  font-size: 20px;
+}
+
+.success-handoff p:not(.success-kicker) {
+  margin-top: 4px;
+  max-width: 62ch;
+  color: var(--ink-soft);
 }
 
 .verdict--consequence {
@@ -1023,10 +1116,18 @@ details.policy[open] > summary {
     padding: 10px 0 2px;
     margin-top: 4px;
   }
+  .module-card {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .module-card ul {
+    justify-content: flex-start;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .verdict {
+  .verdict,
+  .success-handoff {
     animation: none;
   }
 }

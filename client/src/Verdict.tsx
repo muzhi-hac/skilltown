@@ -17,13 +17,20 @@ export function Verdict(props: VerdictProps) {
   const kind = verdictKind(props.attempt);
   if (!kind) return null;
   const atConsequence = kind === "consequence";
+  const passed = props.attempt.learning_updates.some(
+    (update) => update.state === "practiced" || update.state === "demonstrated",
+  );
 
   return (
     <section className={`verdict verdict--${kind}`} aria-label="Result" role="status">
       <div className="verdict-body">
         {/* "Completed" is what the path did, not a claim that the learner got it
             all right: independence stays on the skills that earned it. */}
-        <h3>{atConsequence ? "This decision needs another look." : "Practice completed."}</h3>
+        <h3>
+          {atConsequence
+            ? "This decision needs another look."
+            : passed ? "Success — module complete." : "Module complete."}
+        </h3>
         <p>{props.attempt.node?.verdict_line}</p>
       </div>
       <div className="verdict-actions">

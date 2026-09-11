@@ -100,6 +100,7 @@ export interface TownNpc {
   title: string;
   category: Category;
   position: { x: number; y: number };
+  module: { label: string; summary: string; skills: string[] };
   tasks: TaskSummary[];
   recommendation_state: "none" | "recommended" | "review";
 }

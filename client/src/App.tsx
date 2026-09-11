@@ -50,6 +50,7 @@ export default function App() {
   const [confirmClear, setConfirmClear] = useState(false);
   const [error, setError] = useState("");
   const [versionMismatch, setVersionMismatch] = useState(false);
+  const [openModuleFor, setOpenModuleFor] = useState("");
   const firstVisitChecked = useRef(false);
 
   const npcs: TownNpc[] = town?.npcs ?? [];
@@ -112,6 +113,7 @@ export default function App() {
 
   const openDoor = useCallback(async (selectedTask?: TaskSummary) => {
     if (phase !== "outside" || view !== "room") return;
+    setOpenModuleFor("");
     let visitor = current;
     let tasks = byName.get(current)?.tasks ?? [];
     if (!visitor) {
@@ -323,6 +325,7 @@ export default function App() {
   }, [view, attempt?.attempt_id]);
 
   const teacher = byName.get(current);
+  const moduleOpen = Boolean(teacher) && openModuleFor === teacher?.name;
   const availableTasks = teacher?.tasks ?? [];
   const waiting = queue.filter((name) => name !== current);
 
@@ -355,7 +358,30 @@ export default function App() {
             {waiting.length > 0 ? `Waiting: ${waiting.join(", ")}` : "No one else waiting."}
           </p>
         </div>
+        {teacher && view !== "progress" && (
+          <button
+            className="ghost module-trigger"
+            aria-expanded={moduleOpen}
+            aria-controls="visitor-module"
+            onClick={() => setOpenModuleFor((name) => name === teacher.name ? "" : teacher.name)}
+          >
+            What {teacher.name} covers
+          </button>
+        )}
       </header>
+
+      {moduleOpen && teacher && view !== "progress" && (
+        <section id="visitor-module" className="module-card" aria-label={`${teacher.name}'s module`}>
+          <div>
+            <p className="module-owner">{teacher.name}'s module</p>
+            <h2>{teacher.module.label}</h2>
+            <p>{teacher.module.summary}</p>
+          </div>
+          <ul>
+            {teacher.module.skills.map((skill) => <li key={skill}>{skill}</li>)}
+          </ul>
+        </section>
+      )}
 
       {error && <p className="error">{error}</p>}
 
