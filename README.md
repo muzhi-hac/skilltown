@@ -8,20 +8,27 @@
 `/api/v1` 同源）。
 
 前端已从 Godot Web 换成 **React**（`client/`，Vite + TypeScript）：房间是一间家徒四壁
-的小屋，四位老师依次敲门进来、在房间里授课，作答**全部由学习者自己打字**，没有任何
-选择题。构建产物 233KB JS（gzip 73KB）+ 5KB CSS，页面秒开；旧的 Godot 客户端保留在
+的小屋，几个人依次敲门进来——**他们不是老师，是想让你破例的人**：供应商 Alex 递礼、
+客户 Sam 推现金、同事 Nina 想把数据事件压到发布之后、经理 Jo 让你加班并别走举报渠道。
+答得不到位不会当场公布答案，对方会**连续 3–4 轮升级施压**（当成惯例 → 加码 → 打人情
+→ 要你别留记录），顶不住才进入后果预演，再由唯一不施压的角色 Mira 复盘。作答**全部
+由学习者自己打字**，没有任何选择题。构建产物 233KB JS（gzip 73KB）+ 5KB CSS，页面秒开；旧的 Godot 客户端保留在
 `godot/` 但已不构建、不部署。
 
 已验证的部分：
 
-- `server/tests` 53 项通过；FastAPI 提供 `/ready` RAG 探针和 13 个接口操作，SQLite 保存匿名会话。
-- `tools/e2e_room.py` 用真实 Chrome 对真实服务端跑完整验收（21 项断言）：敲门 → 开门
-  → 老师走进来 → 三题摸底全部打字作答 → 证据落库 → 学习护照回显你自己的原话 → 清除
-  记录后确实归零。
+- `server/tests` 67 项通过；FastAPI 提供 `/ready` RAG 探针和 13 个接口操作，SQLite 保存匿名会话。
+- `tools/e2e_room.py` 用真实 Chrome 对真实服务端跑完整验收：敲门 → 开门 → 人走进来
+  → 三题摸底全部打字作答 → Alex 施压时**不泄露判定也不给答案**（断言页面上没有
+  "evidence recorded"/"learning feedback"，只有对方的下一句话和"Round 1 of 4"）→
+  顶住后落证据 → 学习护照回显你自己的原话 → 清除记录后确实归零。
 - `tools/smoke_api.py` 对线上 URL 全绿（幂等重放、过期 revision 得 409、会话隔离）。
 - 自由回答走真实模型：线上实测 `feedback_mode=ai`，约 5 秒，判定引用学习者原文并经
   服务端核对。
 - 内容使用 ANNEX 真实来源锚点：节点、提示和反馈均显示 source；礼品、现金、隐私与工时主线均含条件不同的反例，Mira 只回顾当前版本的真实答题证据。
+- 施压台词由模型现场生成，但受服务端约束：引用了条款号或评分要点的台词会被丢弃，改说
+  内容里写好的那一级台词。判定和台词是同一次模型调用的两个字段，所以一轮仍然只花一次
+  调用。人设与升级阶梯只存在于服务端，`/api/v1/town` 不下发（有测试盯着这条）。
 
 尚未验证的部分（不要当成已完成）：
 
@@ -61,7 +68,7 @@ set -a; . <你的环境变量文件>; set +a
 ```bash
 python3 -m venv .venv
 .venv/bin/python -m pip install -r server/requirements.txt websocket-client
-.venv/bin/python -m pytest server/tests -q                     # 53 passed
+.venv/bin/python -m pytest server/tests -q                     # 67 passed
 
 cd client && npm ci && npm run build && cd ..
 
@@ -82,7 +89,7 @@ python3 tools/smoke_api.py http://127.0.0.1:8000             # HTTP 冒烟
 
 - 点击 NPC，或 WASD / 方向键移动、靠近按 E。
 - 两个醒目分类：🛡️ 伦理与合规、🌱 个人发展。
-- 合规主线：商务宴请 → 风险揭示 → 后果预演 → 定向反馈 → 新情境复测。
+- 合规主线：对方开价 → 你打字回应 → 3–4 轮升级施压 → 后果预演 → Mira 复盘 → 新情境复测。
 - 三题轻量筛查、跨 NPC 学习记忆、个人学习护照与可点击学习方案。
 - 无主管端、排行榜或自动绩效评价；虚构培训政策不作为法律结论。
 

@@ -22,10 +22,28 @@ export interface ScenarioNode {
   id: string;
   npc_id: string;
   category: Category;
+  /** The situation, written down. Context, not something anybody says. */
   text: string;
+  /** What the person in the room opens with. Empty where nobody is pressing. */
+  line: string;
   choices: { id: string; label: string }[];
   allow_text: boolean;
   policy_cards: PolicyCard[];
+}
+
+export interface DialogueTurn {
+  node_id: string;
+  speaker: "npc" | "learner";
+  text: string;
+  /** True once the arc that contained this round has been settled. */
+  resolved: boolean;
+}
+
+export interface Pressure {
+  /** Rounds already spent against the person still in the room. */
+  turn: number;
+  max_turns: number;
+  active: boolean;
 }
 
 export interface Feedback {
@@ -57,6 +75,8 @@ export interface Attempt {
   is_complete: boolean;
   feedback_mode: FeedbackMode;
   assessment_status: "assessed" | "deferred" | "not_requested";
+  dialogue: DialogueTurn[];
+  pressure: Pressure | null;
   timing: { active_seconds: number; model_wait_seconds: number };
 }
 

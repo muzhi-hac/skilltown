@@ -44,6 +44,11 @@ def validate_content(content: dict[str, Any]) -> None:
         for scenario_id in npc.get("scenario_ids", []):
             if scenario_id not in scenarios:
                 _fail(f"npc {npc.get('id')}: unknown scenario {scenario_id}")
+        _validate_persona(npc)
+    known_npcs = {npc.get("id") for npc in content.get("npcs", [])}
+    pressuring = {
+        npc.get("id") for npc in content.get("npcs", []) if npc.get("persona")
+    }
     screening = content.get("screening_task")
     if screening and screening.get("scenario_id") not in scenarios:
         _fail("screening_task points to an unknown scenario")
@@ -53,10 +58,50 @@ def validate_content(content: dict[str, Any]) -> None:
             _fail(f"TASK_BY_SKILL[{skill_id}] points to an unknown scenario")
 
     for scenario_id, scenario in scenarios.items():
-        _validate_scenario(scenario_id, scenario)
+        _validate_scenario(scenario_id, scenario, known_npcs, pressuring)
 
 
-def _validate_scenario(scenario_id: str, scenario: dict[str, Any]) -> None:
+PERSONA_FIELDS = ("role", "relationship", "wants", "voice", "concede", "closing")
+
+
+def _validate_persona(npc: dict[str, Any]) -> None:
+    """A persona is what the model performs, so an incomplete one is an error."""
+    persona = npc.get("persona")
+    if persona is None:
+        return
+    npc_id = npc.get("id")
+    if not isinstance(persona, dict):
+        _fail(f"npc {npc_id}: persona must be an object")
+    for field in PERSONA_FIELDS:
+        if not _nonempty(persona.get(field)):
+            _fail(f"npc {npc_id}: persona.{field} must be non-empty")
+    tactics = persona.get("tactics")
+    if not isinstance(tactics, list) or len(tactics) < 2:
+        _fail(f"npc {npc_id}: persona.tactics needs at least two rungs")
+    seen: set[str] = set()
+    for tactic in tactics:
+        if not isinstance(tactic, dict) or not all(
+            _nonempty(tactic.get(key)) for key in ("id", "instruction", "line")
+        ):
+            _fail(f"npc {npc_id}: each tactic needs id, instruction and line")
+        if tactic["id"] in seen:
+            _fail(f"npc {npc_id}: duplicate tactic {tactic['id']}")
+        seen.add(tactic["id"])
+
+
+def _validate_scenario(
+    scenario_id: str,
+    scenario: dict[str, Any],
+    known_npcs: set[str | None] | None = None,
+    pressuring: set[str | None] | None = None,
+) -> None:
+    known_npcs = known_npcs if known_npcs is not None else set()
+    pressuring = pressuring if pressuring is not None else set()
+    pressure = scenario.get("pressure")
+    if pressure is not None:
+        turns = pressure.get("max_turns") if isinstance(pressure, dict) else None
+        if not isinstance(turns, int) or not 2 <= turns <= 6:
+            _fail(f"{scenario_id}: pressure.max_turns must be an integer from 2 to 6")
     if not _nonempty(scenario.get("version")):
         _fail(f"{scenario_id}: version must be non-empty")
     if not isinstance(scenario.get("available_modes"), list) or not scenario["available_modes"]:
@@ -77,6 +122,15 @@ def _validate_scenario(scenario_id: str, scenario: dict[str, Any]) -> None:
             _fail(f"{scenario_id}: invalid coaching source {source!r}")
 
     for node_id, node in nodes.items():
+        if known_npcs and node.get("npc_id") not in known_npcs:
+            _fail(f"{scenario_id}/{node_id}: unknown npc {node.get('npc_id')!r}")
+        if pressure and node.get("allow_text"):
+            # In a pressure module the learner is talking to a person: they need
+            # an opening line, and they have to be someone who actually pushes.
+            if not _nonempty(node.get("line")):
+                _fail(f"{scenario_id}/{node_id}: a pressure node needs a spoken line")
+            if pressuring and node.get("npc_id") not in pressuring:
+                _fail(f"{scenario_id}/{node_id}: {node.get('npc_id')!r} has no persona to press with")
         _validate_node(scenario_id, node_id, node, nodes)
     _validate_reachability(scenario_id, scenario, nodes)
     if scenario_id not in {"screening", "ethics-review"}:

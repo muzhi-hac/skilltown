@@ -10,9 +10,10 @@ that the training corpus replaces local legal or compliance advice.
 
 ## 0:00 — The claim
 
-> "This is a learning town where every prompt, hint and evaluation is anchored
-to a visible source passage. The system keeps evidence of what I actually wrote,
-not a guessed learner profile."
+> "Nobody in this town teaches you. The people who knock want you to bend a
+rule, and they do not give up after one answer. Every line they say and every
+verdict behind it is anchored to a visible source passage, and the record keeps
+what I actually wrote, not a guessed learner profile."
 
 Point out `/ready` in the deployment view if available: the image is ready only
 after the dense corpus has warmed successfully.
@@ -34,32 +35,40 @@ after the dense corpus has warmed successfully.
 > "The check is a starting point. It does not claim that someone has mastered a
 whole legal domain."
 
-## 1:00 — Source cards, hint, deferred answer and rewind
+## 1:00 — Someone pushes back, four rounds deep
 
-Open Alex's **Gifts and hospitality** task. Show the visible ANNEX cards and
-request a hint; its card has the same source provenance.
+Open Alex's **Gifts and hospitality** situation. He speaks first: the head of
+unit left €26 of chocolates for you. Open **Check the rules** once to show the
+ANNEX cards are one click away, exactly as they would be at a real desk.
 
-Type a novel answer that is not an approved fallback example. The response stays
-on the same node with **deferred** assessment and records no learning result.
-Then type: **“€26 is a small gift, so I will accept it.”** The reviewed miss
-opens a teaching consequence. Rewind, then type the reviewed pass answer shown
-in the answer matrix.
+Type the weak answer: **“€26 is a small gift, so I will accept it.”**
 
-> "The deterministic path does not pretend to grade arbitrary wording. A model
-verdict must cite only the passages in this node's context, and the server
-rechecks it."
+Point at what does *not* happen: no red cross, no correct answer, no evidence
+line. The header now reads **Round 1 of 4** and Alex simply pushes again -
+first as ordinary courtesy, then sweetening the offer, then making it personal,
+then asking you to keep it off the books. Keep giving way and the arc ends in
+the consequence preview; hold the line at any round and he backs off in
+character and the situation moves on.
+
+> "Pressure is the thing being trained. A verdict after one answer teaches you
+the rule; four rounds of someone you like asking again teaches you what you
+actually do. The grading half of that same model call is unchanged: it may cite
+only this node's passages, it must quote my own words to pass me, and the server
+rechecks both. The line he speaks is dropped if it names a rule or a clause id."
 
 ## 1:50 — Evidence-driven review
 
-Close Alex and Sam, then wait for Mira. Her task chooser shows both **Privacy
-and incident response** and **Review a case from your record**. Choose the
-review task.
+Close Alex and Sam, let Nina and Jo through, then wait for Mira - the only
+visitor who is not pressing you for anything. Open her **Review a case from your
+record**.
 
 > "Mira selected a static, version-matched copy of a case I actually answered.
 Old scenario versions remain in the record but are not mapped onto new wording."
 
 Open **My progress** to show the learner's own evidence sentence and the skill
-state. Close Progress to return to the lesson, not a broken room state.
+state, including how many rounds of pressure it took and whether they held the
+line or gave way. Close Progress to return to the conversation, not a broken
+room state.
 
 ## 2:30 — Deployment proof
 

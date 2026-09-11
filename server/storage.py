@@ -9,7 +9,7 @@ import sqlite3
 from contextlib import contextmanager
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from typing import Any, Iterator
+from typing import Any, Iterator, Sequence
 from uuid import uuid4
 
 from server.core.activity import active_seconds
@@ -37,6 +37,26 @@ def iso_now() -> str:
 
 def hash_token(token: str) -> str:
     return hashlib.sha256(token.encode()).hexdigest()
+
+
+def _insert_dialogue(
+    db: sqlite3.Connection, session_id: str, attempt_id: str, node_id: str,
+    rows: Sequence[tuple[str, str]],
+) -> None:
+    """Append spoken turns. Ordinal runs across the attempt, not per node, so
+    the transcript reads in the order the learner actually lived it."""
+    if not rows:
+        return
+    start = int(db.execute(
+        "SELECT COALESCE(MAX(ordinal), 0) n FROM dialogue_turns WHERE attempt_id = ?",
+        (attempt_id,),
+    ).fetchone()["n"])
+    for offset, (speaker, said) in enumerate(rows, start=1):
+        db.execute(
+            "INSERT INTO dialogue_turns VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (str(uuid4()), session_id, attempt_id, node_id, start + offset,
+             speaker, said, 0, iso_now()),
+        )
 
 
 def payload_digest(payload: dict[str, Any]) -> str:
@@ -123,6 +143,17 @@ class Store:
                 CREATE TABLE IF NOT EXISTS model_calls (
                     id TEXT PRIMARY KEY,
                     session_id TEXT NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
+                    created_at TEXT NOT NULL
+                );
+                CREATE TABLE IF NOT EXISTS dialogue_turns (
+                    id TEXT PRIMARY KEY,
+                    session_id TEXT NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
+                    attempt_id TEXT NOT NULL REFERENCES attempts(id) ON DELETE CASCADE,
+                    node_id TEXT NOT NULL,
+                    ordinal INTEGER NOT NULL,
+                    speaker TEXT NOT NULL,
+                    body TEXT NOT NULL,
+                    resolved INTEGER NOT NULL DEFAULT 0,
                     created_at TEXT NOT NULL
                 );
                 CREATE TABLE IF NOT EXISTS activity_events (
@@ -225,6 +256,9 @@ class Store:
         interpretation: str | None,
         policy_clause_ids: list[str],
         response_builder,
+        dialogue_rows: Sequence[tuple[str, str]] = (),
+        resolve_dialogue: bool = False,
+        arrival_line: str = "",
     ) -> dict[str, Any]:
         digest = payload_digest(request_payload)
         with self.connect() as db:
@@ -292,8 +326,29 @@ class Store:
                 WHERE id = ? AND session_id = ?""",
                 (next_node_id, new_revision, status, iso_now(), attempt_id, session_id),
             )
+            spoken_node_id = attempt["current_node_id"]
+            _insert_dialogue(db, session_id, attempt_id, spoken_node_id, dialogue_rows)
+            if resolve_dialogue:
+                # The arc is over; these rounds stay on screen but stop counting.
+                db.execute(
+                    "UPDATE dialogue_turns SET resolved = 1 WHERE attempt_id = ? AND node_id = ?",
+                    (attempt_id, spoken_node_id),
+                )
+            if arrival_line and next_node_id != spoken_node_id:
+                _insert_dialogue(
+                    db, session_id, attempt_id, next_node_id, [("npc", arrival_line)]
+                )
+            dialogue = [
+                {"node_id": row["node_id"], "speaker": row["speaker"], "text": row["body"],
+                 "resolved": bool(row["resolved"])}
+                for row in db.execute(
+                    """SELECT node_id, speaker, body, resolved FROM dialogue_turns
+                    WHERE attempt_id = ? ORDER BY ordinal""",
+                    (attempt_id,),
+                ).fetchall()
+            ]
             response = response_builder(
-                dict(attempt), new_revision, status, evidence_id, resolved_state
+                dict(attempt), new_revision, status, evidence_id, resolved_state, dialogue
             )
             db.execute(
                 "INSERT INTO events VALUES (?, ?, ?, ?, ?, ?, ?)",
@@ -340,6 +395,38 @@ class Store:
                 (target_node_id, expected_revision + 1, iso_now(), attempt_id),
             )
         return self.get_attempt(session_id, attempt_id)
+
+    def dialogue(
+        self, session_id: str, attempt_id: str, node_id: str | None = None
+    ) -> list[dict[str, Any]]:
+        """The conversation so far, oldest first: whole attempt, or one node."""
+        query = """SELECT node_id, speaker, body, resolved FROM dialogue_turns
+                WHERE session_id = ? AND attempt_id = ?"""
+        params: list[Any] = [session_id, attempt_id]
+        if node_id is not None:
+            query += " AND node_id = ?"
+            params.append(node_id)
+        with self.connect() as db:
+            rows = db.execute(query + " ORDER BY ordinal", params).fetchall()
+        return [
+            {"node_id": row["node_id"], "speaker": row["speaker"], "text": row["body"],
+             "resolved": bool(row["resolved"])}
+            for row in rows
+        ]
+
+    def append_dialogue(
+        self, session_id: str, attempt_id: str, node_id: str, rows: Sequence[tuple[str, str]]
+    ) -> None:
+        with self.connect() as db:
+            _insert_dialogue(db, session_id, attempt_id, node_id, rows)
+
+    def clear_dialogue(self, session_id: str, attempt_id: str, node_id: str) -> None:
+        """Rewinding replays the situation, so the pressure starts over too."""
+        with self.connect() as db:
+            db.execute(
+                "DELETE FROM dialogue_turns WHERE session_id = ? AND attempt_id = ? AND node_id = ?",
+                (session_id, attempt_id, node_id),
+            )
 
     def last_answered_node(self, session_id: str, attempt_id: str) -> str | None:
         """Node the learner last answered from, i.e. the decision point to rewind to."""

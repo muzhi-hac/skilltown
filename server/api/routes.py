@@ -17,7 +17,7 @@ from server.api.models import (
     RecommendationResponse, SessionView, TownResponse,
 )
 from server.core import knowledge
-from server.core.grounding import build_context
+from server.core.grounding import PressureState, build_context
 from server.core.policy import get_policy_cards
 from server.core.recommendations import recommend
 from server.core.session import require_session
@@ -39,15 +39,51 @@ def _node_view(engine, scenario_id: str, node_id: str) -> dict:
         "npc_id": node["npc_id"],
         "category": node.get("category", scenario["category"]),
         "text": node["text"],
+        "line": node.get("line", ""),
         "choices": node.get("choices", []),
         "allow_text": node.get("allow_text", False),
         "policy_cards": get_policy_cards(list(dict.fromkeys(node.get("knowledge", [])))),
     }
 
 
+def _pressure_view(engine, scenario_id: str, node_id: str, dialogue: list[dict]) -> dict | None:
+    """Rounds already spent against the character still holding the floor."""
+    if not engine.is_pressure_node(scenario_id, node_id):
+        return None
+    turn = sum(
+        1 for item in dialogue
+        if item["speaker"] == "learner" and not item["resolved"] and item.get("node_id") == node_id
+    )
+    max_turns = engine.max_pressure_turns(scenario_id)
+    return {"turn": turn, "max_turns": max_turns, "active": turn < max_turns}
+
+
+def _opening_line(engine, scenario_id: str, node_id: str) -> str:
+    """What the next person says on walking into the situation."""
+    try:
+        return str(engine.get_node(scenario_id, node_id).get("line", ""))
+    except Exception:  # a missing node is the caller's problem, not the transcript's
+        return ""
+
+
+def _authored_line(context) -> str:
+    """The written rung of the ladder, used when no usable model line arrived."""
+    tactic = context.tactic
+    return tactic.line if tactic else ""
+
+
+def _with_rounds(interpretation: str, rounds: int, held: bool) -> str:
+    """Keep how long the learner lasted, since that is the thing being trained."""
+    if rounds <= 1:
+        return interpretation
+    tail = "held the line" if held else "gave way"
+    return f"{interpretation} (after {rounds} rounds of pressure, {tail})"
+
+
 def _attempt_response(engine, attempt: dict, **overrides) -> dict:
     values = dict(attempt)
     values.update(overrides)
+    dialogue = overrides.get("dialogue", [])
     return {
         "attempt_id": values["id"],
         "scenario_id": values["scenario_id"],
@@ -63,6 +99,10 @@ def _attempt_response(engine, attempt: dict, **overrides) -> dict:
         "is_complete": values["status"] == "completed",
         "feedback_mode": overrides.get("feedback_mode", "scripted"),
         "assessment_status": overrides.get("assessment_status", "not_requested"),
+        "dialogue": dialogue,
+        "pressure": _pressure_view(
+            engine, values["scenario_id"], values["current_node_id"], dialogue
+        ),
         "timing": {
             "active_seconds": values.get("active_seconds", 0),
             "model_wait_seconds": values.get("model_wait_seconds", 0),
@@ -124,7 +164,11 @@ def create_attempt(body: CreateAttemptRequest, request: Request, session: Sessio
         session["id"], body.scenario_id, scenario["version"], body.mode.value, start_node_id,
         assisted=assisted,
     )
-    return _attempt_response(engine, attempt)
+    opening = _opening_line(engine, body.scenario_id, start_node_id)
+    if opening:
+        store.append_dialogue(session["id"], attempt["id"], start_node_id, [("npc", opening)])
+    dialogue = store.dialogue(session["id"], attempt["id"])
+    return _attempt_response(engine, attempt, dialogue=dialogue)
 
 
 _STATE_PRIORITY = {"needs_practice": 0, "practiced": 1, "demonstrated": 2}
@@ -143,7 +187,9 @@ def get_attempt(attempt_id: UUID, request: Request, session: Session):
     store, engine, _ = _services(request)
     attempt = store.get_attempt(session["id"], str(attempt_id))
     engine.assert_version(attempt["scenario_id"], attempt["scenario_version"])
-    return _attempt_response(engine, attempt)
+    # A refresh mid-conversation has to come back to the same conversation.
+    dialogue = store.dialogue(session["id"], str(attempt_id))
+    return _attempt_response(engine, attempt, dialogue=dialogue)
 
 
 @router.post("/attempts/{attempt_id}/respond", response_model=AttemptResponse, operation_id="respondToAttempt")
@@ -161,6 +207,8 @@ def respond(attempt_id: UUID, body: AnswerRequest, request: Request, session: Se
     node_id = attempt["current_node_id"]
     node = engine.get_node(attempt["scenario_id"], node_id)
     assessment_status = "assessed"
+    dialogue_rows: list[tuple[str, str]] = []
+    resolve_dialogue = False
 
     if body.kind == "choice":
         branch = engine.choose(attempt["scenario_id"], node_id, body.choice_id)
@@ -173,7 +221,20 @@ def respond(attempt_id: UUID, body: AnswerRequest, request: Request, session: Se
         if not node.get("allow_text") or not rule:
             from server.main import ApiError
             raise ApiError(400, "text_not_allowed", "Free text is not allowed at this node.")
-        context = build_context(attempt["scenario_id"], attempt["scenario_version"], node_id, node)
+        persona = engine.persona(node["npc_id"])
+        pressure_state = None
+        history = store.dialogue(session["id"], str(attempt_id), node_id)
+        if engine.is_pressure_node(attempt["scenario_id"], node_id):
+            open_rounds = [item for item in history if not item["resolved"]]
+            pressure_state = PressureState(
+                turn=sum(1 for item in open_rounds if item["speaker"] == "learner") + 1,
+                max_turns=engine.max_pressure_turns(attempt["scenario_id"]),
+                history=tuple((item["speaker"], item["text"]) for item in open_rounds),
+            )
+        context = build_context(
+            attempt["scenario_id"], attempt["scenario_version"], node_id, node,
+            persona=persona, pressure=pressure_state,
+        )
         if knowledge.dense_runtime_failure_reason():
             from server.core.rag_runtime import warmup_rag
             request.app.state.rag_status = warmup_rag(bool(request.app.state.require_dense))
@@ -197,6 +258,15 @@ def respond(attempt_id: UUID, body: AnswerRequest, request: Request, session: Se
             interpretation, feedback_message = evaluated.interpretation, evaluated.feedback
             clause_ids = evaluated.policy_clause_ids
             assessment_status = "deferred"
+        elif pressure_state and evaluated.outcome != "pass" and not pressure_state.is_last_turn:
+            # Mid-arc: the character presses again. No verdict is revealed and no
+            # evidence is written, because the learner has not finished deciding.
+            next_node_id, effect = node_id, "none"
+            skill_id = learning_state = None
+            interpretation, feedback_message = evaluated.interpretation, None
+            clause_ids = evaluated.policy_clause_ids
+            spoken = evaluated.character_line or _authored_line(context)
+            dialogue_rows = [("learner", body.text), ("npc", spoken)]
         else:
             branch = engine.resolve_text(attempt["scenario_id"], node_id, evaluated.outcome)
             next_node_id, effect = branch.next_node_id, branch.effect
@@ -209,8 +279,18 @@ def respond(attempt_id: UUID, body: AnswerRequest, request: Request, session: Se
                 interpretation = branch.interpretation or evaluated.interpretation
                 feedback_message = branch.feedback or evaluated.feedback
                 clause_ids = branch.policy_clause_ids
+            if pressure_state and persona:
+                # The arc closes in character: they give ground, or they get
+                # their way and the consequence takes it from there.
+                held = evaluated.outcome == "pass"
+                spoken = (evaluated.character_line if held else "") or (
+                    persona.concede if held else persona.closing
+                )
+                dialogue_rows = [("learner", body.text), ("npc", spoken)]
+                resolve_dialogue = True
+                interpretation = _with_rounds(interpretation, pressure_state.turn, held)
 
-    def build_response(old_attempt, revision, new_status, evidence_id, resolved_state):
+    def build_response(old_attempt, revision, new_status, evidence_id, resolved_state, dialogue):
         current = dict(old_attempt)
         current.update(current_node_id=next_node_id, revision=revision, status=new_status)
         updates = []
@@ -222,7 +302,7 @@ def respond(attempt_id: UUID, body: AnswerRequest, request: Request, session: Se
         } if feedback_message else None
         return _attempt_response(
             engine, current, feedback=feedback, effect=effect, learning_updates=updates,
-            feedback_mode=feedback_mode, assessment_status=assessment_status,
+            feedback_mode=feedback_mode, assessment_status=assessment_status, dialogue=dialogue,
         )
 
     return store.apply_transition(
@@ -231,6 +311,8 @@ def respond(attempt_id: UUID, body: AnswerRequest, request: Request, session: Se
         next_node_id=next_node_id, effect=effect, skill_id=skill_id, state=learning_state,
         observed_response=observed, interpretation=interpretation, policy_clause_ids=clause_ids,
         response_builder=build_response,
+        dialogue_rows=dialogue_rows, resolve_dialogue=resolve_dialogue,
+        arrival_line=_opening_line(engine, attempt["scenario_id"], next_node_id),
     )
 
 
@@ -256,7 +338,14 @@ def rewind(attempt_id: UUID, body: MutationRequest, request: Request, session: S
     engine.assert_version(attempt["scenario_id"], attempt["scenario_version"])
     target = engine.rewind_target(attempt["scenario_id"], attempt["current_node_id"])
     updated = store.rewind(session["id"], str(attempt_id), body.expected_revision, target)
-    return _attempt_response(engine, updated, effect="rewind_available")
+    # Replaying the moment replays the pressure: the old rounds go, and the
+    # person says their opening line again.
+    store.clear_dialogue(session["id"], str(attempt_id), target)
+    opening = _opening_line(engine, attempt["scenario_id"], target)
+    if opening:
+        store.append_dialogue(session["id"], str(attempt_id), target, [("npc", opening)])
+    dialogue = store.dialogue(session["id"], str(attempt_id))
+    return _attempt_response(engine, updated, effect="rewind_available", dialogue=dialogue)
 
 
 @router.post("/attempts/{attempt_id}/activity", status_code=status.HTTP_204_NO_CONTENT, operation_id="recordActivity")

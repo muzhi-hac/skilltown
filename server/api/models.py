@@ -22,6 +22,7 @@ class LearningCategory(StrEnum):
 class NpcId(StrEnum):
     ALEX = "alex"
     SAM = "sam"
+    NINA = "nina"
     MIRA = "mira"
     JO = "jo"
 
@@ -155,6 +156,8 @@ class ScenarioNode(StrictModel):
     npc_id: NpcId
     category: LearningCategory
     text: str = Field(max_length=1200)
+    # What the person in the room actually says; empty where nobody is pressing.
+    line: str = Field(default="", max_length=600)
     choices: list[Choice] = Field(max_length=4)
     allow_text: bool
     policy_cards: list[PolicyCard] = Field(default_factory=list)
@@ -205,6 +208,22 @@ class Timing(StrictModel):
     model_wait_seconds: int = Field(ge=0)
 
 
+class DialogueTurn(StrictModel):
+    node_id: str
+    speaker: Literal["npc", "learner"]
+    text: str = Field(max_length=1200)
+    # A resolved round is one the arc already closed; it stays on screen.
+    resolved: bool = False
+
+
+class Pressure(StrictModel):
+    """Where the learner stands in one character's escalation."""
+
+    turn: int = Field(ge=0)
+    max_turns: int = Field(ge=1)
+    active: bool
+
+
 class AttemptResponse(StrictModel):
     attempt_id: UUID
     scenario_id: str
@@ -220,6 +239,8 @@ class AttemptResponse(StrictModel):
     is_complete: bool
     feedback_mode: FeedbackMode
     assessment_status: Literal["assessed", "deferred", "not_requested"] = "not_requested"
+    dialogue: list[DialogueTurn] = Field(default_factory=list)
+    pressure: Pressure | None = None
     timing: Timing
 
 

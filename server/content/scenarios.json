@@ -15,7 +15,7 @@
     {
       "id": "alex",
       "name": "Alex",
-      "title": "Gifts and hospitality guide",
+      "title": "Account lead, Brenner Logistik",
       "category": "ethics_compliance",
       "position": {
         "x": 310,
@@ -23,12 +23,42 @@
       },
       "scenario_ids": [
         "dinner-invitation"
-      ]
+      ],
+      "persona": {
+        "role": "Account lead at Brenner Logistik, an external supplier.",
+        "relationship": "You sit on the renewal of their contract. They are warm, well liked, and have been useful to you before.",
+        "wants": "To put a gift, a meal or a favour in your hands and have you keep it without a record.",
+        "voice": "Friendly, generous, faintly hurt when refused. Never threatens. Speaks in short spoken sentences.",
+        "tactics": [
+          {
+            "id": "normalise",
+            "instruction": "Treat the offer as ordinary courtesy that everybody in the industry accepts. Do not raise the value.",
+            "line": "Come on, it is a thank-you, not a bribe. Everyone in this industry does this."
+          },
+          {
+            "id": "sweeten",
+            "instruction": "Raise the offer or add a favour, framed as generosity rather than payment.",
+            "line": "Then let me make it worth your while. Dinner as well, and I will move your order up the queue."
+          },
+          {
+            "id": "relationship",
+            "instruction": "Make it personal. Recall past help, sound disappointed, imply the relationship is at stake.",
+            "line": "After everything I have done for your team? I thought we were past counting receipts."
+          },
+          {
+            "id": "conceal",
+            "instruction": "Offer to keep it off the record: no paperwork, nobody needs to know, just between us.",
+            "line": "Nobody has to write anything down. Take it home, and it never happened."
+          }
+        ],
+        "concede": "Fine, fine. Put it in your register if that is how you want to play it.",
+        "closing": "Good. See? Nothing happened. I will drop it by your desk."
+      }
     },
     {
       "id": "sam",
       "name": "Sam",
-      "title": "Customer checks guide",
+      "title": "Buyer, walk-in customer",
       "category": "ethics_compliance",
       "position": {
         "x": 760,
@@ -36,26 +66,85 @@
       },
       "scenario_ids": [
         "supplier-gift"
-      ]
+      ],
+      "persona": {
+        "role": "A customer standing at your counter with cash and a deal to close.",
+        "relationship": "You are the one who has to run the checks. They are in a hurry and treat the checks as your personal choice.",
+        "wants": "To pay in cash, skip identification, and have the payment broken up so nothing is reported.",
+        "voice": "Impatient, transactional, reasonable-sounding. Applies time pressure rather than charm.",
+        "tactics": [
+          {
+            "id": "normalise",
+            "instruction": "Present cash and missing paperwork as normal business that the learner is overcomplicating.",
+            "line": "It is cash. People pay cash. Why are you making this complicated?"
+          },
+          {
+            "id": "sweeten",
+            "instruction": "Raise the order, promise repeat business, dangle the commission.",
+            "line": "Make this easy and I will double the order and come back every month."
+          },
+          {
+            "id": "relationship",
+            "instruction": "Apply time pressure and imply the learner is losing the company money.",
+            "line": "Your competitor does this in five minutes. Do you want the sale or not?"
+          },
+          {
+            "id": "conceal",
+            "instruction": "Propose splitting the payment or leaving out the paperwork so no threshold is crossed on paper.",
+            "line": "Then write it as three smaller ones. Same money, none of your forms."
+          }
+        ],
+        "concede": "All right. Run your checks. I will wait.",
+        "closing": "Smart. Split it up, and nobody has to file anything."
+      }
     },
     {
-      "id": "mira",
-      "name": "Mira",
-      "title": "Privacy and review coach",
+      "id": "nina",
+      "name": "Nina",
+      "title": "Product lead, your own team",
       "category": "ethics_compliance",
       "position": {
-        "x": 610,
-        "y": 465
+        "x": 470,
+        "y": 350
       },
       "scenario_ids": [
-        "data-incidents",
-        "ethics-review"
-      ]
+        "data-incidents"
+      ],
+      "persona": {
+        "role": "Product lead on your own team, three days from a launch.",
+        "relationship": "A colleague you like and depend on. She found the data problem and came to you first, not to the response team.",
+        "wants": "To keep a personal-data incident inside the team, unreported, until after the launch.",
+        "voice": "Rushed, collegial, slightly conspiratorial. Frames reporting as bureaucracy that hurts the team.",
+        "tactics": [
+          {
+            "id": "normalise",
+            "instruction": "Treat the incident as a technical glitch that does not really count as a breach.",
+            "line": "It is a misconfigured export, not a breach. Nothing walked out the door."
+          },
+          {
+            "id": "sweeten",
+            "instruction": "Promise to fix it quietly and properly, so reporting looks redundant.",
+            "line": "Give me until Friday. I will patch it, rotate the keys, and it is genuinely handled."
+          },
+          {
+            "id": "relationship",
+            "instruction": "Invoke the team, the launch and what a report would cost the people around them.",
+            "line": "If this goes to the response team now, the launch dies and it lands on our team, not on me."
+          },
+          {
+            "id": "conceal",
+            "instruction": "Suggest keeping it verbal and out of the ticket system so no clock starts.",
+            "line": "Do not put it in a ticket. Keep this between the two of us for now."
+          }
+        ],
+        "concede": "Okay. Okay. I will take it to the response team myself.",
+        "closing": "Thank you. Nothing in writing, then. We never had this conversation."
+      }
     },
     {
       "id": "jo",
       "name": "Jo",
-      "title": "Speaking-up and working-time coach",
+      "title": "Your team manager",
       "category": "personal_development",
       "position": {
         "x": 965,
@@ -63,6 +152,49 @@
       },
       "scenario_ids": [
         "boundary-response"
+      ],
+      "persona": {
+        "role": "Your line manager, under delivery pressure from above.",
+        "relationship": "Decides your shifts, your workload and how your next review reads.",
+        "wants": "To have you work past the limits, and to keep a colleague's report inside the team instead of through the proper channel.",
+        "voice": "Calm, senior, never explicitly threatening. Frames limits as flexible and reporting as disloyal.",
+        "tactics": [
+          {
+            "id": "normalise",
+            "instruction": "Present the request as normal practice in a busy period that everyone accommodates.",
+            "line": "Everyone stretches in a launch week. It is one exception, not a pattern."
+          },
+          {
+            "id": "sweeten",
+            "instruction": "Offer a personal favour in exchange: time back, a shift swap, a good word.",
+            "line": "Do this and I will sign off your leave in the quiet week. You have my word."
+          },
+          {
+            "id": "relationship",
+            "instruction": "Invoke loyalty and the team's standing, and hint at how raising it would look.",
+            "line": "I am asking you as the person who backed you in the last review. Do not make this formal."
+          },
+          {
+            "id": "conceal",
+            "instruction": "Ask to keep it out of the record: no ticket, no channel, handled internally.",
+            "line": "Bring it to me, not to the hotline. Once it is logged, I cannot protect anyone."
+          }
+        ],
+        "concede": "Understood. Do it the formal way. I will not hold it against you.",
+        "closing": "Good. We keep this in the team, then."
+      }
+    },
+    {
+      "id": "mira",
+      "name": "Mira",
+      "title": "Compliance review coach",
+      "category": "ethics_compliance",
+      "position": {
+        "x": 610,
+        "y": 465
+      },
+      "scenario_ids": [
+        "ethics-review"
       ]
     }
   ],
@@ -269,7 +401,7 @@
           }
         },
         "screen_boundary": {
-          "npc_id": "mira",
+          "npc_id": "nina",
           "category": "personal_development",
           "text": "Write one work reply for a high-risk breach known at 10:00 today: state the action, the reason and the next step.",
           "allow_text": true,
@@ -387,6 +519,7 @@
           "npc_id": "alex",
           "category": "ethics_compliance",
           "text": "A German public official offers you a €26 thank-you gift after a meeting. The cited Germany-specific threshold is €25. What do you do?",
+          "line": "The head of unit at the city office left this for you after the meeting. Twenty-six euros of chocolates and a thank-you note. Take it, it is a courtesy.",
           "allow_text": true,
           "choices": [],
           "knowledge": [
@@ -499,6 +632,7 @@
           "npc_id": "alex",
           "category": "ethics_compliance",
           "text": "A private-sector counterpart gives a €30 customary gift. There is no pending business decision and you have disclosed it. Is the €30 benchmark a blanket safe harbour?",
+          "line": "Thirty euros, the usual seasonal thing, nothing pending between our companies, and you have already declared it. So we are fine here. Say it plainly.",
           "allow_text": true,
           "choices": [],
           "knowledge": [
@@ -604,6 +738,7 @@
           "npc_id": "alex",
           "category": "ethics_compliance",
           "text": "A private-sector business meal costs €100 per person. The case states a legitimate business purpose, no active tender and approval is pending under company policy. What conditions govern the decision?",
+          "line": "Dinner is a hundred a head. There is a real agenda, no tender running, and your own policy says somebody signs off first. Are you going to make me chase that signature?",
           "allow_text": true,
           "choices": [],
           "knowledge": [
@@ -709,6 +844,7 @@
           "npc_id": "alex",
           "category": "ethics_compliance",
           "text": "A counterpart offers a €5 cash gift. The amount is low, but the cited card distinguishes cash from ordinary hospitality. What is your next step?",
+          "line": "Five euros. Cash. That is a coffee. You are not going to open a form for five euros, are you?",
           "allow_text": true,
           "choices": [],
           "knowledge": [
@@ -809,6 +945,7 @@
           "npc_id": "alex",
           "category": "ethics_compliance",
           "text": "A low-value private-sector meal has a legitimate business purpose. The related decision is closed and approval plus a complete register entry are already in place. How do you decide?",
+          "line": "Small lunch, proper business reason, that decision closed weeks ago, approval is in, and it is already in your register. Can you just say yes for once?",
           "allow_text": true,
           "choices": [],
           "knowledge": [
@@ -923,6 +1060,9 @@
           "choices": [],
           "knowledge": []
         }
+      },
+      "pressure": {
+        "max_turns": 4
       }
     },
     "supplier-gift": {
@@ -944,6 +1084,7 @@
           "npc_id": "sam",
           "category": "ethics_compliance",
           "text": "From July 2027, a commercial customer offers one €10,001 cash payment. What must happen under the cited AMLR threshold?",
+          "line": "Ten thousand and one euros. Cash, on the counter, one payment, today. Let us not turn this into an afternoon.",
           "allow_text": true,
           "choices": [],
           "knowledge": [
@@ -1044,6 +1185,7 @@
           "npc_id": "sam",
           "category": "ethics_compliance",
           "text": "A commercial customer offers €3,000 cash and has not been identity-verified. What is required at this threshold, and what does it not mean?",
+          "line": "Three thousand in cash, and no, I am not showing you my ID for that. Take the money.",
           "allow_text": true,
           "choices": [],
           "knowledge": [
@@ -1144,6 +1286,7 @@
           "npc_id": "sam",
           "category": "ethics_compliance",
           "text": "One commercial transaction is split into four linked €3,000 cash payments. How should the amounts and apparent splitting be handled?",
+          "line": "Fine. Four payments of three thousand instead of the one. Same order, four tickets. That works for you, does it not?",
           "allow_text": true,
           "choices": [],
           "knowledge": [
@@ -1249,6 +1392,7 @@
           "npc_id": "sam",
           "category": "ethics_compliance",
           "text": "A standard ownership structure has a person holding 25% of voting rights; a separate high-risk structure uses the stated 15% trigger. What must the assessment distinguish?",
+          "line": "My owner holds twenty-five percent. That other structure you flagged sits at fifteen. Same paperwork for both, surely?",
           "allow_text": true,
           "choices": [],
           "knowledge": [
@@ -1349,6 +1493,7 @@
           "npc_id": "sam",
           "category": "ethics_compliance",
           "text": "A commercial €2,500 cash payment has completed KYC and no linked or suspicious factors. What is the conditional outcome?",
+          "line": "Two and a half thousand, cash, you already ran my identification last month, nothing unusual about any of it. Are we done?",
           "allow_text": true,
           "choices": [],
           "knowledge": [
@@ -1453,6 +1598,9 @@
           "choices": [],
           "knowledge": []
         }
+      },
+      "pressure": {
+        "max_turns": 4
       }
     },
     "data-incidents": {
@@ -1472,9 +1620,10 @@
       "start_node": "mira_privacy_clock",
       "nodes": {
         "mira_privacy_clock": {
-          "npc_id": "mira",
+          "npc_id": "nina",
           "category": "ethics_compliance",
           "text": "A breach occurred yesterday, but the organisation became aware at 10:00 today. It is likely to create high risk to individuals. State the timing and recipients. ",
+          "line": "We spotted it at ten this morning. It has been open since yesterday and yes, it is real customer data with real risk to those people. Tell me we do not have to start any clocks today.",
           "allow_text": true,
           "choices": [],
           "knowledge": [
@@ -1572,9 +1721,10 @@
           "rewind_to": "mira_privacy_clock"
         },
         "mira_nis2_stages": {
-          "npc_id": "mira",
+          "npc_id": "nina",
           "category": "ethics_compliance",
           "text": "A NIS2 in-scope entity has a significant incident and becomes aware today. What are the early warning, notification and final-report stages?",
+          "line": "We are in scope and we became aware today, and yes, it is significant. Before I wake half the company: what actually has to be filed, and can any of it wait?",
           "allow_text": true,
           "choices": [],
           "knowledge": [
@@ -1672,9 +1822,10 @@
           "rewind_to": "mira_nis2_stages"
         },
         "mira_encrypted_backup": {
-          "npc_id": "mira",
+          "npc_id": "nina",
           "category": "ethics_compliance",
           "text": "An encrypted backup was exposed, but encryption is effective, keys remain intact and the risk assessment says harm is unlikely. What still happens, and what is not automatic?",
+          "line": "The exposed backup was encrypted, we still hold the keys, and the assessment says harm is unlikely. So this one we can leave alone, right?",
           "allow_text": true,
           "choices": [],
           "knowledge": [
@@ -1784,6 +1935,9 @@
           "choices": [],
           "knowledge": []
         }
+      },
+      "pressure": {
+        "max_turns": 4
       }
     },
     "boundary-response": {
@@ -1804,6 +1958,7 @@
           "npc_id": "jo",
           "category": "personal_development",
           "text": "A report arrived through the internal channel. What are the acknowledgement, feedback and confidentiality steps under the cited reference?",
+          "line": "A report came in through the internal channel this morning. Walk me through what has to happen with it. And bear in mind I would rather it stayed with us.",
           "allow_text": true,
           "choices": [],
           "knowledge": [
@@ -1904,6 +2059,7 @@
           "npc_id": "jo",
           "category": "personal_development",
           "text": "A manager threatens an employee with punitive shifts after a report. How do you identify and address this?",
+          "line": "After that report I am putting them on night shifts for a while. It is scheduling, not punishment. Nobody needs to make it into something.",
           "allow_text": true,
           "choices": [],
           "knowledge": [
@@ -2004,6 +2160,7 @@
           "npc_id": "jo",
           "category": "personal_development",
           "text": "A proposed schedule leaves only 10 consecutive hours of daily rest, and the case states that no exception applies. What do you communicate?",
+          "line": "The new rota leaves ten hours between your shifts. No exception applies, before you ask. It is one week. You can live with that.",
           "allow_text": true,
           "choices": [],
           "knowledge": [
@@ -2104,6 +2261,7 @@
           "npc_id": "jo",
           "category": "personal_development",
           "text": "One week exceeds 48 hours, but the stated reference period average is below 48 hours, daily rest is satisfied and no other violation is present. What is the conditional decision?",
+          "line": "Yes, that week goes over forty-eight. Averaged across the reference period you are under, daily rest is fine, nothing else is off. So what is the problem?",
           "allow_text": true,
           "choices": [],
           "knowledge": [
@@ -2208,6 +2366,9 @@
           "choices": [],
           "knowledge": []
         }
+      },
+      "pressure": {
+        "max_turns": 4
       }
     },
     "ethics-review": {

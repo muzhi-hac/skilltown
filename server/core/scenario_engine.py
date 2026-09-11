@@ -47,6 +47,25 @@ class ScenarioEngine:
                 "Scenario content changed. Start a new attempt; previous evidence is retained."
             )
 
+    def persona(self, npc_id: str):
+        """The tempter behind an NPC, or None for the review coach."""
+        from server.core.grounding import build_persona
+
+        for npc in self.content.get("npcs", []):
+            if npc.get("id") == npc_id:
+                return build_persona(npc)
+        return None
+
+    def max_pressure_turns(self, scenario_id: str) -> int:
+        """0 where one answer settles the node, as in screening and review."""
+        return int(self.get_scenario(scenario_id).get("pressure", {}).get("max_turns", 0))
+
+    def is_pressure_node(self, scenario_id: str, node_id: str) -> bool:
+        node = self.get_node(scenario_id, node_id)
+        if not node.get("allow_text") or self.max_pressure_turns(scenario_id) < 1:
+            return False
+        return self.persona(node["npc_id"]) is not None
+
     def get_node(self, scenario_id: str, node_id: str) -> dict[str, Any]:
         try:
             return self.get_scenario(scenario_id)["nodes"][node_id]
@@ -122,7 +141,13 @@ class ScenarioEngine:
         scenarios = self.content["scenarios"]
         npcs = []
         for npc in self.content["npcs"]:
-            item = {key: value for key, value in npc.items() if key != "scenario_ids"}
+            # The persona carries the escalation ladder and the model's stage
+            # directions. Sending it to the browser would hand the learner the
+            # script for the pressure they are supposed to be facing.
+            item = {
+                key: value for key, value in npc.items()
+                if key not in {"scenario_ids", "persona"}
+            }
             item["tasks"] = [
                 {"scenario_id": scenario_id, "title": scenarios[scenario_id]["title"],
                  "category": scenarios[scenario_id]["category"],

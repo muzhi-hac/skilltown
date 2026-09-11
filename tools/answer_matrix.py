@@ -13,7 +13,7 @@ import uuid
 from pathlib import Path
 
 BASE = sys.argv[1] if len(sys.argv) > 1 else "http://127.0.0.1:8000"
-CASES = json.loads((Path(__file__).parents[1] / "server/tests/fixtures/grounded_cases.json").read_text())
+CASES = json.loads((Path(__file__).parents[1] / "server/tests/fixtures/grounded_cases.json").read_text(encoding="utf-8"))
 
 
 def call(method: str, path: str, body=None, token: str | None = None):
@@ -32,7 +32,25 @@ def outcome(result: dict) -> str:
     effect = result.get("effect")
     if effect == "consequence_preview": return "miss"
     node = (result.get("node") or {}).get("id", "")
-    return "overgeneralized" if node in {"alex_public_gift", "sam_cash_limit"} and result.get("learning_updates", [{}])[0].get("state") == "needs_practice" else "pass"
+    updates = result.get("learning_updates") or [{}]
+    return "overgeneralized" if node in {"alex_public_gift", "sam_cash_limit"} and updates[0].get("state") == "needs_practice" else "pass"
+
+
+def settle(attempt: dict, text: str, token: str):
+    """Answer until the arc resolves: an unresolved round carries no verdict."""
+    rounds = max(1, (attempt.get("pressure") or {}).get("max_turns", 1))
+    result, status = {}, 0
+    for _ in range(rounds):
+        result, status = call("POST", f"/api/v1/attempts/{attempt['attempt_id']}/respond", {
+            "client_event_id": str(uuid.uuid4()), "expected_revision": attempt["revision"],
+            "kind": "text", "text": text,
+        }, token)
+        if status != 200 or result.get("assessment_status") == "deferred":
+            return result, status
+        if result.get("learning_updates") or result.get("effect") == "consequence_preview":
+            return result, status
+        attempt = {**attempt, "revision": result["revision"]}
+    return result, status
 
 
 def main() -> int:
@@ -46,9 +64,7 @@ def main() -> int:
             failures.append(case["case_id"])
             print(f"{case['case_id']}\t{case['expected_outcome']}\tsetup_error\t-\t-\t-")
             continue
-        result, status = call("POST", f"/api/v1/attempts/{attempt['attempt_id']}/respond", {
-            "client_event_id": str(uuid.uuid4()), "expected_revision": attempt["revision"], "kind": "text", "text": case["text"]
-        }, token)
+        result, status = settle(attempt, case["text"], token)
         actual = outcome(result) if status == 200 else "http_error"
         cited = [card["clause_id"] for card in ((result.get("feedback") or {}).get("policy_clauses") or [])]
         print(f"{case['case_id']}\t{case['expected_outcome']}\t{actual}\t{result.get('assessment_status')}\t{result.get('feedback_mode')}\t{','.join(cited)}")

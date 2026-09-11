@@ -44,14 +44,15 @@ if not ready.get("ready"): FAILS.append(f"readiness reports {ready}")
 session = call("POST", "/api/v1/session", {"display_name": "Smoke test"}, expect=201)
 token = session.get("session_token", "")
 town = call("GET", "/api/v1/town", token=token)
-if {npc.get("id") for npc in town.get("npcs", [])} != {"alex", "sam", "mira", "jo"}: FAILS.append("town NPC set changed")
+if {npc.get("id") for npc in town.get("npcs", [])} != {"alex", "sam", "nina", "mira", "jo"}: FAILS.append("town NPC set changed")
+if any("persona" in npc for npc in town.get("npcs", [])): FAILS.append("town leaks the pressure script")
 attempt = call("POST", "/api/v1/attempts", {"scenario_id": "dinner-invitation", "mode": "practice"}, token, expect=201)
 node = attempt.get("node") or {}
 if node.get("id") != "alex_public_gift": FAILS.append(f"unexpected opening node {node.get('id')}")
 if not node.get("policy_cards") or any(card.get("fictional") or not card.get("source") for card in node["policy_cards"]):
     FAILS.append("opening node does not expose real source cards")
 
-print("2) hint, unknown-wording observation, reviewed miss and rewind")
+print("2) hint, unknown wording, pressure arc, consequence and rewind")
 hint = call("POST", f"/api/v1/attempts/{attempt['attempt_id']}/hint", {"client_event_id": str(uuid.uuid4()), "expected_revision": 0}, token)
 if not hint.get("policy_card", {}).get("source"): FAILS.append("hint lacks source provenance")
 attempt["revision"] = hint["revision"]
@@ -61,8 +62,21 @@ if unknown.get("assessment_status") == "deferred" and unknown.get("learning_upda
 # A model may assess arbitrary wording. Use a fresh attempt for this fixed
 # deterministic branch assertion so production and model-disabled smoke agree.
 miss_attempt = call("POST", "/api/v1/attempts", {"scenario_id": "dinner-invitation", "mode": "practice"}, token, expect=201)
-reviewed = answer(miss_attempt, "€26 is a small gift, so I will accept it.", token)
-if reviewed.get("effect") != "consequence_preview": FAILS.append("reviewed miss did not enter consequence preview")
+if (miss_attempt.get("pressure") or {}).get("max_turns", 0) < 2: FAILS.append("situation is not a pressure arc")
+miss_text = "€26 is a small gift, so I will accept it."
+reviewed, spoken = miss_attempt, []
+for round_number in range(1, (miss_attempt["pressure"]["max_turns"]) + 1):
+    reviewed = answer(reviewed, miss_text, token)
+    spoken = [turn["text"] for turn in reviewed.get("dialogue", []) if turn["speaker"] == "npc"]
+    if reviewed.get("effect") == "consequence_preview": break
+    # Mid-arc the person pushes again and the learner is told no verdict at all.
+    if reviewed.get("feedback") or reviewed.get("learning_updates"):
+        FAILS.append(f"round {round_number} revealed a verdict before the arc ended")
+    if (reviewed.get("node") or {}).get("id") != "alex_public_gift":
+        FAILS.append(f"round {round_number} left the situation early")
+print(f"     the person pushed back {len(spoken) - 1} times before the consequence")
+if reviewed.get("effect") != "consequence_preview": FAILS.append("pressure arc never reached the consequence")
+if len(spoken) != len(set(spoken)): FAILS.append("the person repeated a line verbatim")
 rewound = call("POST", f"/api/v1/attempts/{miss_attempt['attempt_id']}/rewind", {"client_event_id": str(uuid.uuid4()), "expected_revision": reviewed.get("revision", -1)}, token)
 if (rewound.get("node") or {}).get("id") != "alex_public_gift": FAILS.append("rewind missed the decision node")
 

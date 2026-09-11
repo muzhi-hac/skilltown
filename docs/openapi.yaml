@@ -459,6 +459,15 @@ components:
           - not_requested
           title: Assessment Status
           default: not_requested
+        dialogue:
+          items:
+            $ref: '#/components/schemas/DialogueTurn'
+          type: array
+          title: Dialogue
+        pressure:
+          anyOf:
+          - $ref: '#/components/schemas/Pressure'
+          - type: 'null'
         timing:
           $ref: '#/components/schemas/Timing'
       additionalProperties: false
@@ -579,6 +588,32 @@ components:
       - session_token
       - session
       title: CreateSessionResponse
+    DialogueTurn:
+      properties:
+        node_id:
+          type: string
+          title: Node Id
+        speaker:
+          type: string
+          enum:
+          - npc
+          - learner
+          title: Speaker
+        text:
+          type: string
+          maxLength: 1200
+          title: Text
+        resolved:
+          type: boolean
+          title: Resolved
+          default: false
+      additionalProperties: false
+      type: object
+      required:
+      - node_id
+      - speaker
+      - text
+      title: DialogueTurn
     Effect:
       type: string
       enum:
@@ -770,6 +805,7 @@ components:
       enum:
       - alex
       - sam
+      - nina
       - mira
       - jo
       title: NpcId
@@ -835,6 +871,27 @@ components:
       - x
       - y
       title: Position
+    Pressure:
+      properties:
+        turn:
+          type: integer
+          minimum: 0.0
+          title: Turn
+        max_turns:
+          type: integer
+          minimum: 1.0
+          title: Max Turns
+        active:
+          type: boolean
+          title: Active
+      additionalProperties: false
+      type: object
+      required:
+      - turn
+      - max_turns
+      - active
+      title: Pressure
+      description: Where the learner stands in one character's escalation.
     ReadyResponse:
       properties:
         ready:
@@ -941,6 +998,11 @@ components:
           type: string
           maxLength: 1200
           title: Text
+        line:
+          type: string
+          maxLength: 600
+          title: Line
+          default: ''
         choices:
           items:
             $ref: '#/components/schemas/Choice'

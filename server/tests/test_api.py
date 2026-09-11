@@ -32,6 +32,17 @@ def answer(client, headers, attempt, text, event_id=None):
     )
 
 
+def press_through(client, headers, attempt, text):
+    """Answer until the character stops pushing, i.e. the arc resolves."""
+    node_id, result = attempt["node"]["id"], attempt
+    for _ in range(8):
+        result = answer(client, headers, result, text).json()
+        resolved = result["learning_updates"] or result["node"]["id"] != node_id
+        if resolved:
+            return result
+    raise AssertionError("the pressure arc never resolved")
+
+
 def test_health_ready_and_auth_boundary(tmp_path):
     with TestClient(create_app(tmp_path / "test.sqlite3")) as client:
         assert client.get("/health").json() == {"status": "ok", "version": "1.0.0"}
@@ -86,7 +97,7 @@ def test_reviewed_miss_writes_evidence_and_rewinds_to_same_node(tmp_path):
     with TestClient(create_app(tmp_path / "test.sqlite3")) as client:
         _, headers = session(client)
         attempt = create_attempt(client, headers)
-        result = answer(client, headers, attempt, reference(client, "dinner-invitation", "alex_public_gift", "miss")).json()
+        result = press_through(client, headers, attempt, reference(client, "dinner-invitation", "alex_public_gift", "miss"))
         assert result["effect"] == "consequence_preview"
         assert result["node"]["id"] == "alex_public_gift_consequence"
         assert result["learning_updates"][0]["state"] == "needs_practice"
@@ -121,7 +132,7 @@ def test_coaching_selects_current_version_evidence_and_is_assisted(tmp_path):
     with TestClient(create_app(tmp_path / "test.sqlite3")) as client:
         _, headers = session(client)
         attempt = create_attempt(client, headers)
-        answer(client, headers, attempt, reference(client, "dinner-invitation", "alex_public_gift", "miss"))
+        press_through(client, headers, attempt, reference(client, "dinner-invitation", "alex_public_gift", "miss"))
         coached = create_attempt(client, headers, "ethics-review", "practice")
         assert coached["assisted"] is True
         assert coached["node"]["id"] == "coach__dinner-invitation__alex_public_gift"
@@ -187,3 +198,104 @@ def test_ready_reads_lifespan_snapshot_without_rewarming(tmp_path, monkeypatch):
         assert client.get("/ready").json()["retrieval_mode"] == "hybrid"
         assert client.get("/ready").json()["retrieval_mode"] == "hybrid"
     assert calls == [False]
+
+
+def opening_of(client, scenario_id, node_id):
+    return client.app.state.engine.get_node(scenario_id, node_id).get("line", "")
+
+
+def test_pressure_pushes_back_without_revealing_a_verdict(tmp_path):
+    with TestClient(create_app(tmp_path / "test.sqlite3")) as client:
+        _, headers = session(client)
+        attempt = create_attempt(client, headers)
+        assert attempt["pressure"] == {"turn": 0, "max_turns": 4, "active": True}
+        assert [turn["speaker"] for turn in attempt["dialogue"]] == ["npc"]
+        assert attempt["dialogue"][0]["text"] == opening_of(client, "dinner-invitation", "alex_public_gift")
+
+        result = answer(client, headers, attempt, reference(client, "dinner-invitation", "alex_public_gift", "miss")).json()
+        # Still in the room with the same person, and told nothing about the rule.
+        assert result["node"]["id"] == "alex_public_gift"
+        assert result["effect"] == "none"
+        assert result["feedback"] is None
+        assert result["learning_updates"] == []
+        assert result["pressure"] == {"turn": 1, "max_turns": 4, "active": True}
+        spoken = [turn["text"] for turn in result["dialogue"] if turn["speaker"] == "npc"]
+        assert len(spoken) == 2 and spoken[1] != spoken[0]
+
+
+def test_pressure_arc_ends_in_consequence_and_records_how_long_it_held(tmp_path):
+    with TestClient(create_app(tmp_path / "test.sqlite3")) as client:
+        _, headers = session(client)
+        attempt = create_attempt(client, headers)
+        miss = reference(client, "dinner-invitation", "alex_public_gift", "miss")
+        result = press_through(client, headers, attempt, miss)
+        assert result["node"]["id"] == "alex_public_gift_consequence"
+        assert result["learning_updates"][0]["state"] == "needs_practice"
+        # Four rounds of pressure, and the record says the learner gave way.
+        assert len([t for t in result["dialogue"] if t["speaker"] == "learner"]) == 4
+        passport = client.get("/api/v1/passport", headers=headers).json()
+        evidence = [item for skill in passport["skills"] for item in skill["evidence"]]
+        assert any("4 rounds of pressure, gave way" in str(item["interpretation"]) for item in evidence)
+
+
+def test_holding_the_line_mid_arc_ends_the_pressure_and_moves_on(tmp_path):
+    with TestClient(create_app(tmp_path / "test.sqlite3")) as client:
+        _, headers = session(client)
+        attempt = create_attempt(client, headers)
+        pushed = answer(client, headers, attempt, reference(client, "dinner-invitation", "alex_public_gift", "miss")).json()
+        held = answer(client, headers, pushed, reference(client, "dinner-invitation", "alex_public_gift")).json()
+        assert held["node"]["id"] == "alex_private_gift"
+        assert held["learning_updates"][0]["state"] == "practiced"
+        assert "2 rounds of pressure, held the line" in client.get(
+            "/api/v1/passport", headers=headers
+        ).json()["skills"][0]["evidence"][-1]["interpretation"]
+        # The new situation opens with its own person speaking.
+        assert held["dialogue"][-1]["text"] == opening_of(client, "dinner-invitation", "alex_private_gift")
+        assert held["pressure"] == {"turn": 0, "max_turns": 4, "active": True}
+
+
+def test_rewind_replays_the_situation_and_restarts_the_pressure(tmp_path):
+    with TestClient(create_app(tmp_path / "test.sqlite3")) as client:
+        _, headers = session(client)
+        attempt = create_attempt(client, headers)
+        spent = press_through(client, headers, attempt, reference(client, "dinner-invitation", "alex_public_gift", "miss"))
+        rewound = client.post(
+            f"/api/v1/attempts/{attempt['attempt_id']}/rewind", headers=headers,
+            json={"client_event_id": str(uuid4()), "expected_revision": spent["revision"]},
+        ).json()
+        assert rewound["node"]["id"] == "alex_public_gift"
+        assert rewound["pressure"] == {"turn": 0, "max_turns": 4, "active": True}
+        assert [turn["text"] for turn in rewound["dialogue"]] == [
+            opening_of(client, "dinner-invitation", "alex_public_gift")
+        ]
+
+
+def test_refresh_restores_the_conversation(tmp_path):
+    with TestClient(create_app(tmp_path / "test.sqlite3")) as client:
+        _, headers = session(client)
+        attempt = create_attempt(client, headers)
+        pushed = answer(client, headers, attempt, reference(client, "dinner-invitation", "alex_public_gift", "miss")).json()
+        restored = client.get(f"/api/v1/attempts/{attempt['attempt_id']}", headers=headers).json()
+        assert restored["dialogue"] == pushed["dialogue"]
+        assert restored["pressure"] == pushed["pressure"]
+
+
+def test_screening_and_review_settle_on_one_answer(tmp_path):
+    with TestClient(create_app(tmp_path / "test.sqlite3")) as client:
+        _, headers = session(client)
+        screening = create_attempt(client, headers, "screening", "screening")
+        assert screening["pressure"] is None
+        result = answer(client, headers, screening, reference(client, "screening", "screen_clarify", "miss")).json()
+        # A three-question check is not a negotiation: one answer, one verdict.
+        assert result["pressure"] is None
+        assert result["learning_updates"][0]["state"] == "needs_practice"
+
+
+def test_town_never_ships_the_pressure_script(tmp_path):
+    with TestClient(create_app(tmp_path / "test.sqlite3")) as client:
+        _, headers = session(client)
+        town = client.get("/api/v1/town", headers=headers).json()
+        assert {npc["name"] for npc in town["npcs"]} == {"Alex", "Sam", "Nina", "Jo", "Mira"}
+        assert all("persona" not in npc for npc in town["npcs"])
+        # The tactic wording must not reach the browser in any field at all.
+        assert "conceal" not in str(town)

@@ -104,6 +104,20 @@ Content-Type: application/json
 
 `feedback_mode` 表示反馈来源；`assessment_status` 区分 `assessed`、`deferred` 与 `not_requested`。确定性 fallback 只精确匹配审核答案；其余措辞为 `deferred`，不写入学习证据。
 
+### 施压弧（pressure arc）
+
+带 `pressure` 的情境模块里，节点不是一问一答，而是一段最多 `max_turns`（当前为 4）轮的对话：
+
+- `node.line` 是对方走进来说的第一句话；`node.text` 仍是情境说明，不是谁说的。
+- `dialogue[]` 是本次 attempt 的完整对话记录（`node_id` / `speaker` / `text` / `resolved`），刷新和 `GET /attempts/{id}` 都会原样返回，前端据此还原对话。
+- `pressure` 给出 `turn`（当前节点已用掉的回合）、`max_turns` 和 `active`。
+- **答得不到位且还没用完回合**：节点不动，`feedback` 为 `null`，`learning_updates` 为空 —— 不公布判定、不给答案，只回一句对方升级后的话。
+- **答对**：对方当场退让，按 `pass` 分支推进，正常写证据。
+- **回合用尽**：按 `miss`/`overgeneralized` 分支推进（通常进入后果节点），这时才写证据，`interpretation` 里带上"撑了几轮、最后是顶住还是让步"。
+- `POST /rewind` 会清掉该节点的对话并重新说开场白，即重新开始一段施压。
+
+人设（`persona`）、升级阶梯和台词只存在于服务端内容里，`/api/v1/town` 与任何响应都不下发。
+
 ### 幂等与冲突
 
 - `client_event_id` 在一个会话内唯一。

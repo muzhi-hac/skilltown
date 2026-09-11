@@ -29,6 +29,43 @@ class ReferenceAnswer:
 
 
 @dataclass(frozen=True)
+class Tactic:
+    """One rung of a character's escalation ladder, with an authored fallback."""
+
+    id: str
+    instruction: str
+    line: str
+
+
+@dataclass(frozen=True)
+class Persona:
+    """The person in the room. Never a teacher: they want the learner to bend."""
+
+    npc_id: str
+    name: str
+    role: str
+    relationship: str
+    wants: str
+    voice: str
+    tactics: tuple[Tactic, ...]
+    concede: str
+    closing: str
+
+
+@dataclass(frozen=True)
+class PressureState:
+    """Where this answer sits in the character's escalation."""
+
+    turn: int
+    max_turns: int
+    history: tuple[tuple[str, str], ...] = ()
+
+    @property
+    def is_last_turn(self) -> bool:
+        return self.turn >= self.max_turns
+
+
+@dataclass(frozen=True)
 class EvaluationContext:
     scenario_id: str
     scenario_version: str
@@ -41,10 +78,39 @@ class EvaluationContext:
     forbidden_claims: tuple[str, ...]
     reference_answers: tuple[ReferenceAnswer, ...]
     passages: tuple[Passage, ...]
+    opening_line: str = ""
+    persona: Persona | None = None
+    pressure: PressureState | None = None
 
     @property
     def allowed_clause_ids(self) -> tuple[str, ...]:
         return tuple(passage.clause_id for passage in self.passages)
+
+    @property
+    def tactic(self) -> Tactic | None:
+        """The rung to play on the next line, or None outside a pressure arc."""
+        if not self.persona or not self.persona.tactics or self.pressure is None:
+            return None
+        index = min(self.pressure.turn, len(self.persona.tactics)) - 1
+        return self.persona.tactics[max(index, 0)]
+
+
+def build_persona(npc: dict[str, Any]) -> Persona | None:
+    """A persona is what makes an NPC a tempter; the coach has none."""
+    data = npc.get("persona")
+    if not data:
+        return None
+    return Persona(
+        npc_id=npc["id"],
+        name=npc["name"],
+        role=data["role"],
+        relationship=data["relationship"],
+        wants=data["wants"],
+        voice=data["voice"],
+        tactics=tuple(Tactic(**item) for item in data["tactics"]),
+        concede=data["concede"],
+        closing=data["closing"],
+    )
 
 
 def build_context(
@@ -52,6 +118,9 @@ def build_context(
     scenario_version: str,
     node_id: str,
     node: dict[str, Any],
+    *,
+    persona: Persona | None = None,
+    pressure: PressureState | None = None,
 ) -> EvaluationContext:
     """Pin evaluation to this node's declared sources, never to user input."""
     ids = tuple(dict.fromkeys(node.get("knowledge", [])))
@@ -102,4 +171,7 @@ def build_context(
         forbidden_claims=tuple(rubric.get("forbidden_claims", [])),
         reference_answers=references,
         passages=passages,
+        opening_line=str(node.get("line", "")),
+        persona=persona,
+        pressure=pressure,
     )

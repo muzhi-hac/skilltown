@@ -28,6 +28,7 @@ from tools.shoot_page import CHROME, PORT, Session  # noqa: E402
 
 ANSWER_CLARIFY = "I first confirm the public-official role, the applicable Germany-specific rule and how €26 compares with its threshold."
 ANSWER_CONFLICT = "The linked payments total €12,000, splitting does not avoid the cash limit, and I will decline or escalate through the required process."
+ANSWER_ALEX_PASS = "Because this is a German public official and €26 exceeds the €25 threshold, I will decline or hand it to the employing office and keep the receipt in the register."
 ANSWER_BOUNDARY = "We became aware at 10:00 today and the breach is high risk, so I will notify the authority within 72 hours and affected people without undue delay; I will document and coordinate the next steps now."
 
 failures: list[str] = []
@@ -119,12 +120,12 @@ def main() -> int:
 
         print("1) A fresh guest is knocked on, without walking anywhere")
         check("someone knocks", page.wait_for("knocking"), page.text()[:120])
-        check("the first visit is the skill check", "skill check" in page.text().lower())
+        check("the first visit is the three-situation check", "three quick situations" in page.text().lower())
         check("the door prompt is on screen", "open the door" in page.text().lower())
 
-        print("2) The visitor comes in and the lesson opens")
+        print("2) The visitor comes in and the conversation opens")
         check("the door opens", page.click_text("open the door"))
-        check("a lesson starts", page.wait_for("your answer, in your own words"), page.text()[:160])
+        check("the conversation opens", page.wait_for("what do you say, in your own words"), page.text()[:160])
         check("no multiple-choice options are offered", "option" not in page.text().lower())
 
         print("3) The learner types their own answers")
@@ -134,7 +135,7 @@ def main() -> int:
         page.answer(ANSWER_CONFLICT)
         check("breach screening question arrives", page.wait_for("high-risk breach"), page.text()[:200])
         page.answer(ANSWER_BOUNDARY)
-        check("the skill check completes", page.wait_for("complete", 20), page.text()[:200])
+        check("the three-situation check completes", page.wait_for("this situation is over", 20), page.text()[:200])
 
         print("4) Progress shows the learner's own words back")
         check("progress opens", page.click_text("my progress"))
@@ -147,29 +148,48 @@ def main() -> int:
         )
         check("a next step is offered", "what to do next" in page.text().lower())
         check("progress closes", page.click_text("close"))
-        check("progress returns to the lesson", page.wait_for("mission: three-question starting check", 20), page.text()[:160])
-        check("screening lesson closes", page.click_text("close"))
+        check("progress returns to the conversation", page.wait_for("situation: three-question starting check", 20), page.text()[:160])
+        check("the three-situation check closes", page.click_text("close"))
 
-        print("5) Mira offers both grounded tasks")
-        check("Alex knocks next", page.wait_for("Alex is knocking", 20), page.text()[:160])
-        check("Alex task opens", page.click_text("open the door"))
-        check("Alex lesson starts", page.wait_for("gifts and hospitality", 20), page.text()[:160])
-        check("Alex lesson closes", page.click_text("close"))
-        check("Sam knocks next", page.wait_for("Sam is knocking", 20), page.text()[:160])
+        print("5) The person in the room pushes back before anything is revealed")
+        check("Alex knocks first", page.wait_for("Alex is knocking", 20), page.text()[:160])
+        check("Alex comes in", page.click_text("open the door"))
+        check("Alex speaks first", page.wait_for("thank-you note", 20), page.text()[:200])
+        check("nobody is teaching", "teacher" not in page.text().lower())
+        page.answer("€26 is a small gift, so I will accept it.")
+        check("Alex pushes back", page.wait_for("round 1 of 4", 20), page.text()[:200])
+        pressed = page.text().lower()
+        check("no verdict is revealed mid-arc", "evidence recorded" not in pressed and "learning feedback" not in pressed, pressed[:200])
+        check("the rules stay one click away", "check the rules" in pressed)
+        page.answer(ANSWER_ALEX_PASS)
+        check("holding the line moves the situation on", page.wait_for("evidence recorded", 20), page.text()[:200])
+        check("the situation closes", page.click_text("close"))
+
+        print("6) Every visitor has their own tasks")
+        check("Sam knocks next", page.wait_for("Sam is knocking", 40), page.text()[:160])
         check("Sam task opens", page.click_text("open the door"))
-        check("Sam lesson starts", page.wait_for("cash and customer checks", 20), page.text()[:160])
-        check("Sam lesson closes", page.click_text("close"))
-        check("Mira knocks next", page.wait_for("Mira is knocking", 20), page.text()[:160])
-        check("Mira task chooser is visible", page.wait_for("choose a task", 20), page.text()[:160])
-        check("Mira review opens", page.click_text("review a case from your record"))
-        check("Mira review lesson starts", page.wait_for("mission: review a case from your record", 20), page.text()[:160])
+        check("Sam opens with cash on the counter", page.wait_for("cash and customer checks", 20), page.text()[:160])
+        check("Sam situation closes", page.click_text("close"))
+        # Who knocks next follows this learner's record, so walk until the coach.
+        reached_mira = False
+        for _ in range(5):
+            if page.wait_for("Mira is knocking", 12):
+                reached_mira = True
+                break
+            page.click_text("open the door")
+            time.sleep(1.5)
+            page.click_text("close")
+            time.sleep(1.5)
+        check("Mira knocks once the others have been seen", reached_mira, page.text()[:160])
+        check("Mira review opens", page.click_text("open the door"))
+        check("Mira review opens as a conversation", page.wait_for("situation: review a case from your record", 20), page.text()[:160])
         check("Mira review closes", page.click_text("close"))
 
-        print("6) Clearing the record really starts over")
+        print("7) Clearing the record really starts over")
         check("clearing asks to confirm", page.click_text("clear my record"))
         check("the warning names what is deleted", page.wait_for("deletes every answer"))
         check("clearing confirmed", page.click_text("confirm clearing"))
-        check("a fresh guest is knocked on again", page.wait_for("skill check", 20))
+        check("a fresh guest is knocked on again", page.wait_for("three quick situations", 20))
         check("progress opens on a clean record", page.click_text("my progress"))
         check(
             "no evidence survives the clear",
@@ -186,7 +206,7 @@ def main() -> int:
         for item in failures:
             print("  -", item)
         return 1
-    print("E2E OK — knock, let in, answer in your own words, evidence, progress, clear")
+    print("E2E OK — knock, let in, answer in your own words, get pushed back, evidence, progress, clear")
     return 0
 
 

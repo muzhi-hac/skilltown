@@ -1,8 +1,9 @@
-// Room mode in the browser: teachers knock, you let them in one at a time.
+// Room mode in the browser: people knock, you let them in one at a time. Most
+// of them want something from you that the rules do not allow.
 //
-// The queue is not scripted here. GET /api/v1/town marks each teacher "review"
+// The queue is not scripted here. GET /api/v1/town marks each visitor "review"
 // (a skill this learner answered wrong) or "recommended" (no evidence yet), and
-// the town is refreshed after every lesson, so what you just answered decides
+// the town is refreshed after every situation, so what you just answered decides
 // who knocks next.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -12,11 +13,12 @@ import { Room, type VisitorPhase } from "./Room";
 import { Lesson, Progress } from "./Lesson";
 import "./styles.css";
 
-// Four sprite sheets for four teachers plus the learner, so one sheet is reused
-// with a wardrobe shift rather than a hue rotation that would recolour skin.
-const SPRITES: Record<string, number> = { Alex: 2, Sam: 3, Mira: 4, Jo: 3 };
+// Four sprite sheets for five visitors plus the learner, so two sheets are
+// reused with a wardrobe shift rather than a hue rotation that would recolour skin.
+const SPRITES: Record<string, number> = { Alex: 2, Sam: 3, Nina: 4, Mira: 4, Jo: 3 };
 const TINTS: Record<string, string | undefined> = {
   Jo: "saturate(0.55) brightness(1.12)",
+  Nina: "saturate(1.25) hue-rotate(-12deg) brightness(0.95)",
 };
 const WALK_MS = 950;
 
@@ -108,7 +110,7 @@ export default function App() {
     if (view !== "room" || phase !== "outside" || !town) return;
     if (screeningPending) {
       setCurrent("Mira");
-      setHeadline("Mira is knocking — here for a quick skill check.");
+      setHeadline("Mira is knocking — three quick situations before anyone else arrives.");
       return;
     }
     if (queue.length === 0) {
@@ -153,7 +155,7 @@ export default function App() {
           : task.available_modes[0];
         setAttempt(await api.startAttempt(task.scenario_id, mode));
         setVersionMismatch(false);
-        setHeadline(`In a lesson with ${current}.`);
+        setHeadline(`${current} is in the room with you.`);
         setStatus("");
       } catch (err) {
         setStatus(err instanceof Error ? err.message : String(err));
@@ -314,7 +316,7 @@ export default function App() {
     }
   }, [confirmClear, refreshTown]);
 
-  // Learning time only counts while a lesson is actually open.
+  // Learning time only counts while a situation is actually open.
   useEffect(() => {
     if (view !== "lesson" || !attempt) return;
     void api.recordActivity(attempt.attempt_id, "start");
@@ -362,7 +364,7 @@ export default function App() {
             <div className="door-cta">
               {current && <p className="knock">* knock knock *</p>}
               <button className="door" onClick={() => void openDoor()}>
-                {current ? "Open the door  (E)" : "Invite the next teacher  (E)"}
+                {current ? "Open the door  (E)" : "See who is next  (E)"}
               </button>
               {availableTasks.length > 1 && (
                 <div className="task-chooser" aria-label={`${current} tasks`}>

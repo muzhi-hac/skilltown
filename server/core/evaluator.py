@@ -18,6 +18,9 @@ class EvaluationResult:
     mode: str = "fallback"
     overgeneralized: bool = False
     assessed: bool = True
+    # What the person in the room says next. Empty when no model wrote a line,
+    # in which case the route falls back to the authored escalation ladder.
+    character_line: str = ""
 
     @property
     def outcome(self) -> str:
