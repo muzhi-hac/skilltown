@@ -590,6 +590,19 @@ button:disabled {
   gap: 7px;
 }
 
+.answer-done {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.answer-done p {
+  margin: 0;
+  color: var(--muted);
+}
+
 .answer label {
   font-size: 14px;
   font-weight: 600;

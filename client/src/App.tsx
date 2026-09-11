@@ -22,6 +22,15 @@ const TINTS: Record<string, string | undefined> = {
 };
 const WALK_MS = 950;
 
+// Who knocks first: a skill this learner got wrong, then one with no evidence
+// yet, then the rest. At module scope because openDoor needs it too.
+const orderFrom = (list: TownNpc[]): string[] => {
+  const review = list.filter((n) => n.recommendation_state === "review").map((n) => n.name);
+  const fresh = list.filter((n) => n.recommendation_state === "recommended").map((n) => n.name);
+  const rest = list.filter((n) => n.recommendation_state === "none").map((n) => n.name);
+  return [...review, ...fresh, ...rest];
+};
+
 type View = "room" | "lesson" | "progress";
 
 export default function App() {
@@ -66,13 +75,6 @@ export default function App() {
     },
     [npcs, screening],
   );
-
-  const orderFrom = (list: TownNpc[]): string[] => {
-    const review = list.filter((n) => n.recommendation_state === "review").map((n) => n.name);
-    const fresh = list.filter((n) => n.recommendation_state === "recommended").map((n) => n.name);
-    const rest = list.filter((n) => n.recommendation_state === "none").map((n) => n.name);
-    return [...review, ...fresh, ...rest];
-  };
 
   const refreshTown = useCallback(async (resetQueue = false) => {
     const next = await api.getTown();
@@ -124,27 +126,39 @@ export default function App() {
 
   const openDoor = useCallback(async (selectedTask?: TaskSummary) => {
     if (phase !== "outside" || view !== "room") return;
-    if (!current) {
+    let visitor = current;
+    let tasks = byName.get(current)?.tasks ?? [];
+    if (!visitor) {
+      // Nobody is queued — usually because a town refresh failed. Ask who is
+      // next and walk them in from here: clicking an empty door only to be told
+      // someone is knocking reads like nothing happened.
       setHeadline("Asking who is available…");
-      await refreshTown().catch(() => undefined);
-      return;
+      const refreshed = await refreshTown(true).catch(() => null);
+      const nextUp = refreshed ? (orderFrom(refreshed.npcs)[0] ?? "") : "";
+      if (!refreshed || !nextUp) {
+        setHeadline("No one is waiting right now.");
+        return;
+      }
+      visitor = nextUp;
+      tasks = refreshed.npcs.find((npc) => npc.name === nextUp)?.tasks ?? [];
+      setCurrent(nextUp);
     }
     setPhase("entering");
-    setHeadline(`${current} is coming in…`);
+    setHeadline(`${visitor} is coming in…`);
     window.setTimeout(async () => {
       setPhase("teaching");
       const isScreening = screeningPending;
       const task = isScreening
         ? screening
-        : (selectedTask ?? byName.get(current)?.tasks?.[0] ?? null);
+        : (selectedTask ?? tasks[0] ?? null);
       setScreeningPending(false);
       if (!task) {
-        setHeadline(`${current} has nothing to teach right now.`);
+        setHeadline(`${visitor} has nothing to teach right now.`);
         setPhase("leaving");
         window.setTimeout(() => setPhase("outside"), WALK_MS);
         return;
       }
-      if (!isScreening) setQueue((rest) => rest.filter((name) => name !== current));
+      if (!isScreening) setQueue((rest) => rest.filter((name) => name !== visitor));
       setTaskTitle(task.title);
       setView("lesson");
       setBusy(true);
@@ -155,7 +169,7 @@ export default function App() {
           : task.available_modes[0];
         setAttempt(await api.startAttempt(task.scenario_id, mode));
         setVersionMismatch(false);
-        setHeadline(`${current} is in the room with you.`);
+        setHeadline(`${visitor} is in the room with you.`);
         setStatus("");
       } catch (err) {
         setStatus(err instanceof Error ? err.message : String(err));

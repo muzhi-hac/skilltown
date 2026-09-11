@@ -149,7 +149,12 @@ def main() -> int:
         check("a next step is offered", "what to do next" in page.text().lower())
         check("progress closes", page.click_text("close"))
         check("progress returns to the conversation", page.wait_for("situation: three-question starting check", 20), page.text()[:160])
-        check("the three-situation check closes", page.click_text("close"))
+        check(
+            "the finished situation points at the next visitor",
+            page.wait_for("next visitor", 10),
+            page.text()[:160],
+        )
+        check("the three-situation check closes", page.click_text("next visitor"))
 
         print("5) The person in the room pushes back before anything is revealed")
         check("Alex knocks first", page.wait_for("Alex is knocking", 20), page.text()[:160])

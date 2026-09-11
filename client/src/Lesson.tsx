@@ -118,8 +118,11 @@ export function Lesson(props: LessonProps) {
               </span>
             </span>
           )}
-          <button className="ghost" onClick={props.onClose}>
-            Close
+          <button
+            className={attempt?.is_complete ? "primary" : "ghost"}
+            onClick={props.onClose}
+          >
+            {attempt?.is_complete ? "Next visitor →" : "Close"}
           </button>
         </div>
       </header>
@@ -184,6 +187,14 @@ export function Lesson(props: LessonProps) {
         </p>
       )}
 
+      {attempt?.is_complete ? (
+        <div className="answer answer-done">
+          <p>This situation is over — {props.teacher} can head out.</p>
+          <button className="primary" onClick={props.onClose}>
+            Next visitor →
+          </button>
+        </div>
+      ) : (
       <div className="answer">
         <label htmlFor="answer-box">
           {canAnswer
@@ -229,6 +240,7 @@ export function Lesson(props: LessonProps) {
           <span className="status">{props.status}</span>
         </div>
       </div>
+      )}
     </section>
   );
 }
