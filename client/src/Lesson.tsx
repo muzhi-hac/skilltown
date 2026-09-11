@@ -5,7 +5,7 @@
 // the person said - no verdict, no rule, no correct answer. The debrief arrives
 // afterwards, in the coach's voice, once the situation has played out.
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { verdictKind, type Attempt, type DialogueTurn, type Passport, type PolicyCard, type Recommendation } from "./api";
 import { Verdict } from "./Verdict";
 
@@ -26,6 +26,106 @@ const STATE_LABELS: Record<string, string> = {
 function cardLabel(card: PolicyCard): string {
   if (card.fictional) return `Training policy (fictional) ${card.clause_id}`;
   return card.source ? `${card.source} · ${card.clause_id}` : `Reference ${card.clause_id}`;
+}
+
+/** Render the small Markdown subset used by committed policy excerpts.
+ *
+ * Keeping this local and structural avoids injecting HTML while still making
+ * emphasis, numbered tests and threshold tables readable in the lesson.
+ */
+function inlinePolicy(text: string): ReactNode[] {
+  return text.split(/(\*\*[^*]+\*\*)/g).filter(Boolean).map((part, index) =>
+    part.startsWith("**") && part.endsWith("**")
+      ? <strong key={index}>{part.slice(2, -2)}</strong>
+      : part,
+  );
+}
+
+function tableCells(line: string): string[] {
+  return line.trim().replace(/^\||\|$/g, "").split("|").map((cell) => cell.trim());
+}
+
+function PolicyExcerpt({ text }: { text: string }) {
+  const lines = text.split("\n");
+  const blocks: ReactNode[] = [];
+  let index = 0;
+
+  while (index < lines.length) {
+    const line = lines[index].trim();
+    if (!line) {
+      index += 1;
+      continue;
+    }
+
+    if (line.startsWith("|")) {
+      const tableLines: string[] = [];
+      while (index < lines.length && lines[index].trim().startsWith("|")) {
+        tableLines.push(lines[index]);
+        index += 1;
+      }
+      const rows = tableLines.map(tableCells);
+      const hasDivider = rows[1]?.every((cell) => /^:?-{3,}:?$/.test(cell));
+      const body = rows.slice(hasDivider ? 2 : 1);
+      blocks.push(
+        <div className="policy-table-wrap" key={`table-${index}`}>
+          <table>
+            <thead><tr>{rows[0].map((cell, cellIndex) => <th key={cellIndex}>{inlinePolicy(cell)}</th>)}</tr></thead>
+            <tbody>{body.map((row, rowIndex) => (
+              <tr key={rowIndex}>{row.map((cell, cellIndex) => <td key={cellIndex}>{inlinePolicy(cell)}</td>)}</tr>
+            ))}</tbody>
+          </table>
+        </div>,
+      );
+      continue;
+    }
+
+    const ordered = line.match(/^\d+\.\s+(.*)$/);
+    if (ordered) {
+      const items: string[] = [];
+      while (index < lines.length) {
+        const match = lines[index].trim().match(/^\d+\.\s+(.*)$/);
+        if (!match) break;
+        items.push(match[1]);
+        index += 1;
+      }
+      blocks.push(<ol key={`list-${index}`}>{items.map((item, itemIndex) => <li key={itemIndex}>{inlinePolicy(item)}</li>)}</ol>);
+      continue;
+    }
+
+    const paragraph: string[] = [];
+    while (index < lines.length) {
+      const next = lines[index].trim();
+      if (!next || next.startsWith("|") || /^\d+\.\s+/.test(next)) break;
+      paragraph.push(next);
+      index += 1;
+    }
+    blocks.push(<p key={`paragraph-${index}`}>{inlinePolicy(paragraph.join(" "))}</p>);
+  }
+
+  return <div className="policy-body">{blocks}</div>;
+}
+
+function PolicyReference({ card, collapsible = false }: { card: PolicyCard; collapsible?: boolean }) {
+  const heading = (
+    <span className="policy-heading">
+      <strong>{card.title}</strong>
+      <small>{cardLabel(card)}</small>
+    </span>
+  );
+  if (collapsible) {
+    return (
+      <details className="policy" key={card.clause_id}>
+        <summary>{heading}</summary>
+        <PolicyExcerpt text={card.text} />
+      </details>
+    );
+  }
+  return (
+    <article className="policy" key={card.clause_id}>
+      {heading}
+      <PolicyExcerpt text={card.text} />
+    </article>
+  );
 }
 
 const MODE_LABELS: Record<string, string> = {
@@ -178,9 +278,7 @@ export function Lesson(props: LessonProps) {
         <details className="rules" open={Boolean(debrief)}>
           <summary>Check the rules ({node.policy_cards.length})</summary>
           {node.policy_cards.map((card) => (
-            <p key={card.clause_id} className="policy">
-              <strong>{cardLabel(card)}</strong> · {card.title}: {card.text}
-            </p>
+            <PolicyReference key={card.clause_id} card={card} collapsible />
           ))}
         </details>
       )}
@@ -193,9 +291,7 @@ export function Lesson(props: LessonProps) {
           </p>
           <p>{debrief.message}</p>
           {debrief.policy_clauses.map((card) => (
-            <p key={card.clause_id} className="policy">
-              <strong>{cardLabel(card)}</strong> · {card.title}: {card.text}
-            </p>
+            <PolicyReference key={card.clause_id} card={card} />
           ))}
         </div>
       )}
