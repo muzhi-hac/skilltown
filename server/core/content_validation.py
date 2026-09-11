@@ -49,9 +49,6 @@ def validate_content(content: dict[str, Any]) -> None:
     pressuring = {
         npc.get("id") for npc in content.get("npcs", []) if npc.get("persona")
     }
-    screening = content.get("screening_task")
-    if screening and screening.get("scenario_id") not in scenarios:
-        _fail("screening_task points to an unknown scenario")
     from server.core.recommendations import TASK_BY_SKILL
     for skill_id, (scenario_id, _npc_id) in TASK_BY_SKILL.items():
         if scenario_id not in scenarios:
@@ -61,7 +58,7 @@ def validate_content(content: dict[str, Any]) -> None:
         _validate_scenario(scenario_id, scenario, known_npcs, pressuring)
 
 
-PERSONA_FIELDS = ("role", "relationship", "wants", "voice", "concede", "closing")
+PERSONA_FIELDS = ("role", "relationship", "wants", "voice", "concede", "closing", "deflect")
 
 
 def _validate_persona(npc: dict[str, Any]) -> None:
@@ -129,12 +126,47 @@ def _validate_scenario(
             # an opening line, and they have to be someone who actually pushes.
             if not _nonempty(node.get("line")):
                 _fail(f"{scenario_id}/{node_id}: a pressure node needs a spoken line")
+            _validate_withheld(scenario_id, node_id, node)
             if pressuring and node.get("npc_id") not in pressuring:
                 _fail(f"{scenario_id}/{node_id}: {node.get('npc_id')!r} has no persona to press with")
         _validate_node(scenario_id, node_id, node, nodes)
     _validate_reachability(scenario_id, scenario, nodes)
-    if scenario_id not in {"screening", "ethics-review"}:
+    if scenario_id != "ethics-review":
         _validate_pass_path(scenario_id, scenario, nodes)
+
+
+def _validate_withheld(scenario_id: str, node_id: str, node: dict[str, Any]) -> None:
+    """Facts the learner has to ask for.
+
+    Every pressure node needs at least two, or there is nothing to find out and
+    the clarify_context skill has nothing to measure. The wording here is spoken
+    verbatim, so an empty one would have the character answer with silence.
+    """
+    prefix = f"{scenario_id}/{node_id}"
+    withheld = node.get("withheld")
+    if not isinstance(withheld, list) or len(withheld) < 2:
+        _fail(f"{prefix}: a pressure node needs at least two withheld facts")
+    seen: set[str] = set()
+    for item in withheld:
+        if not isinstance(item, dict) or not all(
+            _nonempty(item.get(key)) for key in ("id", "topic", "fact")
+        ):
+            _fail(f"{prefix}: each withheld fact needs id, topic and fact")
+        if item["id"] in seen:
+            _fail(f"{prefix}: duplicate withheld fact {item['id']}")
+        seen.add(item["id"])
+    # The brief is what the learner reads before asking, so it must not already
+    # contain the numbers that the facts exist to hand over.
+    figures = {token for item in withheld for token in _figures(item["fact"])}
+    leaked = figures & _figures(f"{node.get('text', '')} {node.get('line', '')}")
+    if leaked:
+        _fail(f"{prefix}: the brief already gives away {sorted(leaked)}")
+
+
+def _figures(text: str) -> set[str]:
+    import re
+
+    return set(re.findall(r"\d+", text))
 
 
 def _validate_node(

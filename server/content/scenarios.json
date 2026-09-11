@@ -52,7 +52,8 @@
           }
         ],
         "concede": "Fine, fine. Put it in your register if that is how you want to play it.",
-        "closing": "Good. See? Nothing happened. I will drop it by your desk."
+        "closing": "Good. See? Nothing happened. I will drop it by your desk.",
+        "deflect": "Why does that matter? It is a courtesy, not a contract."
       }
     },
     {
@@ -95,7 +96,8 @@
           }
         ],
         "concede": "All right. Run your checks. I will wait.",
-        "closing": "Smart. Split it up, and nobody has to file anything."
+        "closing": "Smart. Split it up, and nobody has to file anything.",
+        "deflect": "Does that matter? Money is money. Can we get on with it?"
       }
     },
     {
@@ -138,7 +140,8 @@
           }
         ],
         "concede": "Okay. Okay. I will take it to the response team myself.",
-        "closing": "Thank you. Nothing in writing, then. We never had this conversation."
+        "closing": "Thank you. Nothing in writing, then. We never had this conversation.",
+        "deflect": "Is that really the thing to focus on right now?"
       }
     },
     {
@@ -181,7 +184,8 @@
           }
         ],
         "concede": "Understood. Do it the formal way. I will not hold it against you.",
-        "closing": "Good. We keep this in the team, then."
+        "closing": "Good. We keep this in the team, then.",
+        "deflect": "That is not the point here, and you know it."
       }
     },
     {
@@ -199,313 +203,12 @@
     }
   ],
   "scenarios": {
-    "screening": {
-      "version": "2.0.0",
-      "title": "Three-question starting check",
-      "category": "ethics_compliance",
-      "estimated_minutes": 3,
-      "available_modes": [
-        "screening"
-      ],
-      "skills": [
-        "clarify_context",
-        "conflict_awareness",
-        "communicate_boundary"
-      ],
-      "start_node": "screen_clarify",
-      "nodes": {
-        "screen_clarify": {
-          "npc_id": "alex",
-          "category": "ethics_compliance",
-          "text": "Before deciding on a €26 gift from a German public official, what three facts or rules do you name?",
-          "allow_text": true,
-          "choices": [],
-          "knowledge": [
-            "ANNEX-1.1",
-            "ANNEX-1.2"
-          ],
-          "facts": {
-            "domain": "screening",
-            "scope": "Starting check: facts before judging a public-official gift",
-            "reference_date": "2026-09-10"
-          },
-          "rubric": {
-            "question": "Does the answer apply the stated facts and cited reference?",
-            "required": [
-              "recipient_role",
-              "applicable_rule",
-              "amount"
-            ],
-            "criteria": {
-              "recipient_role": "Identify the public-official role.",
-              "applicable_rule": "Name the applicable Germany-specific rule.",
-              "amount": "Use the €26 amount against the threshold."
-            },
-            "forbidden_claims": [],
-            "reference_answers": [
-              {
-                "text": "I first confirm the public-official role, the applicable Germany-specific rule and how €26 compares with its threshold.",
-                "outcome": "pass"
-              },
-              {
-                "text": "€26 is fine without checking anything.",
-                "outcome": "miss"
-              },
-              {
-                "text": "I refuse all gifts without checking context.",
-                "outcome": "overgeneralized"
-              }
-            ]
-          },
-          "hint": {
-            "text": "Name the role, the applicable rule and the amount before making the decision.",
-            "clause_id": "ANNEX-1.1"
-          },
-          "counterexample": false,
-          "branches": {
-            "pass": {
-              "next_node": "screen_conflict",
-              "effect": "none",
-              "skill_id": "clarify_context",
-              "state": "pass",
-              "interpretation": "Applied the cited conditions to this case.",
-              "feedback": "You used the stated facts and the relevant reference conditions.",
-              "policy_clause_ids": [
-                "ANNEX-1.1",
-                "ANNEX-1.2"
-              ]
-            },
-            "miss": {
-              "next_node": "screen_conflict",
-              "effect": "none",
-              "skill_id": "clarify_context",
-              "state": "needs_practice",
-              "interpretation": "The response missed a required condition in the cited reference.",
-              "feedback": "Review the facts and the source card, then rewind to try the decision again.",
-              "policy_clause_ids": [
-                "ANNEX-1.1",
-                "ANNEX-1.2"
-              ]
-            },
-            "overgeneralized": {
-              "next_node": "screen_conflict",
-              "effect": "none",
-              "skill_id": "clarify_context",
-              "state": "needs_practice",
-              "interpretation": "The response replaced conditional judgment with a blanket rule.",
-              "feedback": "The reference requires a judgment based on the stated conditions, not a blanket rule.",
-              "policy_clause_ids": [
-                "ANNEX-1.1",
-                "ANNEX-1.2"
-              ]
-            }
-          },
-          "text_rule": "clarify_context",
-          "text_branches": {
-            "pass": "pass",
-            "miss": "miss",
-            "overgeneralized": "overgeneralized"
-          }
-        },
-        "screen_conflict": {
-          "npc_id": "sam",
-          "category": "ethics_compliance",
-          "text": "A €12,000 commercial transaction is presented as four linked €3,000 cash payments. What risk and next step do you identify?",
-          "allow_text": true,
-          "choices": [],
-          "knowledge": [
-            "ANNEX-4.1",
-            "ANNEX-4.3"
-          ],
-          "facts": {
-            "domain": "screening",
-            "scope": "Starting check: linked commercial cash payments",
-            "reference_date": "2026-09-10"
-          },
-          "rubric": {
-            "question": "Does the answer apply the stated facts and cited reference?",
-            "required": [
-              "linked_total",
-              "evasion_risk",
-              "process_step"
-            ],
-            "criteria": {
-              "linked_total": "Aggregate the payments.",
-              "evasion_risk": "Identify the splitting/evasion concern.",
-              "process_step": "State decline or escalation."
-            },
-            "forbidden_claims": [],
-            "reference_answers": [
-              {
-                "text": "The linked payments total €12,000, splitting does not avoid the cash limit, and I will decline or escalate through the required process.",
-                "outcome": "pass"
-              },
-              {
-                "text": "Each €3,000 payment is separate.",
-                "outcome": "miss"
-              },
-              {
-                "text": "Every payment must be reported as criminal.",
-                "outcome": "overgeneralized"
-              }
-            ]
-          },
-          "hint": {
-            "text": "Calculate the linked total, identify the splitting risk and name the process step.",
-            "clause_id": "ANNEX-4.1"
-          },
-          "counterexample": false,
-          "branches": {
-            "pass": {
-              "next_node": "screen_boundary",
-              "effect": "none",
-              "skill_id": "conflict_awareness",
-              "state": "pass",
-              "interpretation": "Applied the cited conditions to this case.",
-              "feedback": "You used the stated facts and the relevant reference conditions.",
-              "policy_clause_ids": [
-                "ANNEX-4.1",
-                "ANNEX-4.3"
-              ]
-            },
-            "miss": {
-              "next_node": "screen_boundary",
-              "effect": "none",
-              "skill_id": "conflict_awareness",
-              "state": "needs_practice",
-              "interpretation": "The response missed a required condition in the cited reference.",
-              "feedback": "Review the facts and the source card, then rewind to try the decision again.",
-              "policy_clause_ids": [
-                "ANNEX-4.1",
-                "ANNEX-4.3"
-              ]
-            },
-            "overgeneralized": {
-              "next_node": "screen_boundary",
-              "effect": "none",
-              "skill_id": "conflict_awareness",
-              "state": "needs_practice",
-              "interpretation": "The response replaced conditional judgment with a blanket rule.",
-              "feedback": "The reference requires a judgment based on the stated conditions, not a blanket rule.",
-              "policy_clause_ids": [
-                "ANNEX-4.1",
-                "ANNEX-4.3"
-              ]
-            }
-          },
-          "text_rule": "conflict_awareness",
-          "text_branches": {
-            "pass": "pass",
-            "miss": "miss",
-            "overgeneralized": "overgeneralized"
-          }
-        },
-        "screen_boundary": {
-          "npc_id": "nina",
-          "category": "personal_development",
-          "text": "Write one work reply for a high-risk breach known at 10:00 today: state the action, the reason and the next step.",
-          "allow_text": true,
-          "choices": [],
-          "knowledge": [
-            "ANNEX-2.1"
-          ],
-          "facts": {
-            "domain": "screening",
-            "scope": "Starting check: communicate a high-risk breach response",
-            "reference_date": "2026-09-10"
-          },
-          "rubric": {
-            "question": "Does the answer apply the stated facts and cited reference?",
-            "required": [
-              "action",
-              "reason",
-              "next_step"
-            ],
-            "criteria": {
-              "action": "State the authority and individual-notice action.",
-              "reason": "State awareness and high-risk reasoning.",
-              "next_step": "State the immediate follow-up step."
-            },
-            "forbidden_claims": [],
-            "reference_answers": [
-              {
-                "text": "We became aware at 10:00 today and the breach is high risk, so I will notify the authority within 72 hours and affected people without undue delay; I will document and coordinate the next steps now.",
-                "outcome": "pass"
-              },
-              {
-                "text": "We can wait a month before acting.",
-                "outcome": "miss"
-              },
-              {
-                "text": "We always tell everyone about every incident.",
-                "outcome": "overgeneralized"
-              }
-            ]
-          },
-          "hint": {
-            "text": "Use a three-part reply: action, awareness/high-risk reason and a concrete next step.",
-            "clause_id": "ANNEX-2.1"
-          },
-          "counterexample": false,
-          "branches": {
-            "pass": {
-              "next_node": "screen_complete",
-              "effect": "completed",
-              "skill_id": "communicate_boundary",
-              "state": "pass",
-              "interpretation": "Applied the cited conditions to this case.",
-              "feedback": "You used the stated facts and the relevant reference conditions.",
-              "policy_clause_ids": [
-                "ANNEX-2.1"
-              ]
-            },
-            "miss": {
-              "next_node": "screen_complete",
-              "effect": "completed",
-              "skill_id": "communicate_boundary",
-              "state": "needs_practice",
-              "interpretation": "The response missed a required condition in the cited reference.",
-              "feedback": "Review the facts and the source card, then rewind to try the decision again.",
-              "policy_clause_ids": [
-                "ANNEX-2.1"
-              ]
-            },
-            "overgeneralized": {
-              "next_node": "screen_complete",
-              "effect": "completed",
-              "skill_id": "communicate_boundary",
-              "state": "needs_practice",
-              "interpretation": "The response replaced conditional judgment with a blanket rule.",
-              "feedback": "The reference requires a judgment based on the stated conditions, not a blanket rule.",
-              "policy_clause_ids": [
-                "ANNEX-2.1"
-              ]
-            }
-          },
-          "text_rule": "communicate_boundary",
-          "text_branches": {
-            "pass": "pass",
-            "miss": "miss",
-            "overgeneralized": "overgeneralized"
-          }
-        },
-        "screen_complete": {
-          "npc_id": "mira",
-          "category": "ethics_compliance",
-          "text": "This was a starting check. The map contains independent grounded practice tasks.",
-          "allow_text": false,
-          "choices": [],
-          "knowledge": []
-        }
-      }
-    },
     "dinner-invitation": {
       "version": "2.0.0",
       "title": "Gifts and hospitality",
       "category": "ethics_compliance",
       "estimated_minutes": 6,
       "available_modes": [
-        "screening",
         "practice",
         "verification"
       ],
@@ -518,8 +221,25 @@
         "alex_public_gift": {
           "npc_id": "alex",
           "category": "ethics_compliance",
-          "text": "A German public official offers you a €26 thank-you gift after a meeting. The cited Germany-specific threshold is €25. What do you do?",
-          "line": "The head of unit at the city office left this for you after the meeting. Twenty-six euros of chocolates and a thank-you note. Take it, it is a courtesy.",
+          "text": "Someone has left a gift for you after a meeting, and Alex wants you to keep it. Who sent it, what it is worth and whether anyone has written it down are not stated.",
+          "line": "Something came over for you after this morning's meeting. It is on your desk. Take it, it is a courtesy.",
+          "withheld": [
+            {
+              "id": "sender",
+              "topic": "who sent it and what they do",
+              "fact": "The head of unit at the city office. She is the one who signs off our permits."
+            },
+            {
+              "id": "value",
+              "topic": "what it is worth",
+              "fact": "A box of chocolates. Twenty-six euros on the receipt, if you must know."
+            },
+            {
+              "id": "paperwork",
+              "topic": "whether it has been declared or recorded anywhere",
+              "fact": "Nobody has written anything down. That is rather the point."
+            }
+          ],
           "allow_text": true,
           "choices": [],
           "knowledge": [
@@ -631,8 +351,30 @@
         "alex_private_gift": {
           "npc_id": "alex",
           "category": "ethics_compliance",
-          "text": "A private-sector counterpart gives a €30 customary gift. There is no pending business decision and you have disclosed it. Is the €30 benchmark a blanket safe harbour?",
-          "line": "Thirty euros, the usual seasonal thing, nothing pending between our companies, and you have already declared it. So we are fine here. Say it plainly.",
+          "text": "Alex has sent a seasonal gift and wants you to confirm it is fine. Who it came from, what it is worth, whether anything is pending and whether it was declared are not stated.",
+          "line": "The usual seasonal thing went out to your team. So we are fine here. Say it plainly.",
+          "withheld": [
+            {
+              "id": "sender",
+              "topic": "who it came from and what they are to us",
+              "fact": "From us at Brenner Logistik. A private company, same as yours. No official anywhere near it."
+            },
+            {
+              "id": "value",
+              "topic": "what it is worth",
+              "fact": "Thirty euros. The same hamper everyone gets."
+            },
+            {
+              "id": "pending",
+              "topic": "whether any decision is open with them",
+              "fact": "Nothing is open. Your renewal closed in spring, so there is nothing to influence."
+            },
+            {
+              "id": "paperwork",
+              "topic": "whether it has been declared or recorded",
+              "fact": "You declared it yourself last week. It is in your register."
+            }
+          ],
           "allow_text": true,
           "choices": [],
           "knowledge": [
@@ -737,8 +479,30 @@
         "alex_business_meal": {
           "npc_id": "alex",
           "category": "ethics_compliance",
-          "text": "A private-sector business meal costs €100 per person. The case states a legitimate business purpose, no active tender and approval is pending under company policy. What conditions govern the decision?",
-          "line": "Dinner is a hundred a head. There is a real agenda, no tender running, and your own policy says somebody signs off first. Are you going to make me chase that signature?",
+          "text": "Alex wants to take your team to dinner and is impatient about the approval step. The cost per head, the business reason, whether a tender is running and whether anyone has signed off are not stated.",
+          "line": "Dinner for the team, on us. Are you going to make me chase a signature over a meal?",
+          "withheld": [
+            {
+              "id": "cost",
+              "topic": "what it costs per person",
+              "fact": "About a hundred a head. It is a nice place, that is all."
+            },
+            {
+              "id": "purpose",
+              "topic": "what the business reason is",
+              "fact": "We are walking your operations people through next year's routes. Real agenda, real work."
+            },
+            {
+              "id": "tender",
+              "topic": "whether a tender or bid is running",
+              "fact": "Nothing is out to tender. Bidding closed months ago."
+            },
+            {
+              "id": "approval",
+              "topic": "whether anyone has approved it",
+              "fact": "Nobody has signed anything yet. That is the bit I am asking you to skip."
+            }
+          ],
           "allow_text": true,
           "choices": [],
           "knowledge": [
@@ -843,8 +607,25 @@
         "alex_cash_gift": {
           "npc_id": "alex",
           "category": "ethics_compliance",
-          "text": "A counterpart offers a €5 cash gift. The amount is low, but the cited card distinguishes cash from ordinary hospitality. What is your next step?",
-          "line": "Five euros. Cash. That is a coffee. You are not going to open a form for five euros, are you?",
+          "text": "Alex is pressing something into your hand and treating the paperwork as absurd. How much it is, what form it is in and what it is for are not stated.",
+          "line": "Here, take it. For the coffee. You are not going to open a form over this, surely.",
+          "withheld": [
+            {
+              "id": "amount",
+              "topic": "how much it is",
+              "fact": "Five euros. Five."
+            },
+            {
+              "id": "form",
+              "topic": "what form it is in",
+              "fact": "Cash. Notes. What difference does that make?"
+            },
+            {
+              "id": "occasion",
+              "topic": "what it is for",
+              "fact": "Nothing in particular. You helped me out on the phone last week."
+            }
+          ],
           "allow_text": true,
           "choices": [],
           "knowledge": [
@@ -944,8 +725,30 @@
         "alex_permitted_meal": {
           "npc_id": "alex",
           "category": "ethics_compliance",
-          "text": "A low-value private-sector meal has a legitimate business purpose. The related decision is closed and approval plus a complete register entry are already in place. How do you decide?",
-          "line": "Small lunch, proper business reason, that decision closed weeks ago, approval is in, and it is already in your register. Can you just say yes for once?",
+          "text": "Alex wants you to sign off a modest lunch and sounds tired of being doubted. The cost, the business reason, whether a decision is open and whether it is approved and recorded are not stated.",
+          "line": "Small lunch, nothing fancy. Can you just say yes for once?",
+          "withheld": [
+            {
+              "id": "cost",
+              "topic": "what it costs",
+              "fact": "Twenty a head. A sandwich place."
+            },
+            {
+              "id": "purpose",
+              "topic": "what the business reason is",
+              "fact": "Quarterly handover with your operations team. A normal working lunch."
+            },
+            {
+              "id": "pending",
+              "topic": "whether any decision is open",
+              "fact": "That decision closed weeks ago. Nothing is riding on it."
+            },
+            {
+              "id": "paperwork",
+              "topic": "whether it is approved and recorded",
+              "fact": "Your manager approved it and it is already in your register. I checked."
+            }
+          ],
           "allow_text": true,
           "choices": [],
           "knowledge": [
@@ -1083,8 +886,25 @@
         "sam_cash_limit": {
           "npc_id": "sam",
           "category": "ethics_compliance",
-          "text": "From July 2027, a commercial customer offers one €10,001 cash payment. What must happen under the cited AMLR threshold?",
-          "line": "Ten thousand and one euros. Cash, on the counter, one payment, today. Let us not turn this into an afternoon.",
+          "text": "A customer wants to settle today and does not want a process. The amount, the form of payment and who is paying are not stated.",
+          "line": "I want to pay for this now. Today, one payment. Let us not turn it into an afternoon.",
+          "withheld": [
+            {
+              "id": "amount",
+              "topic": "how much the payment is",
+              "fact": "Ten thousand and one euros. Yes, one euro over, that is what the invoice says."
+            },
+            {
+              "id": "form",
+              "topic": "how they intend to pay",
+              "fact": "Cash. It is on the counter."
+            },
+            {
+              "id": "customer",
+              "topic": "who is paying and in what capacity",
+              "fact": "For my company. It is a commercial purchase."
+            }
+          ],
           "allow_text": true,
           "choices": [],
           "knowledge": [
@@ -1184,8 +1004,25 @@
         "sam_kyc_boundary": {
           "npc_id": "sam",
           "category": "ethics_compliance",
-          "text": "A commercial customer offers €3,000 cash and has not been identity-verified. What is required at this threshold, and what does it not mean?",
-          "line": "Three thousand in cash, and no, I am not showing you my ID for that. Take the money.",
+          "text": "A customer is paying and refusing paperwork. The amount, whether they have ever been identified and in what capacity they are buying are not stated.",
+          "line": "Take the money and let us be done. I am not filling in anything for you.",
+          "withheld": [
+            {
+              "id": "amount",
+              "topic": "how much it is",
+              "fact": "Three thousand. In cash."
+            },
+            {
+              "id": "identity",
+              "topic": "whether they have been identified before",
+              "fact": "You have never checked me and you do not need to start now."
+            },
+            {
+              "id": "customer",
+              "topic": "who is buying and in what capacity",
+              "fact": "For the business. It is a commercial purchase."
+            }
+          ],
           "allow_text": true,
           "choices": [],
           "knowledge": [
@@ -1285,8 +1122,25 @@
         "sam_linked_payments": {
           "npc_id": "sam",
           "category": "ethics_compliance",
-          "text": "One commercial transaction is split into four linked €3,000 cash payments. How should the amounts and apparent splitting be handled?",
-          "line": "Fine. Four payments of three thousand instead of the one. Same order, four tickets. That works for you, does it not?",
+          "text": "The customer has proposed paying in instalments and presents it as a convenience. How many payments, how much each, whether they belong to one order and why they want it split are not stated.",
+          "line": "Fine, we do it in instalments then. Same deal, several tickets. That works for you, does it not?",
+          "withheld": [
+            {
+              "id": "split",
+              "topic": "how many payments there are and how much each",
+              "fact": "Four. Three thousand each."
+            },
+            {
+              "id": "single",
+              "topic": "whether they belong to one transaction",
+              "fact": "It is one order. Obviously it is one order."
+            },
+            {
+              "id": "reason",
+              "topic": "why they want it split up",
+              "fact": "Because then none of your forms get triggered. That is the point."
+            }
+          ],
           "allow_text": true,
           "choices": [],
           "knowledge": [
@@ -1391,8 +1245,25 @@
         "sam_beneficial_owner": {
           "npc_id": "sam",
           "category": "ethics_compliance",
-          "text": "A standard ownership structure has a person holding 25% of voting rights; a separate high-risk structure uses the stated 15% trigger. What must the assessment distinguish?",
-          "line": "My owner holds twenty-five percent. That other structure you flagged sits at fifteen. Same paperwork for both, surely?",
+          "text": "The customer wants both of their structures treated the same way. The ownership percentages and whether either structure is flagged higher risk are not stated.",
+          "line": "Same paperwork for both of my companies, surely. They are the same to me.",
+          "withheld": [
+            {
+              "id": "first",
+              "topic": "the ownership in the first structure",
+              "fact": "One person holds twenty-five percent of the voting rights. A standard setup."
+            },
+            {
+              "id": "second",
+              "topic": "the ownership in the other structure",
+              "fact": "Fifteen percent in that one. It is the smaller company."
+            },
+            {
+              "id": "risk",
+              "topic": "whether either structure is flagged as higher risk",
+              "fact": "Your own system flags the second one as higher risk. I do not know why."
+            }
+          ],
           "allow_text": true,
           "choices": [],
           "knowledge": [
@@ -1492,8 +1363,25 @@
         "sam_permitted_cash": {
           "npc_id": "sam",
           "category": "ethics_compliance",
-          "text": "A commercial €2,500 cash payment has completed KYC and no linked or suspicious factors. What is the conditional outcome?",
-          "line": "Two and a half thousand, cash, you already ran my identification last month, nothing unusual about any of it. Are we done?",
+          "text": "A cash payment, a customer who has been here before, and impatience. The amount, whether they have been identified and whether anything else is linked are not stated.",
+          "line": "Cash, for the order. Are we done?",
+          "withheld": [
+            {
+              "id": "amount",
+              "topic": "how much it is",
+              "fact": "Two thousand five hundred."
+            },
+            {
+              "id": "identity",
+              "topic": "whether the customer has been identified",
+              "fact": "You ran my identification last month. It is in your file."
+            },
+            {
+              "id": "linked",
+              "topic": "whether this connects to other payments",
+              "fact": "Nothing else is running. One payment, one order."
+            }
+          ],
           "allow_text": true,
           "choices": [],
           "knowledge": [
@@ -1622,8 +1510,25 @@
         "mira_privacy_clock": {
           "npc_id": "nina",
           "category": "ethics_compliance",
-          "text": "A breach occurred yesterday, but the organisation became aware at 10:00 today. It is likely to create high risk to individuals. State the timing and recipients. ",
-          "line": "We spotted it at ten this morning. It has been open since yesterday and yes, it is real customer data with real risk to those people. Tell me we do not have to start any clocks today.",
+          "text": "Nina has found a data problem and wants it kept inside the team until after the launch. When it happened, when the team knew, what data is involved and how serious it is are not stated.",
+          "line": "We have a situation with an export. Before you do anything dramatic - tell me we do not have to start any clocks today.",
+          "withheld": [
+            {
+              "id": "when",
+              "topic": "when it happened and when the team became aware",
+              "fact": "It has been open since yesterday. We only found it at ten this morning."
+            },
+            {
+              "id": "data",
+              "topic": "what data was exposed",
+              "fact": "Customer records. Names, addresses, order history. Real people."
+            },
+            {
+              "id": "risk",
+              "topic": "how serious the assessment says it is",
+              "fact": "Our own assessment says high risk to those people. I know how that sounds."
+            }
+          ],
           "allow_text": true,
           "choices": [],
           "knowledge": [
@@ -1723,8 +1628,25 @@
         "mira_nis2_stages": {
           "npc_id": "nina",
           "category": "ethics_compliance",
-          "text": "A NIS2 in-scope entity has a significant incident and becomes aware today. What are the early warning, notification and final-report stages?",
-          "line": "We are in scope and we became aware today, and yes, it is significant. Before I wake half the company: what actually has to be filed, and can any of it wait?",
+          "text": "Nina is asking what has to be filed after an incident, and hoping the answer is later. Whether the company is in scope, how significant the incident is and when awareness started are not stated.",
+          "line": "Before I wake half the company - what actually has to be filed here, and can any of it wait?",
+          "withheld": [
+            {
+              "id": "scope",
+              "topic": "whether the company is in scope",
+              "fact": "We are in scope. Legal confirmed that last year."
+            },
+            {
+              "id": "significance",
+              "topic": "how significant the incident is",
+              "fact": "Significant by our own criteria. Service is degraded for paying customers."
+            },
+            {
+              "id": "awareness",
+              "topic": "when the team became aware",
+              "fact": "Today. About an hour ago."
+            }
+          ],
           "allow_text": true,
           "choices": [],
           "knowledge": [
@@ -1824,8 +1746,25 @@
         "mira_encrypted_backup": {
           "npc_id": "nina",
           "category": "ethics_compliance",
-          "text": "An encrypted backup was exposed, but encryption is effective, keys remain intact and the risk assessment says harm is unlikely. What still happens, and what is not automatic?",
-          "line": "The exposed backup was encrypted, we still hold the keys, and the assessment says harm is unlikely. So this one we can leave alone, right?",
+          "text": "A backup was exposed and Nina wants to close the matter. Whether it was encrypted, who holds the keys and what the risk assessment concluded are not stated.",
+          "line": "The backup that was exposed - it is fine, honestly. We can leave this one alone, right?",
+          "withheld": [
+            {
+              "id": "encryption",
+              "topic": "whether the data was encrypted and how well",
+              "fact": "Encrypted, properly, state of the art. This is not our first rodeo."
+            },
+            {
+              "id": "keys",
+              "topic": "who holds the keys",
+              "fact": "We do. They never left our vault."
+            },
+            {
+              "id": "risk",
+              "topic": "what the risk assessment concluded",
+              "fact": "The assessment says harm to individuals is unlikely."
+            }
+          ],
           "allow_text": true,
           "choices": [],
           "knowledge": [
@@ -1957,8 +1896,25 @@
         "jo_report_receipt": {
           "npc_id": "jo",
           "category": "personal_development",
-          "text": "A report arrived through the internal channel. What are the acknowledgement, feedback and confidentiality steps under the cited reference?",
-          "line": "A report came in through the internal channel this morning. Walk me through what has to happen with it. And bear in mind I would rather it stayed with us.",
+          "text": "A report has arrived through the internal channel and Jo would rather it stayed in the team. How it arrived, what the reporter asked for and what has been done so far are not stated.",
+          "line": "Something came in through the channel this morning. Walk me through what happens now - and bear in mind I would rather it stayed with us.",
+          "withheld": [
+            {
+              "id": "channel",
+              "topic": "how the report arrived",
+              "fact": "Through the internal reporting channel. Properly, with their name on it."
+            },
+            {
+              "id": "request",
+              "topic": "what the reporter asked for",
+              "fact": "They asked to be kept confidential. Of course they did."
+            },
+            {
+              "id": "progress",
+              "topic": "what has been done since it arrived",
+              "fact": "Nothing. It has been sitting in my inbox since Tuesday."
+            }
+          ],
           "allow_text": true,
           "choices": [],
           "knowledge": [
@@ -2058,8 +2014,25 @@
         "jo_no_retaliation": {
           "npc_id": "jo",
           "category": "personal_development",
-          "text": "A manager threatens an employee with punitive shifts after a report. How do you identify and address this?",
-          "line": "After that report I am putting them on night shifts for a while. It is scheduling, not punishment. Nobody needs to make it into something.",
+          "text": "Jo is changing someone's shifts shortly after that person made a report, and calls it scheduling. The timing, what changes for them and who decided are not stated.",
+          "line": "I am moving them onto nights for a while. It is scheduling, not punishment. Nobody needs to make it into something.",
+          "withheld": [
+            {
+              "id": "timing",
+              "topic": "when the change was decided relative to the report",
+              "fact": "Two days after their report. That is a coincidence."
+            },
+            {
+              "id": "change",
+              "topic": "what actually changes for them",
+              "fact": "Nights, every week, and they lose the shift premium."
+            },
+            {
+              "id": "decision",
+              "topic": "who decided it and on what basis",
+              "fact": "I decided. I do not have to justify a rota."
+            }
+          ],
           "allow_text": true,
           "choices": [],
           "knowledge": [
@@ -2159,8 +2132,25 @@
         "jo_rest_hours": {
           "npc_id": "jo",
           "category": "personal_development",
-          "text": "A proposed schedule leaves only 10 consecutive hours of daily rest, and the case states that no exception applies. What do you communicate?",
-          "line": "The new rota leaves ten hours between your shifts. No exception applies, before you ask. It is one week. You can live with that.",
+          "text": "A new rota is being pushed through for one week. How much rest it leaves between shifts, whether an exception applies and how long it lasts are not stated.",
+          "line": "New rota for next week. It is one week. You can live with it.",
+          "withheld": [
+            {
+              "id": "rest",
+              "topic": "how many hours of rest it leaves between shifts",
+              "fact": "Ten hours between shifts. That is plenty."
+            },
+            {
+              "id": "exception",
+              "topic": "whether an exception or agreement applies",
+              "fact": "No exception applies, before you ask. I checked."
+            },
+            {
+              "id": "duration",
+              "topic": "how long it lasts",
+              "fact": "One week. Then we are back to normal."
+            }
+          ],
           "allow_text": true,
           "choices": [],
           "knowledge": [
@@ -2260,8 +2250,25 @@
         "jo_average_hours": {
           "npc_id": "jo",
           "category": "personal_development",
-          "text": "One week exceeds 48 hours, but the stated reference period average is below 48 hours, daily rest is satisfied and no other violation is present. What is the conditional decision?",
-          "line": "Yes, that week goes over forty-eight. Averaged across the reference period you are under, daily rest is fine, nothing else is off. So what is the problem?",
+          "text": "One week on the rota runs long and Jo is asking what the problem is. The hours that week, the average across the reference period and the daily rest are not stated.",
+          "line": "Yes, next week runs long. So what exactly is the problem?",
+          "withheld": [
+            {
+              "id": "week",
+              "topic": "how many hours that week",
+              "fact": "Fifty-two, for that one week."
+            },
+            {
+              "id": "average",
+              "topic": "what the average is across the reference period",
+              "fact": "Under forty-eight across the reference period. I did the maths."
+            },
+            {
+              "id": "rest",
+              "topic": "what the daily rest looks like",
+              "fact": "Daily rest is fine. Eleven hours, every night."
+            }
+          ],
           "allow_text": true,
           "choices": [],
           "knowledge": [
@@ -3949,281 +3956,6 @@
             "miss": "miss",
             "overgeneralized": "overgeneralized"
           }
-        },
-        "coach__screening__screen_clarify": {
-          "npc_id": "mira",
-          "category": "ethics_compliance",
-          "text": "Review this case from your record. Before deciding on a €26 gift from a German public official, what three facts or rules do you name?",
-          "allow_text": true,
-          "choices": [],
-          "knowledge": [
-            "ANNEX-1.1",
-            "ANNEX-1.2"
-          ],
-          "facts": {
-            "domain": "screening",
-            "scope": "Starting check: facts before judging a public-official gift",
-            "reference_date": "2026-09-10"
-          },
-          "rubric": {
-            "question": "Does the answer apply the stated facts and cited reference?",
-            "required": [
-              "recipient_role",
-              "applicable_rule",
-              "amount"
-            ],
-            "criteria": {
-              "recipient_role": "Identify the public-official role.",
-              "applicable_rule": "Name the applicable Germany-specific rule.",
-              "amount": "Use the €26 amount against the threshold."
-            },
-            "forbidden_claims": [],
-            "reference_answers": [
-              {
-                "text": "I first confirm the public-official role, the applicable Germany-specific rule and how €26 compares with its threshold.",
-                "outcome": "pass"
-              },
-              {
-                "text": "€26 is fine without checking anything.",
-                "outcome": "miss"
-              },
-              {
-                "text": "I refuse all gifts without checking context.",
-                "outcome": "overgeneralized"
-              }
-            ]
-          },
-          "hint": {
-            "text": "Name the role, the applicable rule and the amount before making the decision.",
-            "clause_id": "ANNEX-1.1"
-          },
-          "counterexample": false,
-          "branches": {
-            "pass": {
-              "next_node": "review_complete",
-              "effect": "completed",
-              "skill_id": "clarify_context",
-              "state": "pass",
-              "interpretation": "Applied the cited conditions in a record-based review.",
-              "feedback": "You applied the grounded conditions to this reviewed case.",
-              "policy_clause_ids": [
-                "ANNEX-1.1",
-                "ANNEX-1.2"
-              ]
-            },
-            "miss": {
-              "next_node": "coach__screening__screen_clarify",
-              "effect": "none",
-              "skill_id": "clarify_context",
-              "state": "needs_practice",
-              "interpretation": "The reviewed answer missed a cited condition.",
-              "feedback": "Review the cited source and try this case again.",
-              "policy_clause_ids": [
-                "ANNEX-1.1",
-                "ANNEX-1.2"
-              ]
-            },
-            "overgeneralized": {
-              "next_node": "coach__screening__screen_clarify",
-              "effect": "none",
-              "skill_id": "clarify_context",
-              "state": "needs_practice",
-              "interpretation": "The reviewed answer used a blanket rule.",
-              "feedback": "Use the case facts and cited conditions rather than a blanket rule.",
-              "policy_clause_ids": [
-                "ANNEX-1.1",
-                "ANNEX-1.2"
-              ]
-            }
-          },
-          "text_rule": "clarify_context",
-          "text_branches": {
-            "pass": "pass",
-            "miss": "miss",
-            "overgeneralized": "overgeneralized"
-          }
-        },
-        "coach__screening__screen_conflict": {
-          "npc_id": "mira",
-          "category": "ethics_compliance",
-          "text": "Review this case from your record. A €12,000 commercial transaction is presented as four linked €3,000 cash payments. What risk and next step do you identify?",
-          "allow_text": true,
-          "choices": [],
-          "knowledge": [
-            "ANNEX-4.1",
-            "ANNEX-4.3"
-          ],
-          "facts": {
-            "domain": "screening",
-            "scope": "Starting check: linked commercial cash payments",
-            "reference_date": "2026-09-10"
-          },
-          "rubric": {
-            "question": "Does the answer apply the stated facts and cited reference?",
-            "required": [
-              "linked_total",
-              "evasion_risk",
-              "process_step"
-            ],
-            "criteria": {
-              "linked_total": "Aggregate the payments.",
-              "evasion_risk": "Identify the splitting/evasion concern.",
-              "process_step": "State decline or escalation."
-            },
-            "forbidden_claims": [],
-            "reference_answers": [
-              {
-                "text": "The linked payments total €12,000, splitting does not avoid the cash limit, and I will decline or escalate through the required process.",
-                "outcome": "pass"
-              },
-              {
-                "text": "Each €3,000 payment is separate.",
-                "outcome": "miss"
-              },
-              {
-                "text": "Every payment must be reported as criminal.",
-                "outcome": "overgeneralized"
-              }
-            ]
-          },
-          "hint": {
-            "text": "Calculate the linked total, identify the splitting risk and name the process step.",
-            "clause_id": "ANNEX-4.1"
-          },
-          "counterexample": false,
-          "branches": {
-            "pass": {
-              "next_node": "review_complete",
-              "effect": "completed",
-              "skill_id": "conflict_awareness",
-              "state": "pass",
-              "interpretation": "Applied the cited conditions in a record-based review.",
-              "feedback": "You applied the grounded conditions to this reviewed case.",
-              "policy_clause_ids": [
-                "ANNEX-4.1",
-                "ANNEX-4.3"
-              ]
-            },
-            "miss": {
-              "next_node": "coach__screening__screen_conflict",
-              "effect": "none",
-              "skill_id": "conflict_awareness",
-              "state": "needs_practice",
-              "interpretation": "The reviewed answer missed a cited condition.",
-              "feedback": "Review the cited source and try this case again.",
-              "policy_clause_ids": [
-                "ANNEX-4.1",
-                "ANNEX-4.3"
-              ]
-            },
-            "overgeneralized": {
-              "next_node": "coach__screening__screen_conflict",
-              "effect": "none",
-              "skill_id": "conflict_awareness",
-              "state": "needs_practice",
-              "interpretation": "The reviewed answer used a blanket rule.",
-              "feedback": "Use the case facts and cited conditions rather than a blanket rule.",
-              "policy_clause_ids": [
-                "ANNEX-4.1",
-                "ANNEX-4.3"
-              ]
-            }
-          },
-          "text_rule": "conflict_awareness",
-          "text_branches": {
-            "pass": "pass",
-            "miss": "miss",
-            "overgeneralized": "overgeneralized"
-          }
-        },
-        "coach__screening__screen_boundary": {
-          "npc_id": "mira",
-          "category": "ethics_compliance",
-          "text": "Review this case from your record. Write one work reply for a high-risk breach known at 10:00 today: state the action, the reason and the next step.",
-          "allow_text": true,
-          "choices": [],
-          "knowledge": [
-            "ANNEX-2.1"
-          ],
-          "facts": {
-            "domain": "screening",
-            "scope": "Starting check: communicate a high-risk breach response",
-            "reference_date": "2026-09-10"
-          },
-          "rubric": {
-            "question": "Does the answer apply the stated facts and cited reference?",
-            "required": [
-              "action",
-              "reason",
-              "next_step"
-            ],
-            "criteria": {
-              "action": "State the authority and individual-notice action.",
-              "reason": "State awareness and high-risk reasoning.",
-              "next_step": "State the immediate follow-up step."
-            },
-            "forbidden_claims": [],
-            "reference_answers": [
-              {
-                "text": "We became aware at 10:00 today and the breach is high risk, so I will notify the authority within 72 hours and affected people without undue delay; I will document and coordinate the next steps now.",
-                "outcome": "pass"
-              },
-              {
-                "text": "We can wait a month before acting.",
-                "outcome": "miss"
-              },
-              {
-                "text": "We always tell everyone about every incident.",
-                "outcome": "overgeneralized"
-              }
-            ]
-          },
-          "hint": {
-            "text": "Use a three-part reply: action, awareness/high-risk reason and a concrete next step.",
-            "clause_id": "ANNEX-2.1"
-          },
-          "counterexample": false,
-          "branches": {
-            "pass": {
-              "next_node": "review_complete",
-              "effect": "completed",
-              "skill_id": "communicate_boundary",
-              "state": "pass",
-              "interpretation": "Applied the cited conditions in a record-based review.",
-              "feedback": "You applied the grounded conditions to this reviewed case.",
-              "policy_clause_ids": [
-                "ANNEX-2.1"
-              ]
-            },
-            "miss": {
-              "next_node": "coach__screening__screen_boundary",
-              "effect": "none",
-              "skill_id": "communicate_boundary",
-              "state": "needs_practice",
-              "interpretation": "The reviewed answer missed a cited condition.",
-              "feedback": "Review the cited source and try this case again.",
-              "policy_clause_ids": [
-                "ANNEX-2.1"
-              ]
-            },
-            "overgeneralized": {
-              "next_node": "coach__screening__screen_boundary",
-              "effect": "none",
-              "skill_id": "communicate_boundary",
-              "state": "needs_practice",
-              "interpretation": "The reviewed answer used a blanket rule.",
-              "feedback": "Use the case facts and cited conditions rather than a blanket rule.",
-              "policy_clause_ids": [
-                "ANNEX-2.1"
-              ]
-            }
-          },
-          "text_rule": "communicate_boundary",
-          "text_branches": {
-            "pass": "pass",
-            "miss": "miss",
-            "overgeneralized": "overgeneralized"
-          }
         }
       },
       "coaching_sources": {
@@ -4243,20 +3975,8 @@
         "boundary-response/jo_report_receipt": "coach__boundary-response__jo_report_receipt",
         "boundary-response/jo_no_retaliation": "coach__boundary-response__jo_no_retaliation",
         "boundary-response/jo_rest_hours": "coach__boundary-response__jo_rest_hours",
-        "boundary-response/jo_average_hours": "coach__boundary-response__jo_average_hours",
-        "screening/screen_clarify": "coach__screening__screen_clarify",
-        "screening/screen_conflict": "coach__screening__screen_conflict",
-        "screening/screen_boundary": "coach__screening__screen_boundary"
+        "boundary-response/jo_average_hours": "coach__boundary-response__jo_average_hours"
       }
     }
-  },
-  "screening_task": {
-    "scenario_id": "screening",
-    "title": "Three-question starting check",
-    "category": "ethics_compliance",
-    "estimated_minutes": 3,
-    "available_modes": [
-      "screening"
-    ]
   }
 }

@@ -116,6 +116,14 @@ Content-Type: application/json
 - **回合用尽**：按 `miss`/`overgeneralized` 分支推进（通常进入后果节点），这时才写证据，`interpretation` 里带上"撑了几轮、最后是顶住还是让步"。
 - `POST /rewind` 会清掉该节点的对话并重新说开场白，即重新开始一段施压。
 
+**追问（probe）**：节点的 `withheld` 事实不下发给前端，只有问了才会出现在对话里。
+
+- 模型只判断"这一轮是在问还是在决定"，以及问的是哪个 `withheld.id`；**说出口的原话来自内容文件**，模型不参与措辞，所以它改不了数字。
+- `dialogue[].kind` 区分 `line`（开场/施压台词）、`probe`（学习者在问）、`answer`（对方回答问题）、`decision`（学习者在决定）。
+- **追问不计回合**：`pressure.turn` 只数 `decision`。每个节点最多 4 次追问，超出后对方不再回答，按施压回合处理。
+- 问了内容里没有的东西，得到的是人设里的 `deflect` 一句敷衍。
+- 不问就决定不会被从宽：按现有信息评分，证据的 `interpretation` 写明"decided without asking anything"。
+
 人设（`persona`）、升级阶梯和台词只存在于服务端内容里，`/api/v1/town` 与任何响应都不下发。
 
 ### 幂等与冲突

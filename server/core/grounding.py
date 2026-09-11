@@ -38,6 +38,19 @@ class Tactic:
 
 
 @dataclass(frozen=True)
+class Withheld:
+    """A fact the character has but does not volunteer.
+
+    The learner has to ask. The wording here is what gets spoken, so the model
+    decides only whether it was asked for - never what the number is.
+    """
+
+    id: str
+    topic: str
+    fact: str
+
+
+@dataclass(frozen=True)
 class Persona:
     """The person in the room. Never a teacher: they want the learner to bend."""
 
@@ -50,6 +63,7 @@ class Persona:
     tactics: tuple[Tactic, ...]
     concede: str
     closing: str
+    deflect: str
 
 
 @dataclass(frozen=True)
@@ -79,12 +93,16 @@ class EvaluationContext:
     reference_answers: tuple[ReferenceAnswer, ...]
     passages: tuple[Passage, ...]
     opening_line: str = ""
+    withheld: tuple[Withheld, ...] = ()
     persona: Persona | None = None
     pressure: PressureState | None = None
 
     @property
     def allowed_clause_ids(self) -> tuple[str, ...]:
         return tuple(passage.clause_id for passage in self.passages)
+
+    def disclosure(self, fact_id: str) -> str:
+        return next((item.fact for item in self.withheld if item.id == fact_id), "")
 
     @property
     def tactic(self) -> Tactic | None:
@@ -110,6 +128,7 @@ def build_persona(npc: dict[str, Any]) -> Persona | None:
         tactics=tuple(Tactic(**item) for item in data["tactics"]),
         concede=data["concede"],
         closing=data["closing"],
+        deflect=data["deflect"],
     )
 
 
@@ -172,6 +191,7 @@ def build_context(
         reference_answers=references,
         passages=passages,
         opening_line=str(node.get("line", "")),
+        withheld=tuple(Withheld(**item) for item in node.get("withheld", [])),
         persona=persona,
         pressure=pressure,
     )

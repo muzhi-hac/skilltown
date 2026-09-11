@@ -35,6 +35,8 @@ export interface DialogueTurn {
   node_id: string;
   speaker: "npc" | "learner";
   text: string;
+  /** A question ("probe") costs no round of pressure; a decision does. */
+  kind: "line" | "probe" | "answer" | "decision";
   /** True once the arc that contained this round has been settled. */
   resolved: boolean;
 }
@@ -101,7 +103,6 @@ export interface TownNpc {
 export interface Town {
   categories: { id: Category; label: string; icon: string }[];
   npcs: TownNpc[];
-  screening?: TaskSummary | null;
 }
 
 export interface Evidence {

@@ -2,9 +2,9 @@
 
 Live URL: https://skilltown.fly.dev
 
-Use a fresh browser profile so the three-question starting check appears. The
-screen always shows the source cards that bound the current answer; do not claim
-that the training corpus replaces local legal or compliance advice.
+Use a fresh browser profile so the record is empty. The screen always shows the
+source cards that bound the current answer; do not claim that the training
+corpus replaces local legal or compliance advice.
 
 ---
 
@@ -18,22 +18,23 @@ what I actually wrote, not a guessed learner profile."
 Point out `/ready` in the deployment view if available: the image is ready only
 after the dense corpus has warmed successfully.
 
-## 0:20 — Three-question starting check
+## 0:20 — Nobody tells you anything
 
-1. Open the door for Mira.
-2. For the public-official gift, type: **“I first confirm the public-official
-   role, the applicable Germany-specific rule and how €26 compares with its
-   threshold.”**
-3. For linked cash payments, type the reviewed weak answer: **“Each €3,000
-   payment is separate.”** The scenario advances while recording a specific
-   practice signal.
-4. For the breach reply, type: **“We became aware at 10:00 today and the breach
-   is high risk, so I will notify the authority within 72 hours and affected
-   people without undue delay; I will document and coordinate the next steps
-   now.”**
+Open the door. Alex says a gift arrived after this morning's meeting and you
+should take it. That is all he says: not who sent it, not what it is worth, not
+whether anyone wrote it down. The brief on screen withholds the same three
+things.
 
-> "The check is a starting point. It does not claim that someone has mastered a
-whole legal domain."
+Type a question instead of an answer: **"Who is it actually from?"** He tells
+you — the head of unit at the city office, the one who signs off the permits.
+Ask again: **"What is it worth?"** Twenty-six euros on the receipt.
+
+Point at the round counter while you do it: still 0 of 4.
+
+> "Asking costs nothing here, and it is the whole first skill. The facts he
+gives back are written in the content, not generated - the model only decides
+what was asked. A learner who decides without asking gets graded on what they
+actually knew, and the record says they never asked."
 
 ## 1:00 — Someone pushes back, four rounds deep
 

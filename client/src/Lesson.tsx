@@ -39,7 +39,7 @@ function transcript(attempt: Attempt | null): DialogueTurn[] {
   if (attempt.dialogue.length > 0) return attempt.dialogue;
   const line = attempt.node?.line;
   if (!line || !attempt.node) return [];
-  return [{ node_id: attempt.node.id, speaker: "npc", text: line, resolved: false }];
+  return [{ node_id: attempt.node.id, speaker: "npc", text: line, kind: "line", resolved: false }];
 }
 
 export interface LessonProps {
@@ -193,6 +193,10 @@ export function Lesson(props: LessonProps) {
             : attempt?.is_complete
               ? "This situation is over"
               : "Nothing to say here"}
+          {canAnswer && pressure && (
+            // Asking is the skill being trained here, so say it is allowed.
+            <span className="hint-inline"> — you can ask questions before you decide</span>
+          )}
         </label>
         <textarea
           id="answer-box"

@@ -57,7 +57,7 @@ class ScenarioEngine:
         return None
 
     def max_pressure_turns(self, scenario_id: str) -> int:
-        """0 where one answer settles the node, as in screening and review."""
+        """0 where one answer settles the node, as in Mira's review."""
         return int(self.get_scenario(scenario_id).get("pressure", {}).get("max_turns", 0))
 
     def is_pressure_node(self, scenario_id: str, node_id: str) -> bool:
@@ -158,10 +158,7 @@ class ScenarioEngine:
             skills = [skill for scenario_id in npc["scenario_ids"] for skill in scenarios[scenario_id].get("skills", [])]
             item["recommendation_state"] = self._recommendation_state(skills, states)
             npcs.append(item)
-        payload: dict[str, Any] = {"categories": self.content["categories"], "npcs": npcs}
-        if self.content.get("screening_task"):
-            payload["screening"] = self.content["screening_task"]
-        return payload
+        return {"categories": self.content["categories"], "npcs": npcs}
 
     @staticmethod
     def _recommendation_state(skills: list[str], states: dict[str, str]) -> str:

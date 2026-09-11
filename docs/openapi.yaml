@@ -404,7 +404,6 @@ components:
     AttemptMode:
       type: string
       enum:
-      - screening
       - practice
       - verification
       title: AttemptMode
@@ -603,6 +602,15 @@ components:
           type: string
           maxLength: 1200
           title: Text
+        kind:
+          type: string
+          enum:
+          - line
+          - probe
+          - answer
+          - decision
+          title: Kind
+          default: line
         resolved:
           type: boolean
           title: Resolved
@@ -1197,10 +1205,6 @@ components:
             $ref: '#/components/schemas/TownNpc'
           type: array
           title: Npcs
-        screening:
-          anyOf:
-          - $ref: '#/components/schemas/TaskSummary'
-          - type: 'null'
       additionalProperties: false
       type: object
       required:

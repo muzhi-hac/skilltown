@@ -26,10 +26,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from tools.shoot_page import CHROME, PORT, Session  # noqa: E402
 
-ANSWER_CLARIFY = "I first confirm the public-official role, the applicable Germany-specific rule and how €26 compares with its threshold."
-ANSWER_CONFLICT = "The linked payments total €12,000, splitting does not avoid the cash limit, and I will decline or escalate through the required process."
+ANSWER_ALEX_MISS = "€26 is a small gift, so I will accept it."
 ANSWER_ALEX_PASS = "Because this is a German public official and €26 exceeds the €25 threshold, I will decline or hand it to the employing office and keep the receipt in the register."
-ANSWER_BOUNDARY = "We became aware at 10:00 today and the breach is high risk, so I will notify the authority within 72 hours and affected people without undue delay; I will document and coordinate the next steps now."
 
 failures: list[str] = []
 
@@ -118,58 +116,43 @@ def main() -> int:
                 time.sleep(0.4)
         page = Page(Session(socket))
 
-        print("1) A fresh guest is knocked on, without walking anywhere")
+        print("1) A fresh guest is knocked on, and it is a real situation")
         check("someone knocks", page.wait_for("knocking"), page.text()[:120])
-        check("the first visit is the three-situation check", "three quick situations" in page.text().lower())
+        check("no warm-up quiz", "skill check" not in page.text().lower())
         check("the door prompt is on screen", "open the door" in page.text().lower())
 
-        print("2) The visitor comes in and the conversation opens")
+        print("2) The first person in the room wants something")
         check("the door opens", page.click_text("open the door"))
-        check("the conversation opens", page.wait_for("what do you say, in your own words"), page.text()[:160])
+        check("the conversation opens", page.wait_for("what do you say", 20), page.text()[:160])
         check("no multiple-choice options are offered", "option" not in page.text().lower())
+        check("asking is offered as a move", "ask questions before you decide" in page.text().lower())
+        check("the rules stay one click away", "check the rules" in page.text().lower())
+        check("nobody is teaching", "teacher" not in page.text().lower())
 
-        print("3) The learner types their own answers")
-        page.answer(ANSWER_CLARIFY)
-        check("cash screening question arrives", page.wait_for("€12,000 commercial transaction"), page.text()[:200])
-        check("evidence is recorded", "evidence recorded" in page.text().lower())
-        page.answer(ANSWER_CONFLICT)
-        check("breach screening question arrives", page.wait_for("high-risk breach"), page.text()[:200])
-        page.answer(ANSWER_BOUNDARY)
-        check("the three-situation check completes", page.wait_for("this situation is over", 20), page.text()[:200])
+        print("3) A weak decision is pushed back on, with nothing revealed")
+        page.answer(ANSWER_ALEX_MISS)
+        check("the person pushes back", page.wait_for("round 1/4", 25), page.text()[:200])
+        pressed = page.text().lower()
+        check("no verdict is revealed mid-arc",
+              "evidence recorded" not in pressed and "learning feedback" not in pressed, pressed[:200])
 
-        print("4) Progress shows the learner's own words back")
+        print("4) Holding the line ends the situation and records evidence")
+        page.answer(ANSWER_ALEX_PASS)
+        check("evidence is recorded", page.wait_for("evidence recorded", 25), page.text()[:200])
         check("progress opens", page.click_text("my progress"))
         check("progress view is visible", page.wait_for("what you have shown"), page.text()[:200])
         check("the passport lists a skill", page.wait_for("gather relevant facts"), page.text()[:200])
-        check(
-            "the evidence quotes the learner",
-            "public-official role" in page.text().lower(),
-            page.text()[:200],
-        )
+        check("the evidence quotes the learner", "public official" in page.text().lower(), page.text()[:200])
         check("a next step is offered", "what to do next" in page.text().lower())
         check("progress closes", page.click_text("close"))
-        check("progress returns to the conversation", page.wait_for("situation: three-question starting check", 20), page.text()[:160])
-        check("the three-situation check closes", page.click_text("close"))
-
-        print("5) The person in the room pushes back before anything is revealed")
-        check("Alex knocks first", page.wait_for("Alex is knocking", 20), page.text()[:160])
-        check("Alex comes in", page.click_text("open the door"))
-        check("Alex speaks first", page.wait_for("thank-you note", 20), page.text()[:200])
-        check("nobody is teaching", "teacher" not in page.text().lower())
-        page.answer("€26 is a small gift, so I will accept it.")
-        check("Alex pushes back", page.wait_for("round 1/4", 20), page.text()[:200])
-        pressed = page.text().lower()
-        check("no verdict is revealed mid-arc", "evidence recorded" not in pressed and "learning feedback" not in pressed, pressed[:200])
-        check("the rules stay one click away", "check the rules" in pressed)
-        page.answer(ANSWER_ALEX_PASS)
-        check("holding the line moves the situation on", page.wait_for("evidence recorded", 20), page.text()[:200])
+        check("progress returns to the conversation", page.wait_for("situation: gifts and hospitality", 20), page.text()[:160])
         check("the situation closes", page.click_text("close"))
 
-        print("6) Every visitor has their own tasks")
-        check("Sam knocks next", page.wait_for("Sam is knocking", 40), page.text()[:160])
-        check("Sam task opens", page.click_text("open the door"))
-        check("Sam opens with cash on the counter", page.wait_for("cash and customer checks", 20), page.text()[:160])
-        check("Sam situation closes", page.click_text("close"))
+        print("5) Every visitor has their own tasks")
+        check("someone else knocks next", page.wait_for("is knocking", 40), page.text()[:160])
+        check("the next task opens", page.click_text("open the door"))
+        check("a second situation starts", page.wait_for("situation:", 20), page.text()[:160])
+        check("the second situation closes", page.click_text("close"))
         # Who knocks next follows this learner's record, so walk until the coach.
         reached_mira = False
         for _ in range(5):
@@ -189,7 +172,7 @@ def main() -> int:
         check("clearing asks to confirm", page.click_text("clear my record"))
         check("the warning names what is deleted", page.wait_for("deletes every answer"))
         check("clearing confirmed", page.click_text("confirm clearing"))
-        check("a fresh guest is knocked on again", page.wait_for("three quick situations", 20))
+        check("a fresh guest is knocked on again", page.wait_for("knocking", 20))
         check("progress opens on a clean record", page.click_text("my progress"))
         check(
             "no evidence survives the clear",

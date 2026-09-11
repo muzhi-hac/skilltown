@@ -21,6 +21,10 @@ class EvaluationResult:
     # What the person in the room says next. Empty when no model wrote a line,
     # in which case the route falls back to the authored escalation ladder.
     character_line: str = ""
+    # "probe" means the learner asked for facts instead of deciding. A probe
+    # costs no round of pressure and records nothing.
+    turn_kind: str = "decision"
+    asked: tuple[str, ...] = ()
 
     @property
     def outcome(self) -> str:

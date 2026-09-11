@@ -52,7 +52,8 @@ def _pressure_view(engine, scenario_id: str, node_id: str, dialogue: list[dict])
         return None
     turn = sum(
         1 for item in dialogue
-        if item["speaker"] == "learner" and not item["resolved"] and item.get("node_id") == node_id
+        if item["speaker"] == "learner" and not item["resolved"]
+        and item.get("node_id") == node_id and item.get("kind") != "probe"
     )
     max_turns = engine.max_pressure_turns(scenario_id)
     return {"turn": turn, "max_turns": max_turns, "active": turn < max_turns}
@@ -72,12 +73,34 @@ def _authored_line(context) -> str:
     return tactic.line if tactic else ""
 
 
-def _with_rounds(interpretation: str, rounds: int, held: bool) -> str:
-    """Keep how long the learner lasted, since that is the thing being trained."""
-    if rounds <= 1:
-        return interpretation
+MAX_PROBES = 4
+
+
+def _probes_used(dialogue: list[dict], node_id: str) -> int:
+    return sum(
+        1 for item in dialogue
+        if item.get("kind") == "probe" and not item["resolved"] and item.get("node_id") == node_id
+    )
+
+
+def _probes_left(dialogue: list[dict], node_id: str) -> bool:
+    """Asking is free, but not unlimited: past the cap the character pushes."""
+    return _probes_used(dialogue, node_id) < MAX_PROBES
+
+
+def _with_rounds(interpretation: str, rounds: int, held: bool, asked: int = 0) -> str:
+    """Keep what the learner actually did, since that is the thing being trained.
+
+    Whether they asked anything before deciding is the clarify_context skill in
+    one number, so it belongs in the record next to how long they lasted.
+    """
     tail = "held the line" if held else "gave way"
-    return f"{interpretation} (after {rounds} rounds of pressure, {tail})"
+    detail = f"after {rounds} rounds of pressure, {tail}" if rounds > 1 else tail
+    if asked:
+        detail = f"asked {asked} question{'s' if asked > 1 else ''} first, {detail}"
+    elif not held:
+        detail = f"decided without asking anything, {detail}"
+    return f"{interpretation} ({detail})"
 
 
 def _attempt_response(engine, attempt: dict, **overrides) -> dict:
@@ -166,7 +189,7 @@ def create_attempt(body: CreateAttemptRequest, request: Request, session: Sessio
     )
     opening = _opening_line(engine, body.scenario_id, start_node_id)
     if opening:
-        store.append_dialogue(session["id"], attempt["id"], start_node_id, [("npc", opening)])
+        store.append_dialogue(session["id"], attempt["id"], start_node_id, [("npc", opening, "line")])
     dialogue = store.dialogue(session["id"], attempt["id"])
     return _attempt_response(engine, attempt, dialogue=dialogue)
 
@@ -227,7 +250,10 @@ def respond(attempt_id: UUID, body: AnswerRequest, request: Request, session: Se
         if engine.is_pressure_node(attempt["scenario_id"], node_id):
             open_rounds = [item for item in history if not item["resolved"]]
             pressure_state = PressureState(
-                turn=sum(1 for item in open_rounds if item["speaker"] == "learner") + 1,
+                turn=sum(
+                    1 for item in open_rounds
+                    if item["speaker"] == "learner" and item.get("kind") != "probe"
+                ) + 1,
                 max_turns=engine.max_pressure_turns(attempt["scenario_id"]),
                 history=tuple((item["speaker"], item["text"]) for item in open_rounds),
             )
@@ -258,6 +284,18 @@ def respond(attempt_id: UUID, body: AnswerRequest, request: Request, session: Se
             interpretation, feedback_message = evaluated.interpretation, evaluated.feedback
             clause_ids = evaluated.policy_clause_ids
             assessment_status = "deferred"
+        elif pressure_state and evaluated.turn_kind == "probe" and _probes_left(history, node_id):
+            # They asked instead of deciding. Answer with the authored fact, in
+            # the character's mouth, and charge them nothing for asking.
+            next_node_id, effect = node_id, "none"
+            skill_id = learning_state = None
+            interpretation, feedback_message = evaluated.interpretation, None
+            clause_ids = evaluated.policy_clause_ids
+            answered = [context.disclosure(fact_id) for fact_id in evaluated.asked]
+            spoken = " ".join(part for part in answered if part) or (
+                persona.deflect if persona else ""
+            )
+            dialogue_rows = [("learner", body.text, "probe"), ("npc", spoken, "answer")]
         elif pressure_state and evaluated.outcome != "pass" and not pressure_state.is_last_turn:
             # Mid-arc: the character presses again. No verdict is revealed and no
             # evidence is written, because the learner has not finished deciding.
@@ -266,15 +304,16 @@ def respond(attempt_id: UUID, body: AnswerRequest, request: Request, session: Se
             interpretation, feedback_message = evaluated.interpretation, None
             clause_ids = evaluated.policy_clause_ids
             spoken = evaluated.character_line or _authored_line(context)
-            dialogue_rows = [("learner", body.text), ("npc", spoken)]
+            dialogue_rows = [("learner", body.text, "decision"), ("npc", spoken, "line")]
         else:
             branch = engine.resolve_text(attempt["scenario_id"], node_id, evaluated.outcome)
             next_node_id, effect = branch.next_node_id, branch.effect
             skill_id, learning_state = branch.skill_id or rule, branch.state
             if evaluated.mode == "ai":
-                interpretation, feedback_message, clause_ids = (
-                    evaluated.interpretation, evaluated.feedback, evaluated.policy_clause_ids
-                )
+                interpretation = evaluated.interpretation
+                # An empty model feedback still owes the learner a debrief.
+                feedback_message = evaluated.feedback or branch.feedback
+                clause_ids = evaluated.policy_clause_ids or branch.policy_clause_ids
             else:
                 interpretation = branch.interpretation or evaluated.interpretation
                 feedback_message = branch.feedback or evaluated.feedback
@@ -286,9 +325,12 @@ def respond(attempt_id: UUID, body: AnswerRequest, request: Request, session: Se
                 spoken = (evaluated.character_line if held else "") or (
                     persona.concede if held else persona.closing
                 )
-                dialogue_rows = [("learner", body.text), ("npc", spoken)]
+                dialogue_rows = [("learner", body.text, "decision"), ("npc", spoken, "line")]
                 resolve_dialogue = True
-                interpretation = _with_rounds(interpretation, pressure_state.turn, held)
+                interpretation = _with_rounds(
+                    interpretation, pressure_state.turn, held,
+                    asked=_probes_used(history, node_id),
+                )
 
     def build_response(old_attempt, revision, new_status, evidence_id, resolved_state, dialogue):
         current = dict(old_attempt)
@@ -343,7 +385,7 @@ def rewind(attempt_id: UUID, body: MutationRequest, request: Request, session: S
     store.clear_dialogue(session["id"], str(attempt_id), target)
     opening = _opening_line(engine, attempt["scenario_id"], target)
     if opening:
-        store.append_dialogue(session["id"], str(attempt_id), target, [("npc", opening)])
+        store.append_dialogue(session["id"], str(attempt_id), target, [("npc", opening, "line")])
     dialogue = store.dialogue(session["id"], str(attempt_id))
     return _attempt_response(engine, updated, effect="rewind_available", dialogue=dialogue)
 

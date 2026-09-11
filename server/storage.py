@@ -41,21 +41,27 @@ def hash_token(token: str) -> str:
 
 def _insert_dialogue(
     db: sqlite3.Connection, session_id: str, attempt_id: str, node_id: str,
-    rows: Sequence[tuple[str, str]],
+    rows: Sequence[tuple[str, str, str]],
 ) -> None:
-    """Append spoken turns. Ordinal runs across the attempt, not per node, so
-    the transcript reads in the order the learner actually lived it."""
+    """Append spoken turns as (speaker, text, kind).
+
+    Ordinal runs across the attempt, not per node, so the transcript reads in
+    the order the learner actually lived it. Kind separates a question from a
+    decision: only decisions cost a round of pressure.
+    """
     if not rows:
         return
     start = int(db.execute(
         "SELECT COALESCE(MAX(ordinal), 0) n FROM dialogue_turns WHERE attempt_id = ?",
         (attempt_id,),
     ).fetchone()["n"])
-    for offset, (speaker, said) in enumerate(rows, start=1):
+    for offset, (speaker, said, kind) in enumerate(rows, start=1):
         db.execute(
-            "INSERT INTO dialogue_turns VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            """INSERT INTO dialogue_turns
+            (id, session_id, attempt_id, node_id, ordinal, speaker, body, resolved, created_at, kind)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             (str(uuid4()), session_id, attempt_id, node_id, start + offset,
-             speaker, said, 0, iso_now()),
+             speaker, said, 0, iso_now(), kind),
         )
 
 
@@ -154,7 +160,8 @@ class Store:
                     speaker TEXT NOT NULL,
                     body TEXT NOT NULL,
                     resolved INTEGER NOT NULL DEFAULT 0,
-                    created_at TEXT NOT NULL
+                    created_at TEXT NOT NULL,
+                    kind TEXT NOT NULL DEFAULT 'line'
                 );
                 CREATE TABLE IF NOT EXISTS activity_events (
                     session_id TEXT NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
@@ -166,6 +173,12 @@ class Store:
                 );
                 """
             )
+            # A database created before questions existed has no kind column.
+            columns = {row["name"] for row in db.execute("PRAGMA table_info(dialogue_turns)")}
+            if "kind" not in columns:
+                db.execute(
+                    "ALTER TABLE dialogue_turns ADD COLUMN kind TEXT NOT NULL DEFAULT 'line'"
+                )
 
     def create_session(self, display_name: str, lifetime_hours: int = 24) -> tuple[str, dict[str, Any]]:
         token = secrets.token_urlsafe(32)
@@ -256,7 +269,7 @@ class Store:
         interpretation: str | None,
         policy_clause_ids: list[str],
         response_builder,
-        dialogue_rows: Sequence[tuple[str, str]] = (),
+        dialogue_rows: Sequence[tuple[str, str, str]] = (),
         resolve_dialogue: bool = False,
         arrival_line: str = "",
     ) -> dict[str, Any]:
@@ -336,13 +349,13 @@ class Store:
                 )
             if arrival_line and next_node_id != spoken_node_id:
                 _insert_dialogue(
-                    db, session_id, attempt_id, next_node_id, [("npc", arrival_line)]
+                    db, session_id, attempt_id, next_node_id, [("npc", arrival_line, "line")]
                 )
             dialogue = [
                 {"node_id": row["node_id"], "speaker": row["speaker"], "text": row["body"],
-                 "resolved": bool(row["resolved"])}
+                 "resolved": bool(row["resolved"]), "kind": row["kind"]}
                 for row in db.execute(
-                    """SELECT node_id, speaker, body, resolved FROM dialogue_turns
+                    """SELECT node_id, speaker, body, resolved, kind FROM dialogue_turns
                     WHERE attempt_id = ? ORDER BY ordinal""",
                     (attempt_id,),
                 ).fetchall()
@@ -400,7 +413,7 @@ class Store:
         self, session_id: str, attempt_id: str, node_id: str | None = None
     ) -> list[dict[str, Any]]:
         """The conversation so far, oldest first: whole attempt, or one node."""
-        query = """SELECT node_id, speaker, body, resolved FROM dialogue_turns
+        query = """SELECT node_id, speaker, body, resolved, kind FROM dialogue_turns
                 WHERE session_id = ? AND attempt_id = ?"""
         params: list[Any] = [session_id, attempt_id]
         if node_id is not None:
@@ -410,12 +423,12 @@ class Store:
             rows = db.execute(query + " ORDER BY ordinal", params).fetchall()
         return [
             {"node_id": row["node_id"], "speaker": row["speaker"], "text": row["body"],
-             "resolved": bool(row["resolved"])}
+             "resolved": bool(row["resolved"]), "kind": row["kind"]}
             for row in rows
         ]
 
     def append_dialogue(
-        self, session_id: str, attempt_id: str, node_id: str, rows: Sequence[tuple[str, str]]
+        self, session_id: str, attempt_id: str, node_id: str, rows: Sequence[tuple[str, str, str]]
     ) -> None:
         with self.connect() as db:
             _insert_dialogue(db, session_id, attempt_id, node_id, rows)

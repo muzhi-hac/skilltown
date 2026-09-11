@@ -596,6 +596,11 @@ button:disabled {
   color: var(--ink-soft);
 }
 
+.hint-inline {
+  font-weight: 400;
+  color: var(--muted);
+}
+
 .answer textarea {
   font: inherit;
   font-size: 17px;

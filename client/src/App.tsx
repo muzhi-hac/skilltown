@@ -36,8 +36,6 @@ export default function App() {
   const [headline, setHeadline] = useState("Getting the room ready…");
   const [status, setStatus] = useState("");
   const [busy, setBusy] = useState(false);
-  const [screening, setScreening] = useState<TaskSummary | null>(null);
-  const [screeningPending, setScreeningPending] = useState(false);
   const [passport, setPassport] = useState<Passport | null>(null);
   const [plan, setPlan] = useState<Recommendation[]>([]);
   const [confirmClear, setConfirmClear] = useState(false);
@@ -62,9 +60,9 @@ export default function App() {
           if (task.scenario_id === scenarioId) return task.title;
         }
       }
-      return screening?.scenario_id === scenarioId ? screening.title : scenarioId;
+      return scenarioId;
     },
-    [npcs, screening],
+    [npcs],
   );
 
   const orderFrom = (list: TownNpc[]): string[] => {
@@ -77,7 +75,6 @@ export default function App() {
   const refreshTown = useCallback(async (resetQueue = false) => {
     const next = await api.getTown();
     setTown(next);
-    setScreening(next.screening ?? null);
     setQueue((previous) => {
       const valid = new Set(next.npcs.map((npc) => npc.name));
       if (resetQueue || previous.length === 0) return orderFrom(next.npcs);
@@ -91,13 +88,7 @@ export default function App() {
     (async () => {
       try {
         await api.ensureSession();
-        const next = await refreshTown();
-        if (!firstVisitChecked.current) {
-          firstVisitChecked.current = true;
-          const record = await api.getPassport();
-          const hasEvidence = record.skills.some((skill) => skill.evidence.length > 0);
-          setScreeningPending(!hasEvidence && Boolean(next.screening));
-        }
+        await refreshTown();
       } catch (err) {
         setError(err instanceof Error ? err.message : String(err));
         setHeadline("Could not reach the learning service.");
@@ -108,11 +99,6 @@ export default function App() {
   // Announce whoever is at the door whenever the room is idle.
   useEffect(() => {
     if (view !== "room" || phase !== "outside" || !town) return;
-    if (screeningPending) {
-      setCurrent("Mira");
-      setHeadline("Mira is knocking — three quick situations before anyone else arrives.");
-      return;
-    }
     if (queue.length === 0) {
       setCurrent("");
       setHeadline("No one is waiting right now.");
@@ -120,7 +106,7 @@ export default function App() {
     }
     setCurrent(queue[0]);
     setHeadline(`${queue[0]} is knocking at the door.`);
-  }, [view, phase, town, queue, screeningPending]);
+  }, [view, phase, town, queue]);
 
   const openDoor = useCallback(async (selectedTask?: TaskSummary) => {
     if (phase !== "outside" || view !== "room") return;
@@ -133,18 +119,14 @@ export default function App() {
     setHeadline(`${current} is coming in…`);
     window.setTimeout(async () => {
       setPhase("teaching");
-      const isScreening = screeningPending;
-      const task = isScreening
-        ? screening
-        : (selectedTask ?? byName.get(current)?.tasks?.[0] ?? null);
-      setScreeningPending(false);
+      const task = selectedTask ?? byName.get(current)?.tasks?.[0] ?? null;
       if (!task) {
-        setHeadline(`${current} has nothing to teach right now.`);
+        setHeadline(`${current} has nothing for you right now.`);
         setPhase("leaving");
         window.setTimeout(() => setPhase("outside"), WALK_MS);
         return;
       }
-      if (!isScreening) setQueue((rest) => rest.filter((name) => name !== current));
+      setQueue((rest) => rest.filter((name) => name !== current));
       setTaskTitle(task.title);
       setView("lesson");
       setBusy(true);
@@ -163,7 +145,7 @@ export default function App() {
         setBusy(false);
       }
     }, WALK_MS);
-  }, [phase, view, current, screening, screeningPending, byName, refreshTown]);
+  }, [phase, view, current, byName, refreshTown]);
 
   // The door is the only thing to do while someone knocks, so E works too.
   useEffect(() => {
@@ -308,8 +290,7 @@ export default function App() {
       setPassport(null);
       setPlan([]);
       await api.createSession();
-      const next = await refreshTown(true);
-      setScreeningPending(Boolean(next.screening));
+      await refreshTown(true);
       setHeadline("Record cleared. Fresh guest session started.");
     } catch (err) {
       setStatus(err instanceof Error ? err.message : String(err));
@@ -328,7 +309,7 @@ export default function App() {
   }, [view, attempt?.attempt_id]);
 
   const teacher = byName.get(current);
-  const availableTasks = screeningPending ? [] : (teacher?.tasks ?? []);
+  const availableTasks = teacher?.tasks ?? [];
   const waiting = queue.filter((name) => name !== current);
 
   return (

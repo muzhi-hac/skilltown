@@ -116,17 +116,16 @@ def test_verification_evidence_is_demonstrated(tmp_path):
         assert result["node"]["id"] == "sam_kyc_boundary"
 
 
-def test_screening_progresses_for_reviewed_outcomes_and_preserves_category(tmp_path):
+def test_the_first_knock_is_a_real_situation(tmp_path):
     with TestClient(create_app(tmp_path / "test.sqlite3")) as client:
         _, headers = session(client)
-        attempt = create_attempt(client, headers, "screening", "screening")
-        second = answer(client, headers, attempt, reference(client, "screening", "screen_clarify")).json()
-        assert second["node"]["id"] == "screen_conflict"
-        third = answer(client, headers, second, reference(client, "screening", "screen_conflict", "miss")).json()
-        assert third["node"]["id"] == "screen_boundary"
-        assert third["node"]["category"] == "personal_development"
-        done = answer(client, headers, third, reference(client, "screening", "screen_boundary")).json()
-        assert done["is_complete"] and done["assessment_status"] == "assessed"
+        town = client.get("/api/v1/town", headers=headers).json()
+        # There is no warm-up quiz any more: every task belongs to somebody.
+        assert "screening" not in str(town)
+        assert all(task["available_modes"] for npc in town["npcs"] for task in npc["tasks"])
+        started = create_attempt(client, headers, "boundary-response", "practice")
+        assert started["node"]["category"] == "personal_development"
+        assert started["pressure"]["max_turns"] >= 2
 
 
 def test_coaching_selects_current_version_evidence_and_is_assisted(tmp_path):
@@ -281,13 +280,16 @@ def test_refresh_restores_the_conversation(tmp_path):
         assert restored["pressure"] == pushed["pressure"]
 
 
-def test_screening_and_review_settle_on_one_answer(tmp_path):
+def test_the_coach_settles_on_one_answer(tmp_path):
     with TestClient(create_app(tmp_path / "test.sqlite3")) as client:
         _, headers = session(client)
-        screening = create_attempt(client, headers, "screening", "screening")
-        assert screening["pressure"] is None
-        result = answer(client, headers, screening, reference(client, "screening", "screen_clarify", "miss")).json()
-        # A three-question check is not a negotiation: one answer, one verdict.
+        attempt = create_attempt(client, headers)
+        press_through(client, headers, attempt, reference(client, "dinner-invitation", "alex_public_gift", "miss"))
+        review = create_attempt(client, headers, "ethics-review", "practice")
+        # Mira is not negotiating with anyone: her node takes one answer.
+        assert review["pressure"] is None
+        node_id = review["node"]["id"]
+        result = answer(client, headers, review, reference(client, "ethics-review", node_id, "miss")).json()
         assert result["pressure"] is None
         assert result["learning_updates"][0]["state"] == "needs_practice"
 
@@ -330,3 +332,118 @@ def test_missing_env_file_is_not_an_error(tmp_path):
     from server.main import load_local_env
 
     assert load_local_env(tmp_path / "nope.env") == []
+
+
+class ScriptedEvaluator:
+    """Stands in for the model: replays queued (turn_kind, asked, outcome)."""
+
+    def __init__(self, *turns):
+        self.turns = list(turns)
+        self.contexts = []
+
+    def evaluate(self, rule, text, allow_model=True, *, context):
+        from server.core.evaluator import EvaluationResult
+
+        self.contexts.append(context)
+        kind, asked, outcome = self.turns.pop(0) if self.turns else ("decision", (), "miss")
+        return EvaluationResult(
+            passed=outcome == "pass",
+            overgeneralized=outcome == "overgeneralized",
+            interpretation="scripted",
+            feedback="scripted feedback",
+            policy_clause_ids=list(context.allowed_clause_ids[:1]),
+            mode="ai",
+            character_line="",
+            turn_kind=kind,
+            asked=tuple(asked),
+        )
+
+
+def with_evaluator(client, evaluator):
+    client.app.state.evaluator = evaluator
+    return evaluator
+
+
+def test_asking_costs_no_round_and_answers_only_what_was_asked(tmp_path):
+    with TestClient(create_app(tmp_path / "test.sqlite3")) as client:
+        _, headers = session(client)
+        with_evaluator(client, ScriptedEvaluator(("probe", ["value"], "miss")))
+        attempt = create_attempt(client, headers)
+        result = answer(client, headers, attempt, "How much is it worth?").json()
+
+        assert result["node"]["id"] == "alex_public_gift"
+        assert result["pressure"] == {"turn": 0, "max_turns": 4, "active": True}
+        assert result["feedback"] is None and result["learning_updates"] == []
+        spoken = result["dialogue"][-1]
+        # The figure is spoken from the content, never from the model.
+        node = client.app.state.engine.get_node("dinner-invitation", "alex_public_gift")
+        value = next(item["fact"] for item in node["withheld"] if item["id"] == "value")
+        assert spoken["text"] == value and spoken["kind"] == "answer"
+        # Nothing they did not ask about leaks out with it.
+        sender = next(item["fact"] for item in node["withheld"] if item["id"] == "sender")
+        assert sender not in spoken["text"]
+        assert [turn["kind"] for turn in result["dialogue"]] == ["line", "probe", "answer"]
+
+
+def test_asking_about_something_else_gets_deflected(tmp_path):
+    with TestClient(create_app(tmp_path / "test.sqlite3")) as client:
+        _, headers = session(client)
+        with_evaluator(client, ScriptedEvaluator(("probe", [], "miss")))
+        attempt = create_attempt(client, headers)
+        result = answer(client, headers, attempt, "What is the weather like?").json()
+        persona = client.app.state.engine.persona("alex")
+        assert result["dialogue"][-1]["text"] == persona.deflect
+        assert result["pressure"]["turn"] == 0
+
+
+def test_questions_are_finite_so_the_arc_cannot_be_stalled(tmp_path):
+    from server.api.routes import MAX_PROBES
+
+    with TestClient(create_app(tmp_path / "test.sqlite3")) as client:
+        _, headers = session(client)
+        with_evaluator(client, ScriptedEvaluator(*[("probe", ["value"], "miss")] * (MAX_PROBES + 1)))
+        result = create_attempt(client, headers)
+        for _ in range(MAX_PROBES):
+            result = answer(client, headers, result, "And how much is it?").json()
+            assert result["pressure"]["turn"] == 0
+        # One question too many and the character stops answering and pushes.
+        result = answer(client, headers, result, "And how much is it?").json()
+        assert result["pressure"]["turn"] == 1
+
+
+def test_the_record_says_whether_they_asked_before_deciding(tmp_path):
+    with TestClient(create_app(tmp_path / "test.sqlite3")) as client:
+        _, headers = session(client)
+        with_evaluator(client, ScriptedEvaluator(*[("decision", (), "miss")] * 4))
+        attempt = create_attempt(client, headers)
+        press_through(client, headers, attempt, "I will just take it.")
+        evidence = [
+            item for skill in client.get("/api/v1/passport", headers=headers).json()["skills"]
+            for item in skill["evidence"]
+        ]
+        assert any("decided without asking anything" in str(item["interpretation"]) for item in evidence)
+
+        _, other = session(client, "Asker")
+        with_evaluator(client, ScriptedEvaluator(("probe", ["value"], "miss"), ("decision", (), "pass")))
+        asked_first = create_attempt(client, other)
+        pushed = answer(client, other, asked_first, "How much is it?").json()
+        answer(client, other, pushed, "I decline it and put it in the register.")
+        evidence = [
+            item for skill in client.get("/api/v1/passport", headers=other).json()["skills"]
+            for item in skill["evidence"]
+        ]
+        assert any("asked 1 question first" in str(item["interpretation"]) for item in evidence)
+
+
+def test_the_brief_never_gives_the_withheld_figures_away(tmp_path):
+    with TestClient(create_app(tmp_path / "test.sqlite3")) as client:
+        engine = client.app.state.engine
+        for scenario_id, scenario in engine.content["scenarios"].items():
+            if not scenario.get("pressure"):
+                continue
+            for node_id, node in scenario["nodes"].items():
+                if not node.get("allow_text"):
+                    continue
+                shown = f"{node['text']} {node['line']}"
+                for item in node["withheld"]:
+                    assert item["fact"] not in shown, f"{scenario_id}/{node_id} gives away {item['id']}"

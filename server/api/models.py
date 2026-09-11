@@ -41,7 +41,6 @@ class LearningState(StrEnum):
 
 
 class AttemptMode(StrEnum):
-    SCREENING = "screening"
     PRACTICE = "practice"
     VERIFICATION = "verification"
 
@@ -125,9 +124,6 @@ class TownNpc(StrictModel):
 class TownResponse(StrictModel):
     categories: list[CategoryView]
     npcs: list[TownNpc]
-    # The opening screening is not attached to an NPC, but its id still comes from
-    # the server so the client never hard-codes a scenario id.
-    screening: TaskSummary | None = None
 
 
 class Choice(StrictModel):
@@ -212,6 +208,8 @@ class DialogueTurn(StrictModel):
     node_id: str
     speaker: Literal["npc", "learner"]
     text: str = Field(max_length=1200)
+    # A question costs no round of pressure; a decision does.
+    kind: Literal["line", "probe", "answer", "decision"] = "line"
     # A resolved round is one the arc already closed; it stays on screen.
     resolved: bool = False
 
