@@ -68,6 +68,8 @@ export function Lesson(props: LessonProps) {
   const node = attempt?.node ?? null;
   const canAnswer = Boolean(node?.allow_text) && !attempt?.is_complete && !busy;
   const said = transcript(attempt);
+  const atConsequence = attempt?.effect === "consequence_preview";
+  const atRest = Boolean(attempt?.is_complete) || atConsequence;
   const pressure = attempt?.pressure ?? null;
   const underPressure = Boolean(pressure?.active) && (pressure?.turn ?? 0) > 0;
   const debrief = attempt?.feedback ?? null;
@@ -186,12 +188,23 @@ export function Lesson(props: LessonProps) {
         </p>
       )}
 
-      {attempt?.is_complete ? (
+      {atRest ? (
         <div className="answer answer-done">
-          <p>This situation is over — {props.teacher} can head out.</p>
-          <button className="primary" onClick={props.onClose}>
-            Next visitor →
-          </button>
+          <p>
+            {atConsequence
+              ? `This is where it landed. Answer it again, or let ${props.teacher} go.`
+              : `This situation is over — ${props.teacher} can head out.`}
+          </p>
+          <div className="answer-done-actions">
+            {atConsequence && (
+              <button className="ghost" disabled={busy} onClick={props.onRewind}>
+                Rewind to the decision
+              </button>
+            )}
+            <button className="primary" onClick={props.onClose}>
+              Next visitor →
+            </button>
+          </div>
         </div>
       ) : (
       <div className="answer">
