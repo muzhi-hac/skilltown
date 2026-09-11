@@ -268,7 +268,14 @@ def respond(attempt_id: UUID, body: AnswerRequest, request: Request, session: Se
             spoken = evaluated.character_line or _authored_line(context)
             dialogue_rows = [("learner", body.text), ("npc", spoken)]
         else:
-            branch = engine.resolve_text(attempt["scenario_id"], node_id, evaluated.outcome)
+            outcome = evaluated.outcome
+            if pressure_state and outcome != "pass":
+                # The rounds ran out. Whichever way the last answer was wrong, the
+                # arc has to land where the learner can see what it cost and rewind
+                # into it: the overgeneralized branch loops back to the same
+                # question, which is another chance mid-arc and a dead end here.
+                outcome = "miss"
+            branch = engine.resolve_text(attempt["scenario_id"], node_id, outcome)
             next_node_id, effect = branch.next_node_id, branch.effect
             skill_id, learning_state = branch.skill_id or rule, branch.state
             if evaluated.mode == "ai":

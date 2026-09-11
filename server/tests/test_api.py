@@ -239,6 +239,30 @@ def test_pressure_arc_ends_in_consequence_and_records_how_long_it_held(tmp_path)
         assert any("4 rounds of pressure, gave way" in str(item["interpretation"]) for item in evidence)
 
 
+def test_an_arc_out_of_rounds_lands_on_the_consequence_however_it_was_wrong(tmp_path):
+    """Out of rounds is out of rounds, whichever flavour of wrong the last answer was.
+
+    A blanket refusal grades overgeneralized, and that branch loops back to the
+    same question on purpose: mid-arc it is another chance. At the end of an arc
+    it stranded the learner on a node with no consequence to see and no rewind,
+    while the character spoke their closing line as if something had happened.
+    """
+    with TestClient(create_app(tmp_path / "test.sqlite3")) as client:
+        _, headers = session(client)
+        attempt = create_attempt(client, headers)
+        blanket = reference(client, "dinner-invitation", "alex_public_gift", "overgeneralized")
+        result = press_through(client, headers, attempt, blanket)
+        assert result["node"]["id"] == "alex_public_gift_consequence"
+        assert result["effect"] == "consequence_preview"
+        assert result["learning_updates"][0]["state"] == "needs_practice"
+        rewound = client.post(
+            f"/api/v1/attempts/{attempt['attempt_id']}/rewind", headers=headers,
+            json={"client_event_id": str(uuid4()), "expected_revision": result["revision"]},
+        )
+        assert rewound.status_code == 200, rewound.text
+        assert rewound.json()["node"]["id"] == "alex_public_gift"
+
+
 def test_holding_the_line_mid_arc_ends_the_pressure_and_moves_on(tmp_path):
     with TestClient(create_app(tmp_path / "test.sqlite3")) as client:
         _, headers = session(client)
