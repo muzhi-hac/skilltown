@@ -497,7 +497,8 @@
           "choices": [],
           "knowledge": []
         }
-      }
+      },
+      "completion_summary": "You completed three starting situations. Your recorded answers show where to practise next."
     },
     "dinner-invitation": {
       "version": "2.0.0",
@@ -626,7 +627,8 @@
             "ANNEX-1.2",
             "ANNEX-1.3"
           ],
-          "rewind_to": "alex_public_gift"
+          "rewind_to": "alex_public_gift",
+          "consequence_summary": "Gifts involving public officials need careful handling; missing the applicable conditions or documentation can lead to compliance concerns."
         },
         "alex_private_gift": {
           "npc_id": "alex",
@@ -732,7 +734,8 @@
             "ANNEX-1.1",
             "ANNEX-1.2"
           ],
-          "rewind_to": "alex_private_gift"
+          "rewind_to": "alex_private_gift",
+          "consequence_summary": "The €30 benchmark alone does not settle the decision; context, frequency and registration still matter."
         },
         "alex_business_meal": {
           "npc_id": "alex",
@@ -838,7 +841,8 @@
             "ANNEX-1.2",
             "ANNEX-1.3"
           ],
-          "rewind_to": "alex_business_meal"
+          "rewind_to": "alex_business_meal",
+          "consequence_summary": "Proceeding while approval is pending can leave the meal outside the stated approval process."
         },
         "alex_cash_gift": {
           "npc_id": "alex",
@@ -939,7 +943,8 @@
           "knowledge": [
             "ANNEX-1.1"
           ],
-          "rewind_to": "alex_cash_gift"
+          "rewind_to": "alex_cash_gift",
+          "consequence_summary": "Cash gifts fall outside the hospitality rules in this scenario and raise bribery concerns."
         },
         "alex_permitted_meal": {
           "npc_id": "alex",
@@ -1050,7 +1055,8 @@
             "ANNEX-1.2",
             "ANNEX-1.3"
           ],
-          "rewind_to": "alex_permitted_meal"
+          "rewind_to": "alex_permitted_meal",
+          "consequence_summary": "A blanket refusal can block permitted hospitality, while missing its conditions can leave it improperly documented."
         },
         "alex_complete": {
           "npc_id": "alex",
@@ -1063,7 +1069,8 @@
       },
       "pressure": {
         "max_turns": 4
-      }
+      },
+      "completion_summary": "This practice covered gifts, meals, cash and the conditions for accepting or declining them."
     },
     "supplier-gift": {
       "version": "2.0.0",
@@ -1179,7 +1186,8 @@
           "knowledge": [
             "ANNEX-4.1"
           ],
-          "rewind_to": "sam_cash_limit"
+          "rewind_to": "sam_cash_limit",
+          "consequence_summary": "Accepting a payment above the applicable cash limit can expose the firm to compliance action."
         },
         "sam_kyc_boundary": {
           "npc_id": "sam",
@@ -1280,7 +1288,8 @@
           "knowledge": [
             "ANNEX-4.1"
           ],
-          "rewind_to": "sam_kyc_boundary"
+          "rewind_to": "sam_kyc_boundary",
+          "consequence_summary": "Proceeding without the required identity check leaves the customer verification incomplete."
         },
         "sam_linked_payments": {
           "npc_id": "sam",
@@ -1386,7 +1395,8 @@
             "ANNEX-4.1",
             "ANNEX-4.3"
           ],
-          "rewind_to": "sam_linked_payments"
+          "rewind_to": "sam_linked_payments",
+          "consequence_summary": "Treating linked payments separately can hide a total that exceeds the applicable cash limit."
         },
         "sam_beneficial_owner": {
           "npc_id": "sam",
@@ -1487,7 +1497,8 @@
           "knowledge": [
             "ANNEX-4.2"
           ],
-          "rewind_to": "sam_beneficial_owner"
+          "rewind_to": "sam_beneficial_owner",
+          "consequence_summary": "Applying the wrong ownership or control test can leave the beneficial-ownership assessment incomplete."
         },
         "sam_permitted_cash": {
           "npc_id": "sam",
@@ -1588,7 +1599,8 @@
           "knowledge": [
             "ANNEX-4.1"
           ],
-          "rewind_to": "sam_permitted_cash"
+          "rewind_to": "sam_permitted_cash",
+          "consequence_summary": "A blanket refusal can block a permitted payment; acceptance still depends on the stated checks and records."
         },
         "sam_complete": {
           "npc_id": "sam",
@@ -1601,7 +1613,8 @@
       },
       "pressure": {
         "max_turns": 4
-      }
+      },
+      "completion_summary": "This practice covered cash limits, identity checks, linked payments and beneficial ownership."
     },
     "data-incidents": {
       "version": "2.0.0",
@@ -1718,7 +1731,8 @@
           "knowledge": [
             "ANNEX-2.1"
           ],
-          "rewind_to": "mira_privacy_clock"
+          "rewind_to": "mira_privacy_clock",
+          "consequence_summary": "Using the wrong starting point or notification test can misdirect the breach response."
         },
         "mira_nis2_stages": {
           "npc_id": "nina",
@@ -1819,7 +1833,8 @@
           "knowledge": [
             "ANNEX-5.1"
           ],
-          "rewind_to": "mira_nis2_stages"
+          "rewind_to": "mira_nis2_stages",
+          "consequence_summary": "Missing a reporting stage can delay the information needed for an effective incident response."
         },
         "mira_encrypted_backup": {
           "npc_id": "nina",
@@ -1925,7 +1940,8 @@
             "ANNEX-2.1",
             "ANNEX-5.3"
           ],
-          "rewind_to": "mira_encrypted_backup"
+          "rewind_to": "mira_encrypted_backup",
+          "consequence_summary": "Automatic notification can cause unnecessary alarm; effective encryption and the risk assessment still need to be considered and documented."
         },
         "mira_complete": {
           "npc_id": "mira",
@@ -1938,7 +1954,8 @@
       },
       "pressure": {
         "max_turns": 4
-      }
+      },
+      "completion_summary": "This practice covered notification timing, recipients and the role of risk assessment."
     },
     "boundary-response": {
       "version": "2.0.0",
@@ -2053,7 +2070,8 @@
           "knowledge": [
             "ANNEX-6.3"
           ],
-          "rewind_to": "jo_report_receipt"
+          "rewind_to": "jo_report_receipt",
+          "consequence_summary": "Missing acknowledgement, feedback or confidentiality can undermine trust in the reporting channel."
         },
         "jo_no_retaliation": {
           "npc_id": "jo",
@@ -2154,7 +2172,8 @@
           "knowledge": [
             "ANNEX-6.3"
           ],
-          "rewind_to": "jo_no_retaliation"
+          "rewind_to": "jo_no_retaliation",
+          "consequence_summary": "Punitive scheduling in response to a report can harm the reporter and undermine the reporting process."
         },
         "jo_rest_hours": {
           "npc_id": "jo",
@@ -2255,7 +2274,8 @@
           "knowledge": [
             "ANNEX-6.1"
           ],
-          "rewind_to": "jo_rest_hours"
+          "rewind_to": "jo_rest_hours",
+          "consequence_summary": "Approving ten hours of rest would fall short of the minimum stated in this scenario."
         },
         "jo_average_hours": {
           "npc_id": "jo",
@@ -2356,7 +2376,8 @@
           "knowledge": [
             "ANNEX-6.1"
           ],
-          "rewind_to": "jo_average_hours"
+          "rewind_to": "jo_average_hours",
+          "consequence_summary": "A blanket refusal can block a permitted schedule; the reference-period average and other applicable limits still need checking."
         },
         "jo_complete": {
           "npc_id": "jo",
@@ -2369,7 +2390,8 @@
       },
       "pressure": {
         "max_turns": 4
-      }
+      },
+      "completion_summary": "This practice covered reporting protections, rest periods and conditional scheduling decisions."
     },
     "ethics-review": {
       "version": "2.0.0",
@@ -4247,7 +4269,8 @@
         "screening/screen_clarify": "coach__screening__screen_clarify",
         "screening/screen_conflict": "coach__screening__screen_conflict",
         "screening/screen_boundary": "coach__screening__screen_boundary"
-      }
+      },
+      "completion_summary": "This review explored a selected case using the supplied sources."
     }
   },
   "screening_task": {

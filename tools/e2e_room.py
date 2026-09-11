@@ -135,7 +135,12 @@ def main() -> int:
         page.answer(ANSWER_CONFLICT)
         check("breach screening question arrives", page.wait_for("high-risk breach"), page.text()[:200])
         page.answer(ANSWER_BOUNDARY)
-        check("the three-situation check completes", page.wait_for("this situation is over", 20), page.text()[:200])
+        check("the three-situation check completes", page.wait_for("practice completed", 20), page.text()[:200])
+        check(
+            "the end of a path claims nothing about passing",
+            "passed independently" not in page.text().lower(),
+            page.text()[:200],
+        )
 
         print("4) Progress shows the learner's own words back")
         check("progress opens", page.click_text("my progress"))

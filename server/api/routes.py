@@ -42,8 +42,24 @@ def _node_view(engine, scenario_id: str, node_id: str) -> dict:
         "line": node.get("line", ""),
         "choices": node.get("choices", []),
         "allow_text": node.get("allow_text", False),
+        "verdict_line": _verdict_line(scenario, node_id, node),
         "policy_cards": get_policy_cards(list(dict.fromkeys(node.get("knowledge", [])))),
     }
+
+
+def _verdict_line(scenario: dict, node_id: str, node: dict) -> str:
+    """What a resting situation says about itself.
+
+    Authored per node and per scenario: the same consequence node receives
+    opposite mistakes - accepting what should have been refused, and refusing
+    what the rules allow - so the line describes the risk in the situation and
+    never guesses what this learner did.
+    """
+    if node_id.endswith("_consequence"):
+        return str(node.get("consequence_summary", ""))
+    if not node.get("allow_text") and not node.get("choices"):
+        return str(scenario.get("completion_summary", ""))
+    return ""
 
 
 def _pressure_view(engine, scenario_id: str, node_id: str, dialogue: list[dict]) -> dict | None:

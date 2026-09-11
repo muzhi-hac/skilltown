@@ -346,7 +346,7 @@ export default function App() {
   const waiting = queue.filter((name) => name !== current);
 
   return (
-    <main className="app">
+    <main className={view === "lesson" ? "app app--lesson" : "app"}>
       {/* A compliance officer is evaluating this, so the product says what it
           is before the room does anything. */}
       <div className="topbar">

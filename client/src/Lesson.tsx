@@ -6,7 +6,8 @@
 // afterwards, in the coach's voice, once the situation has played out.
 
 import { useEffect, useRef, useState } from "react";
-import type { Attempt, DialogueTurn, Passport, PolicyCard, Recommendation } from "./api";
+import { verdictKind, type Attempt, type DialogueTurn, type Passport, type PolicyCard, type Recommendation } from "./api";
+import { Verdict } from "./Verdict";
 
 const SKILL_LABELS: Record<string, string> = {
   clarify_context: "Gather relevant facts",
@@ -68,8 +69,7 @@ export function Lesson(props: LessonProps) {
   const node = attempt?.node ?? null;
   const canAnswer = Boolean(node?.allow_text) && !attempt?.is_complete && !busy;
   const said = transcript(attempt);
-  const atConsequence = attempt?.effect === "consequence_preview";
-  const atRest = Boolean(attempt?.is_complete) || atConsequence;
+  const atRest = verdictKind(attempt) !== null;
   const pressure = attempt?.pressure ?? null;
   const underPressure = Boolean(pressure?.active) && (pressure?.turn ?? 0) > 0;
   const debrief = attempt?.feedback ?? null;
@@ -128,6 +128,7 @@ export function Lesson(props: LessonProps) {
         </div>
       </header>
 
+      <div className="lesson-reader" aria-label="The situation so far">
       {props.taskTitle && <p className="lesson-task">Situation: {props.taskTitle}</p>}
 
       {node?.text && <p className="brief">{node.text}</p>}
@@ -188,24 +189,17 @@ export function Lesson(props: LessonProps) {
         </p>
       )}
 
-      {atRest ? (
-        <div className="answer answer-done">
-          <p>
-            {atConsequence
-              ? `This is where it landed. Answer it again, or let ${props.teacher} go.`
-              : `This situation is over — ${props.teacher} can head out.`}
-          </p>
-          <div className="answer-done-actions">
-            {atConsequence && (
-              <button className="ghost" disabled={busy} onClick={props.onRewind}>
-                Rewind to the decision
-              </button>
-            )}
-            <button className="primary" onClick={props.onClose}>
-              Next visitor →
-            </button>
-          </div>
-        </div>
+      </div>
+
+      <div className="lesson-actions">
+      {atRest && attempt ? (
+        <Verdict
+          attempt={attempt}
+          teacher={props.teacher}
+          busy={busy}
+          onRewind={props.onRewind}
+          onClose={props.onClose}
+        />
       ) : (
       <div className="answer">
         <label htmlFor="answer-box">
@@ -253,6 +247,7 @@ export function Lesson(props: LessonProps) {
         </div>
       </div>
       )}
+      </div>
     </section>
   );
 }

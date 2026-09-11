@@ -45,3 +45,18 @@ def test_single_rung_ladder_is_rejected():
     persona["tactics"] = persona["tactics"][:1]
     with pytest.raises(ValueError, match="at least two rungs"):
         validate_content(content)
+
+
+def test_consequence_node_without_its_summary_is_rejected():
+    """The card at a consequence has one authored sentence and no fallback."""
+    content = deepcopy(ScenarioEngine().content)
+    del content["scenarios"]["dinner-invitation"]["nodes"]["alex_public_gift_consequence"]["consequence_summary"]
+    with pytest.raises(ValueError, match="consequence_summary"):
+        validate_content(content)
+
+
+def test_scenario_without_a_completion_summary_is_rejected():
+    content = deepcopy(ScenarioEngine().content)
+    content["scenarios"]["supplier-gift"]["completion_summary"] = "  "
+    with pytest.raises(ValueError, match="completion_summary"):
+        validate_content(content)

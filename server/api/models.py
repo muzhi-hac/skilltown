@@ -160,6 +160,9 @@ class ScenarioNode(StrictModel):
     line: str = Field(default="", max_length=600)
     choices: list[Choice] = Field(max_length=4)
     allow_text: bool
+    # The authored sentence a verdict card states when a situation comes to rest;
+    # empty everywhere the learner is still deciding.
+    verdict_line: str = Field(default="", max_length=400)
     policy_cards: list[PolicyCard] = Field(default_factory=list)
 
 

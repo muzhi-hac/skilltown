@@ -300,6 +300,25 @@ def test_an_arc_out_of_rounds_lands_on_the_consequence_however_it_was_wrong(tmp_
         assert rewound.json()["node"]["id"] == "alex_public_gift"
 
 
+def test_a_resting_situation_carries_its_authored_verdict_line(tmp_path):
+    """The card has one sentence and no fallback, so the API has to deliver it."""
+    with TestClient(create_app(tmp_path / "test.sqlite3")) as client:
+        _, headers = session(client)
+        attempt = create_attempt(client, headers)
+        assert attempt["node"]["verdict_line"] == "", "a question is not a verdict"
+
+        miss = reference(client, "dinner-invitation", "alex_public_gift", "miss")
+        landed = press_through(client, headers, attempt, miss)
+        assert landed["node"]["id"] == "alex_public_gift_consequence"
+        assert "public officials" in landed["node"]["verdict_line"]
+
+        screen = create_attempt(client, headers, scenario="screening", mode="screening")
+        for node_id in ("screen_clarify", "screen_conflict", "screen_boundary"):
+            screen = answer(client, headers, screen, reference(client, "screening", node_id)).json()
+        assert screen["is_complete"]
+        assert "three starting situations" in screen["node"]["verdict_line"]
+
+
 def test_holding_the_line_mid_arc_ends_the_pressure_and_moves_on(tmp_path):
     with TestClient(create_app(tmp_path / "test.sqlite3")) as client:
         _, headers = session(client)

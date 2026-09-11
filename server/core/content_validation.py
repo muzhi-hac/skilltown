@@ -106,6 +106,8 @@ def _validate_scenario(
         _fail(f"{scenario_id}: version must be non-empty")
     if not isinstance(scenario.get("available_modes"), list) or not scenario["available_modes"]:
         _fail(f"{scenario_id}: available_modes must be non-empty")
+    if not _nonempty(scenario.get("completion_summary")):
+        _fail(f"{scenario_id}: completion_summary must be non-empty")
     nodes = scenario.get("nodes")
     if not isinstance(nodes, dict) or not nodes:
         _fail(f"{scenario_id}: nodes must be non-empty")
@@ -131,6 +133,10 @@ def _validate_scenario(
                 _fail(f"{scenario_id}/{node_id}: a pressure node needs a spoken line")
             if pressuring and node.get("npc_id") not in pressuring:
                 _fail(f"{scenario_id}/{node_id}: {node.get('npc_id')!r} has no persona to press with")
+        if node_id.endswith("_consequence") and not _nonempty(node.get("consequence_summary")):
+            # The verdict card states this one sentence and has nothing to fall
+            # back on, so a missing line is a content bug, not a blank line.
+            _fail(f"{scenario_id}/{node_id}: consequence_summary must be non-empty")
         _validate_node(scenario_id, node_id, node, nodes)
     _validate_reachability(scenario_id, scenario, nodes)
     if scenario_id not in {"screening", "ethics-review"}:

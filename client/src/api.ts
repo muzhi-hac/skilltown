@@ -28,6 +28,8 @@ export interface ScenarioNode {
   line: string;
   choices: { id: string; label: string }[];
   allow_text: boolean;
+  /** Authored sentence a resting situation states; empty while still deciding. */
+  verdict_line: string;
   policy_cards: PolicyCard[];
 }
 
@@ -129,6 +131,13 @@ export interface Recommendation {
   skill_id: string;
   reason: string;
   evidence_ids: string[];
+}
+
+/** Where a situation has come to rest, if it has: the two moments that get a card. */
+export function verdictKind(attempt: Attempt | null): "consequence" | "completed" | null {
+  if (!attempt) return null;
+  if (attempt.effect === "consequence_preview") return "consequence";
+  return attempt.is_complete ? "completed" : null;
 }
 
 export class ApiError extends Error {
