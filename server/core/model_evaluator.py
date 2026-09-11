@@ -42,19 +42,26 @@ JOB 1 - grade, privately. The learner never sees this half.
 3. covered and missing contain only supplied stable criterion ids. A pass covers every required id, has no missing ids, and has a continuous learner quote.
 4. Mark blanket claims that replace conditional judgment as overgeneralized, never as a pass.
 5. Return only the structured verdict. Do not alter learning state.
+5a. feedback is one or two sentences written to the learner about their own answer. On a pass, say briefly what they got right; otherwise name what is missing without writing the answer out for them.
 
-JOB 2 - read what the learner is doing. Set turn_kind.
-6. "probe" is asking rather than committing: who, how much, what is pending, what applies, what the paperwork is. In "asked", list the ids from "withheld" whose topic they are asking about; leave it empty if they asked about something not listed there.
-7. "decision" is saying what they would do, including saying they would just accept it. Grade a decision.
-8. A probe is not an answer: when turn_kind is "probe", passed is false and covered is empty. Deciding without having asked is a decision, and it is graded as it stands - missing facts are the learner's problem, not a reason to be lenient.
+How to grade, so that the bar is the one this content was written to.
+6. "calibration" holds answers a compliance reviewer already graded. An answer that does the same work as the pass example is a pass. Grade no harder than that example, and no softer than the miss example.
+7. Someone is speaking under pressure, not sitting an exam. Judge the substance of what they would do and why. Correct paraphrase counts, a figure restated in words counts, and naming no source at all counts.
+8. A criterion is covered when the answer shows the learner applied it. Requiring them to recite the number, the clause or your wording of the criterion is grading the phrasing, not the judgment. Mark a criterion missing only when the answer would leave a real colleague unable to tell that the learner had considered it.
+
+JOB 2 - read what the learner is doing. Set turn_kind and committed.
+9. "probe" is asking rather than committing: who, how much, what is pending, what applies, what the paperwork is. In "asked", list the ids from "withheld" whose topic they are asking about; leave it empty if they asked about something not listed there.
+10. "decision" is saying what they would do, including saying they would just accept it. Grade a decision.
+11. Set committed when a decision is stated as settled - they say what they will do, not what they are weighing up. A question, a hedge or thinking aloud is not committed.
+12. A probe is not an answer: when turn_kind is "probe", passed is false and covered is empty. Deciding without having asked is a decision, and it is graded as it stands - missing facts are the learner's problem, not a reason to be lenient.
 
 JOB 3 - stay in character. Write character_line as the person described in "character", speaking to the learner.
-9. You are not a teacher, a grader or an assistant. You are the person who wants the learner to bend the rule, and you believe you are being reasonable.
-10. On a probe, leave character_line empty. The facts are supplied by the system, not by you.
-11. When the verdict is a pass, give ground in their own words, without praising the learner and without explaining the rule.
-12. Otherwise apply exactly the tactic in "tactic" to push once more, and never repeat a line already in "history".
-13. Never volunteer a withheld fact nobody asked for, never state the correct answer, never name a rule, a clause id, a criterion id, a threshold from the passages, or the fact that this is training. No stage directions, no quotation marks around the whole line.
-14. One to three spoken sentences. Pressure, never threats of violence, slurs, or anything the character would be fired for saying out loud."""
+13. You are not a teacher, a grader or an assistant. You are the person who wants the learner to bend the rule, and you believe you are being reasonable.
+14. On a probe, leave character_line empty. The facts are supplied by the system, not by you.
+15. When the verdict is a pass, give ground in their own words, without praising the learner and without explaining the rule.
+16. Otherwise apply exactly the tactic in "tactic" to push once more, and never repeat a line already in "history". If you set committed, this is your last attempt before they walk away with it, so make it the strongest version of that tactic.
+17. Never volunteer a withheld fact nobody asked for, never state the correct answer, never name a rule, a clause id, a criterion id, a threshold from the passages, or the fact that this is training. No stage directions, no quotation marks around the whole line.
+18. One to three spoken sentences. Pressure, never threats of violence, slurs, or anything the character would be fired for saying out loud."""
 
 
 class RubricVerdict(BaseModel):
@@ -69,6 +76,7 @@ class RubricVerdict(BaseModel):
     character_line: str = ""
     turn_kind: Literal["probe", "decision"] = "decision"
     asked: list[str] = Field(default_factory=list)
+    committed: bool = False
 
 
 def _normalise(text: str) -> str:
@@ -137,6 +145,9 @@ class RubricModelEvaluator:
             ],
             "learner_answer": text,
         }
+        payload["calibration"] = {
+            item.outcome: item.text for item in context.reference_answers
+        }
         if context.withheld:
             # The grading half needs the real facts; the performing half is
             # forbidden from volunteering them and rechecked below.
@@ -179,7 +190,11 @@ class RubricModelEvaluator:
         feedback = verdict.feedback.strip()[:MAX_FEEDBACK_CHARS]
         required, allowed = set(context.required), set(context.allowed_clause_ids)
         covered, missing, cited = set(verdict.covered), set(verdict.missing), set(verdict.policy_clause_ids)
-        valid = bool(feedback) and covered <= required and missing <= required and not (covered & missing)
+        # A pass has nothing to correct, so an empty feedback is not a defect:
+        # the node's own wording covers it. Requiring one here was quietly
+        # sending correct answers down the deterministic path.
+        valid = covered <= required and missing <= required and not (covered & missing)
+        valid = valid and (bool(feedback) or verdict.passed)
         valid = valid and bool(cited) and cited <= allowed
         if verdict.passed and verdict.turn_kind != "probe":
             valid = valid and required <= covered and not missing and not verdict.overgeneralized
@@ -200,6 +215,7 @@ class RubricModelEvaluator:
             character_line=self._in_character(verdict.character_line, context),
             turn_kind="probe" if probing else "decision",
             asked=tuple(item for item in verdict.asked if item in known),
+            committed=bool(verdict.committed) and not probing,
         )
 
     @staticmethod

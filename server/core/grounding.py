@@ -73,6 +73,9 @@ class PressureState:
     turn: int
     max_turns: int
     history: tuple[tuple[str, str], ...] = ()
+    # True when the learner has already said what they will do, so this is the
+    # character's last attempt rather than the next step of a long ladder.
+    final_push: bool = False
 
     @property
     def is_last_turn(self) -> bool:
@@ -109,6 +112,8 @@ class EvaluationContext:
         """The rung to play on the next line, or None outside a pressure arc."""
         if not self.persona or not self.persona.tactics or self.pressure is None:
             return None
+        if self.pressure.final_push:
+            return self.persona.tactics[-1]
         index = min(self.pressure.turn, len(self.persona.tactics)) - 1
         return self.persona.tactics[max(index, 0)]
 

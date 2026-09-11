@@ -609,6 +609,7 @@ components:
           - probe
           - answer
           - decision
+          - commit
           title: Kind
           default: line
         resolved:

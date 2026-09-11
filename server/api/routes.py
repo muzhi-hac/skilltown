@@ -46,16 +46,37 @@ def _node_view(engine, scenario_id: str, node_id: str) -> dict:
     }
 
 
+def _open_turns(dialogue: list[dict], node_id: str) -> list[dict]:
+    return [
+        item for item in dialogue
+        if not item["resolved"] and item.get("node_id") == node_id
+    ]
+
+
+def _decisions(dialogue: list[dict], node_id: str) -> int:
+    return sum(
+        1 for item in _open_turns(dialogue, node_id)
+        if item["speaker"] == "learner" and item.get("kind") in {"decision", "commit"}
+    )
+
+
+def _has_committed(dialogue: list[dict], node_id: str) -> bool:
+    """Somebody who has said what they will do has been heard."""
+    return any(item.get("kind") == "commit" for item in _open_turns(dialogue, node_id))
+
+
 def _pressure_view(engine, scenario_id: str, node_id: str, dialogue: list[dict]) -> dict | None:
-    """Rounds already spent against the character still holding the floor."""
+    """Rounds already spent against the character still holding the floor.
+
+    A learner who has committed gets one more push, not the rest of the ladder,
+    so the meter shortens to match what is actually left.
+    """
     if not engine.is_pressure_node(scenario_id, node_id):
         return None
-    turn = sum(
-        1 for item in dialogue
-        if item["speaker"] == "learner" and not item["resolved"]
-        and item.get("node_id") == node_id and item.get("kind") != "probe"
-    )
+    turn = _decisions(dialogue, node_id)
     max_turns = engine.max_pressure_turns(scenario_id)
+    if _has_committed(dialogue, node_id):
+        max_turns = min(max_turns, turn + 1)
     return {"turn": turn, "max_turns": max_turns, "active": turn < max_turns}
 
 
@@ -67,8 +88,15 @@ def _opening_line(engine, scenario_id: str, node_id: str) -> str:
         return ""
 
 
-def _authored_line(context) -> str:
-    """The written rung of the ladder, used when no usable model line arrived."""
+def _authored_line(context, committed: bool = False) -> str:
+    """The written rung of the ladder, used when no usable model line arrived.
+
+    Someone who has already decided gets the bottom of the ladder: this is the
+    character's last attempt, so it is no time for the gentle opener.
+    """
+    persona = context.persona
+    if committed and persona and persona.tactics:
+        return persona.tactics[-1].line
     tactic = context.tactic
     return tactic.line if tactic else ""
 
@@ -77,10 +105,7 @@ MAX_PROBES = 4
 
 
 def _probes_used(dialogue: list[dict], node_id: str) -> int:
-    return sum(
-        1 for item in dialogue
-        if item.get("kind") == "probe" and not item["resolved"] and item.get("node_id") == node_id
-    )
+    return sum(1 for item in _open_turns(dialogue, node_id) if item.get("kind") == "probe")
 
 
 def _probes_left(dialogue: list[dict], node_id: str) -> bool:
@@ -248,14 +273,13 @@ def respond(attempt_id: UUID, body: AnswerRequest, request: Request, session: Se
         pressure_state = None
         history = store.dialogue(session["id"], str(attempt_id), node_id)
         if engine.is_pressure_node(attempt["scenario_id"], node_id):
-            open_rounds = [item for item in history if not item["resolved"]]
+            open_rounds = _open_turns(history, node_id)
+            settled = _has_committed(history, node_id)
             pressure_state = PressureState(
-                turn=sum(
-                    1 for item in open_rounds
-                    if item["speaker"] == "learner" and item.get("kind") != "probe"
-                ) + 1,
+                turn=_decisions(history, node_id) + 1,
                 max_turns=engine.max_pressure_turns(attempt["scenario_id"]),
                 history=tuple((item["speaker"], item["text"]) for item in open_rounds),
+                final_push=settled,
             )
         context = build_context(
             attempt["scenario_id"], attempt["scenario_version"], node_id, node,
@@ -296,15 +320,23 @@ def respond(attempt_id: UUID, body: AnswerRequest, request: Request, session: Se
                 persona.deflect if persona else ""
             )
             dialogue_rows = [("learner", body.text, "probe"), ("npc", spoken, "answer")]
-        elif pressure_state and evaluated.outcome != "pass" and not pressure_state.is_last_turn:
+        elif (
+            pressure_state
+            and evaluated.outcome != "pass"
+            and not pressure_state.is_last_turn
+            and not _has_committed(history, node_id)
+        ):
             # Mid-arc: the character presses again. No verdict is revealed and no
             # evidence is written, because the learner has not finished deciding.
+            # A settled decision is heard once and pushed once; the ladder is for
+            # someone still making their mind up.
             next_node_id, effect = node_id, "none"
             skill_id = learning_state = None
             interpretation, feedback_message = evaluated.interpretation, None
             clause_ids = evaluated.policy_clause_ids
-            spoken = evaluated.character_line or _authored_line(context)
-            dialogue_rows = [("learner", body.text, "decision"), ("npc", spoken, "line")]
+            spoken = evaluated.character_line or _authored_line(context, evaluated.committed)
+            said_kind = "commit" if evaluated.committed else "decision"
+            dialogue_rows = [("learner", body.text, said_kind), ("npc", spoken, "line")]
         else:
             branch = engine.resolve_text(attempt["scenario_id"], node_id, evaluated.outcome)
             next_node_id, effect = branch.next_node_id, branch.effect
@@ -322,9 +354,11 @@ def respond(attempt_id: UUID, body: AnswerRequest, request: Request, session: Se
                 # The arc closes in character: they give ground, or they get
                 # their way and the consequence takes it from there.
                 held = evaluated.outcome == "pass"
-                spoken = (evaluated.character_line if held else "") or (
-                    persona.concede if held else persona.closing
-                )
+                # Giving ground and getting your way are the two endings, and
+                # both are authored. A cheap model asked to push in one breath
+                # and concede in the next will keep selling through the
+                # concession, which reads as if the verdict did not land.
+                spoken = persona.concede if held else persona.closing
                 dialogue_rows = [("learner", body.text, "decision"), ("npc", spoken, "line")]
                 resolve_dialogue = True
                 interpretation = _with_rounds(

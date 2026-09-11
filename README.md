@@ -17,14 +17,15 @@
 不问就下判断，就按现有信息评分，证据里会写明"没问任何问题就决定了"——这正是
 `clarify_context` 这项能力要测的东西。
 
-答得不到位不会当场公布答案，对方会**连续 3–4 轮升级施压**（当成惯例 → 加码 → 打人情
-→ 要你别留记录），顶不住才进入后果预演，再由唯一不施压的角色 Mira 复盘。作答**全部
-由学习者自己打字**，没有任何选择题。构建产物 233KB JS（gzip 73KB）+ 5KB CSS，页面秒开；旧的 Godot 客户端保留在
+答得不到位不会当场公布答案，对方会**升级施压**（当成惯例 → 加码 → 打人情 → 要你别留
+记录），顶不住才进入后果预演，再由唯一不施压的角色 Mira 复盘。**说得含糊就一路走完四
+级阶梯；把话说死了（"我就收下，这是我的答案"）只再推一轮**——而且直接上最狠的一级，
+不会逼你把同一句话重复四遍。作答**全部由学习者自己打字**，没有任何选择题。构建产物 233KB JS（gzip 73KB）+ 5KB CSS，页面秒开；旧的 Godot 客户端保留在
 `godot/` 但已不构建、不部署。
 
 已验证的部分：
 
-- `server/tests` 83 项通过；FastAPI 提供 `/ready` RAG 探针和 13 个接口操作，SQLite 保存匿名会话。
+- `server/tests` 86 项通过；FastAPI 提供 `/ready` RAG 探针和 13 个接口操作，SQLite 保存匿名会话。
 - `tools/e2e_room.py` 用真实 Chrome 对真实服务端跑完整验收：敲门 → 开门 → 人走进来
   → 打字作答 → Alex 施压时**不泄露判定也不给答案**（断言页面上没有
   "evidence recorded"/"learning feedback"，只有对方的下一句话和"Round 1/4"）→
@@ -93,7 +94,7 @@ OpenAI 那条路对"兼容网关"的两处常见分歧会自适应，每个进�
 ```bash
 python3 -m venv .venv
 .venv/bin/python -m pip install -r server/requirements.txt websocket-client
-.venv/bin/python -m pytest server/tests -q                     # 83 passed
+.venv/bin/python -m pytest server/tests -q                     # 86 passed
 
 cd client && npm ci && npm run build && cd ..
 

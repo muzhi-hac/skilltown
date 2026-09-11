@@ -25,6 +25,9 @@ class EvaluationResult:
     # costs no round of pressure and records nothing.
     turn_kind: str = "decision"
     asked: tuple[str, ...] = ()
+    # A settled decision, not thinking aloud. One more push and the arc ends:
+    # repeating yourself four times to someone who heard you is not training.
+    committed: bool = False
 
     @property
     def outcome(self) -> str:
@@ -78,4 +81,7 @@ class FallbackTextEvaluator:
             interpretation="Matched a reviewed whole-answer example for this node.",
             feedback="This answer was checked against a reviewed example for this scenario.",
             policy_clause_ids=list(context.allowed_clause_ids),
+            # A reviewed example is a settled statement by construction, so this
+            # path shortens the arc exactly as the model path does.
+            committed=True,
         )

@@ -36,7 +36,7 @@ export interface DialogueTurn {
   speaker: "npc" | "learner";
   text: string;
   /** A question ("probe") costs no round of pressure; a decision does. */
-  kind: "line" | "probe" | "answer" | "decision";
+  kind: "line" | "probe" | "answer" | "decision" | "commit";
   /** True once the arc that contained this round has been settled. */
   resolved: boolean;
 }

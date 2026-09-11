@@ -209,7 +209,7 @@ class DialogueTurn(StrictModel):
     speaker: Literal["npc", "learner"]
     text: str = Field(max_length=1200)
     # A question costs no round of pressure; a decision does.
-    kind: Literal["line", "probe", "answer", "decision"] = "line"
+    kind: Literal["line", "probe", "answer", "decision", "commit"] = "line"
     # A resolved round is one the arc already closed; it stays on screen.
     resolved: bool = False
 

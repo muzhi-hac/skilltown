@@ -120,7 +120,8 @@ Content-Type: application/json
 
 - 模型只判断"这一轮是在问还是在决定"，以及问的是哪个 `withheld.id`；**说出口的原话来自内容文件**，模型不参与措辞，所以它改不了数字。
 - `dialogue[].kind` 区分 `line`（开场/施压台词）、`probe`（学习者在问）、`answer`（对方回答问题）、`decision`（学习者在决定）。
-- **追问不计回合**：`pressure.turn` 只数 `decision`。每个节点最多 4 次追问，超出后对方不再回答，按施压回合处理。
+- **追问不计回合**：`pressure.turn` 只数 `decision` 和 `commit`。每个节点最多 4 次追问，超出后对方不再回答，按施压回合处理。
+- **说死了就只再推一轮**：模型判断这一轮是不是 `committed`（把话说定了，而不是在权衡）。是的话这一轮记为 `commit`，对方用阶梯最狠的一级推最后一次，下一次作答无论对错都结算；`pressure.max_turns` 会相应缩短成 `turn + 1`，前端刻度直接显示 `Round 1/2`。含糊其辞则走完整四级。
 - 问了内容里没有的东西，得到的是人设里的 `deflect` 一句敷衍。
 - 不问就决定不会被从宽：按现有信息评分，证据的 `interpretation` 写明"decided without asking anything"。
 

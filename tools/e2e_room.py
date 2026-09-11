@@ -30,6 +30,7 @@ ANSWER_ALEX_MISS = "€26 is a small gift, so I will accept it."
 ANSWER_ALEX_PASS = "Because this is a German public official and €26 exceeds the €25 threshold, I will decline or hand it to the employing office and keep the receipt in the register."
 
 failures: list[str] = []
+last_screen = ""
 
 
 def check(label: str, ok: bool, detail: str = "") -> None:
@@ -52,7 +53,7 @@ class Page:
         )
         return str(result.get("result", {}).get("value") or "")
 
-    def wait_for(self, fragment: str, timeout: float = 30.0) -> bool:
+    def wait_for(self, fragment: str, timeout: float = 45.0) -> bool:
         deadline = time.monotonic() + timeout
         while time.monotonic() < deadline:
             if fragment.lower() in self.text().lower():
@@ -60,8 +61,20 @@ class Page:
             time.sleep(0.4)
         return False
 
-    def click_text(self, fragment: str) -> bool:
-        """Dispatch a click on the first enabled button with matching visible text."""
+    def click_text(self, fragment: str, attempts: int = 20) -> bool:
+        """Click the first enabled button whose text matches, waiting for it.
+
+        The room animates people in and out, and a click dispatched while the
+        button is absent is a no-op that only surfaces as a puzzling timeout
+        several checks later.
+        """
+        for _ in range(attempts):
+            if self._click_once(fragment):
+                return True
+            time.sleep(0.5)
+        return False
+
+    def _click_once(self, fragment: str) -> bool:
         script = f"""
         (() => {{
           const target = [...document.querySelectorAll('button')]
@@ -131,7 +144,9 @@ def main() -> int:
 
         print("3) A weak decision is pushed back on, with nothing revealed")
         page.answer(ANSWER_ALEX_MISS)
-        check("the person pushes back", page.wait_for("round 1/4", 25), page.text()[:200])
+        # A settled answer is heard once and pushed once, so the meter shortens;
+        # match the round, not the denominator, or a rule change fails the copy.
+        check("the person pushes back", page.wait_for("round 1/", 25), page.text()[:200])
         pressed = page.text().lower()
         check("no verdict is revealed mid-arc",
               "evidence recorded" not in pressed and "learning feedback" not in pressed, pressed[:200])
@@ -155,14 +170,15 @@ def main() -> int:
         check("the second situation closes", page.click_text("close"))
         # Who knocks next follows this learner's record, so walk until the coach.
         reached_mira = False
-        for _ in range(5):
-            if page.wait_for("Mira is knocking", 12):
+        for _ in range(6):
+            if page.wait_for("Mira is knocking", 6):
                 reached_mira = True
                 break
-            page.click_text("open the door")
-            time.sleep(1.5)
+            if not page.click_text("open the door", attempts=6):
+                break
+            page.wait_for("situation:", 20)
             page.click_text("close")
-            time.sleep(1.5)
+            time.sleep(2)
         check("Mira knocks once the others have been seen", reached_mira, page.text()[:160])
         check("Mira review opens", page.click_text("open the door"))
         check("Mira review opens as a conversation", page.wait_for("situation: review a case from your record", 20), page.text()[:160])
@@ -180,6 +196,11 @@ def main() -> int:
             page.text()[:200],
         )
     finally:
+        global last_screen
+        try:
+            last_screen = page.text()
+        except Exception:  # noqa: BLE001 - a dead browser has no screen to show
+            last_screen = "(the browser was gone before the screen could be read)"
         chrome.terminate()
         shutil.rmtree(profile, ignore_errors=True)
 
@@ -188,6 +209,8 @@ def main() -> int:
         print(f"E2E FAILED ({len(failures)}):")
         for item in failures:
             print("  -", item)
+        print("\n--- what was on screen at the end ---")
+        print(last_screen[:2000])
         return 1
     print("E2E OK — knock, let in, answer in your own words, get pushed back, evidence, progress, clear")
     return 0

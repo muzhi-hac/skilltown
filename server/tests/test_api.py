@@ -218,7 +218,8 @@ def test_pressure_pushes_back_without_revealing_a_verdict(tmp_path):
         assert result["effect"] == "none"
         assert result["feedback"] is None
         assert result["learning_updates"] == []
-        assert result["pressure"] == {"turn": 1, "max_turns": 4, "active": True}
+        # They said what they would do, so one more push is all that is left.
+        assert result["pressure"] == {"turn": 1, "max_turns": 2, "active": True}
         spoken = [turn["text"] for turn in result["dialogue"] if turn["speaker"] == "npc"]
         assert len(spoken) == 2 and spoken[1] != spoken[0]
 
@@ -231,11 +232,11 @@ def test_pressure_arc_ends_in_consequence_and_records_how_long_it_held(tmp_path)
         result = press_through(client, headers, attempt, miss)
         assert result["node"]["id"] == "alex_public_gift_consequence"
         assert result["learning_updates"][0]["state"] == "needs_practice"
-        # Four rounds of pressure, and the record says the learner gave way.
-        assert len([t for t in result["dialogue"] if t["speaker"] == "learner"]) == 4
+        # Settled answer, one more push, then the consequence: two rounds, not four.
+        assert len([t for t in result["dialogue"] if t["speaker"] == "learner"]) == 2
         passport = client.get("/api/v1/passport", headers=headers).json()
         evidence = [item for skill in passport["skills"] for item in skill["evidence"]]
-        assert any("4 rounds of pressure, gave way" in str(item["interpretation"]) for item in evidence)
+        assert any("2 rounds of pressure, gave way" in str(item["interpretation"]) for item in evidence)
 
 
 def test_holding_the_line_mid_arc_ends_the_pressure_and_moves_on(tmp_path):
@@ -338,14 +339,17 @@ class ScriptedEvaluator:
     """Stands in for the model: replays queued (turn_kind, asked, outcome)."""
 
     def __init__(self, *turns):
-        self.turns = list(turns)
+        # Each turn is (kind, asked, outcome) or (kind, asked, outcome, committed).
+        self.turns = [tuple(turn) + (False,) * (4 - len(turn)) for turn in turns]
         self.contexts = []
 
     def evaluate(self, rule, text, allow_model=True, *, context):
         from server.core.evaluator import EvaluationResult
 
         self.contexts.append(context)
-        kind, asked, outcome = self.turns.pop(0) if self.turns else ("decision", (), "miss")
+        kind, asked, outcome, committed = (
+            self.turns.pop(0) if self.turns else ("decision", (), "miss", False)
+        )
         return EvaluationResult(
             passed=outcome == "pass",
             overgeneralized=outcome == "overgeneralized",
@@ -356,6 +360,7 @@ class ScriptedEvaluator:
             character_line="",
             turn_kind=kind,
             asked=tuple(asked),
+            committed=bool(committed),
         )
 
 
@@ -447,3 +452,44 @@ def test_the_brief_never_gives_the_withheld_figures_away(tmp_path):
                 shown = f"{node['text']} {node['line']}"
                 for item in node["withheld"]:
                     assert item["fact"] not in shown, f"{scenario_id}/{node_id} gives away {item['id']}"
+
+
+def test_a_settled_answer_is_pushed_once_not_four_times(tmp_path):
+    with TestClient(create_app(tmp_path / "test.sqlite3")) as client:
+        _, headers = session(client)
+        with_evaluator(client, ScriptedEvaluator(
+            ("decision", (), "miss", True),
+            ("decision", (), "miss", True),
+        ))
+        attempt = create_attempt(client, headers)
+        first = answer(client, headers, attempt, "I am taking it. That is my answer.").json()
+        assert first["pressure"] == {"turn": 1, "max_turns": 2, "active": True}
+        assert first["learning_updates"] == []
+
+        second = answer(client, headers, first, "Still taking it.").json()
+        # Heard once, pushed once, done - not made to repeat themselves twice more.
+        assert second["node"]["id"] == "alex_public_gift_consequence"
+        assert second["learning_updates"][0]["state"] == "needs_practice"
+
+
+def test_thinking_aloud_still_gets_the_whole_ladder(tmp_path):
+    with TestClient(create_app(tmp_path / "test.sqlite3")) as client:
+        _, headers = session(client)
+        with_evaluator(client, ScriptedEvaluator(*[("decision", (), "miss", False)] * 4))
+        result = create_attempt(client, headers)
+        for expected in (1, 2, 3):
+            result = answer(client, headers, result, "I suppose it might be alright?").json()
+            assert result["pressure"] == {"turn": expected, "max_turns": 4, "active": True}
+        result = answer(client, headers, result, "I suppose it might be alright?").json()
+        assert result["node"]["id"] == "alex_public_gift_consequence"
+
+
+def test_the_last_push_is_the_hardest_sell(tmp_path):
+    with TestClient(create_app(tmp_path / "test.sqlite3")) as client:
+        _, headers = session(client)
+        with_evaluator(client, ScriptedEvaluator(("decision", (), "miss", True)))
+        attempt = create_attempt(client, headers)
+        result = answer(client, headers, attempt, "I am taking it.").json()
+        # Someone who has decided gets the bottom rung, not the gentle opener.
+        persona = client.app.state.engine.persona("alex")
+        assert result["dialogue"][-1]["text"] == persona.tactics[-1].line
