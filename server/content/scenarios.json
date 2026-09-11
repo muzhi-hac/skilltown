@@ -339,6 +339,20 @@
           "npc_id": "mira",
           "category": "ethics_compliance",
           "text": "Review the cited conditions before deciding again. You can rewind to the decision point.",
+          "consequence": [
+            {
+              "when": "Eleven days later",
+              "text": "An audit pulls the city office's gift register for the permit file. Your name is on their side of it, and on nothing of yours."
+            },
+            {
+              "when": "In March",
+              "text": "The permit decision is reopened. The head of unit is stood down while it is reviewed, and every approval she signed that quarter is read again."
+            },
+            {
+              "when": "By summer",
+              "text": "You are a named party in a file you never opened. Alex still sends chocolates. He sends them to whoever has your account now."
+            }
+          ],
           "allow_text": false,
           "choices": [],
           "knowledge": [
@@ -468,6 +482,20 @@
           "npc_id": "mira",
           "category": "ethics_compliance",
           "text": "Review the cited conditions before deciding again. You can rewind to the decision point.",
+          "consequence": [
+            {
+              "when": "Two months later",
+              "text": "You apply the same round number to a supplier who is mid-tender. Nobody stops you, because you told the team it was the rule."
+            },
+            {
+              "when": "In April",
+              "text": "The tender is challenged. The challenge does not turn on the hamper. It turns on nobody being able to say what the hamper had to do with anything."
+            },
+            {
+              "when": "That autumn",
+              "text": "The register shows a pattern nobody looked at, because everyone was looking at the number instead of the conditions."
+            }
+          ],
           "allow_text": false,
           "choices": [],
           "knowledge": [
@@ -596,6 +624,20 @@
           "npc_id": "mira",
           "category": "ethics_compliance",
           "text": "Review the cited conditions before deciding again. You can rewind to the decision point.",
+          "consequence": [
+            {
+              "when": "The next morning",
+              "text": "The dinner went ahead. Nine people attended, and the invoice lands in a cost centre with no record of why."
+            },
+            {
+              "when": "In February",
+              "text": "Finance reconciles the quarter and asks who approved it. The answer is nobody, and the only name on the booking is yours."
+            },
+            {
+              "when": "At the renewal",
+              "text": "The relationship is fine. The paperwork is not, and it is the paperwork that goes to the board."
+            }
+          ],
           "allow_text": false,
           "choices": [],
           "knowledge": [
@@ -715,6 +757,20 @@
           "npc_id": "mira",
           "category": "ethics_compliance",
           "text": "Review the cited conditions before deciding again. You can rewind to the decision point.",
+          "consequence": [
+            {
+              "when": "Later that week",
+              "text": "Five euros is nothing. What you took was cash, from a counterparty, with no record - and you now know that is a thing you do."
+            },
+            {
+              "when": "In May",
+              "text": "A thicker envelope arrives. The step from the first to the second was taken in a corridor, months ago, over a coffee."
+            },
+            {
+              "when": "In the review",
+              "text": "What gets written up is the pattern, not the amount."
+            }
+          ],
           "allow_text": false,
           "choices": [],
           "knowledge": [
@@ -846,6 +902,20 @@
           "npc_id": "mira",
           "category": "ethics_compliance",
           "text": "Review the cited conditions before deciding again. You can rewind to the decision point.",
+          "consequence": [
+            {
+              "when": "That afternoon",
+              "text": "The lunch is cancelled. Nobody minds much, but the handover it existed for does not happen."
+            },
+            {
+              "when": "Over the quarter",
+              "text": "Operations stop looping you in. It is easier to go around you than to explain a lunch to you."
+            },
+            {
+              "when": "When something real arrives",
+              "text": "The gift that should have been refused goes past you, because you are not in the room any more."
+            }
+          ],
           "allow_text": false,
           "choices": [],
           "knowledge": [
@@ -994,6 +1064,20 @@
           "npc_id": "mira",
           "category": "ethics_compliance",
           "text": "Review the cited conditions before deciding again. You can rewind to the decision point.",
+          "consequence": [
+            {
+              "when": "That evening",
+              "text": "The payment goes through the till as one amount, with nothing filed behind it."
+            },
+            {
+              "when": "Six weeks later",
+              "text": "A supervisory check pulls every transaction over the limit. Yours is the only one with no report attached."
+            },
+            {
+              "when": "At the hearing",
+              "text": "The company is asked why its process failed. It did not fail. It was skipped once, at a counter, by a person with a name."
+            }
+          ],
           "allow_text": false,
           "choices": [],
           "knowledge": [
@@ -1112,6 +1196,20 @@
           "npc_id": "mira",
           "category": "ethics_compliance",
           "text": "Review the cited conditions before deciding again. You can rewind to the decision point.",
+          "consequence": [
+            {
+              "when": "The same day",
+              "text": "The goods leave with someone you cannot name."
+            },
+            {
+              "when": "In August",
+              "text": "Two more purchases follow the same shape, from the same unnamed person, each one just small enough."
+            },
+            {
+              "when": "When the file is opened",
+              "text": "It is the first one that gets read aloud, because it is where the chain could have stopped."
+            }
+          ],
           "allow_text": false,
           "choices": [],
           "knowledge": [
@@ -1234,6 +1332,20 @@
           "npc_id": "mira",
           "category": "ethics_compliance",
           "text": "Review the cited conditions before deciding again. You can rewind to the decision point.",
+          "consequence": [
+            {
+              "when": "Within the hour",
+              "text": "Four tickets, four receipts, one order, nothing reported."
+            },
+            {
+              "when": "In the audit sample",
+              "text": "The four sit minutes apart: same name, same total. Splitting is exactly the pattern the sample is built to find."
+            },
+            {
+              "when": "In the write-up",
+              "text": "Structuring is named as the finding. Your till, your login, your afternoon."
+            }
+          ],
           "allow_text": false,
           "choices": [],
           "knowledge": [
@@ -1353,6 +1465,20 @@
           "npc_id": "mira",
           "category": "ethics_compliance",
           "text": "Review the cited conditions before deciding again. You can rewind to the decision point.",
+          "consequence": [
+            {
+              "when": "That week",
+              "text": "Both customers are onboarded at the same level of checking, because they looked the same to you."
+            },
+            {
+              "when": "In the autumn",
+              "text": "The one your system flagged turns out to sit behind two more companies. Nobody looked, because the file said it matched the standard case."
+            },
+            {
+              "when": "In remediation",
+              "text": "Every file you touched that quarter is reopened, to find out which others were waved through by analogy."
+            }
+          ],
           "allow_text": false,
           "choices": [],
           "knowledge": [
@@ -1471,6 +1597,20 @@
           "npc_id": "mira",
           "category": "ethics_compliance",
           "text": "Review the cited conditions before deciding again. You can rewind to the decision point.",
+          "consequence": [
+            {
+              "when": "At the counter",
+              "text": "The sale does not happen. The customer pays cash somewhere else, with their identification already on file here."
+            },
+            {
+              "when": "Over the month",
+              "text": "Two colleagues watch you refuse a clean payment and quietly decide the rules are whatever the nervous person says."
+            },
+            {
+              "when": "When a real one comes",
+              "text": "It is taken without a murmur, because nobody trusts the refusals any more."
+            }
+          ],
           "allow_text": false,
           "choices": [],
           "knowledge": [
@@ -1618,6 +1758,20 @@
           "npc_id": "mira",
           "category": "ethics_compliance",
           "text": "Review the cited conditions before deciding again. You can rewind to the decision point.",
+          "consequence": [
+            {
+              "when": "Day two",
+              "text": "Nothing happens. That is the part that feels like being right."
+            },
+            {
+              "when": "Day nine",
+              "text": "A customer notices before you tell them and writes about it publicly. The clock started on day one, not on the day of the post."
+            },
+            {
+              "when": "In the file",
+              "text": "The delay is its own finding, separate from the leak. A team that fixed it in hours is judged on the fortnight it stayed quiet."
+            }
+          ],
           "allow_text": false,
           "choices": [],
           "knowledge": [
@@ -1736,6 +1890,20 @@
           "npc_id": "mira",
           "category": "ethics_compliance",
           "text": "Review the cited conditions before deciding again. You can rewind to the decision point.",
+          "consequence": [
+            {
+              "when": "By the deadline",
+              "text": "The early warning is not sent. Nobody notices inside the company, because the incident is being handled well."
+            },
+            {
+              "when": "Three weeks later",
+              "text": "The final report has to explain a gap at the beginning that no amount of good handling fills."
+            },
+            {
+              "when": "At the next assessment",
+              "text": "The question is not whether you fixed it. It is whether anyone outside the room knew in time."
+            }
+          ],
           "allow_text": false,
           "choices": [],
           "knowledge": [
@@ -1858,6 +2026,20 @@
           "npc_id": "mira",
           "category": "ethics_compliance",
           "text": "Review the cited conditions before deciding again. You can rewind to the decision point.",
+          "consequence": [
+            {
+              "when": "That day",
+              "text": "The call is made on instinct rather than on the assessment, and the assessment is the only thing anyone can read later."
+            },
+            {
+              "when": "The following month",
+              "text": "Two more incidents are handled by the same instinct. One of them was not encrypted at all."
+            },
+            {
+              "when": "Reviewed together",
+              "text": "What is missing is not a report. It is a written reason for each of the three."
+            }
+          ],
           "allow_text": false,
           "choices": [],
           "knowledge": [
@@ -2004,6 +2186,20 @@
           "npc_id": "mira",
           "category": "personal_development",
           "text": "Review the cited conditions before deciding again. You can rewind to the decision point.",
+          "consequence": [
+            {
+              "when": "By Friday",
+              "text": "The person who reported has been told nothing. They assume it went nowhere, because it did."
+            },
+            {
+              "when": "Six weeks on",
+              "text": "They take it outside the company, with the timeline of the silence attached."
+            },
+            {
+              "when": "In the investigation",
+              "text": "The thing they reported is now the smaller half of it."
+            }
+          ],
           "allow_text": false,
           "choices": [],
           "knowledge": [
@@ -2122,6 +2318,20 @@
           "npc_id": "mira",
           "category": "personal_development",
           "text": "Review the cited conditions before deciding again. You can rewind to the decision point.",
+          "consequence": [
+            {
+              "when": "The next rota",
+              "text": "Nights every week, and the premium gone. On paper it is scheduling."
+            },
+            {
+              "when": "Two months later",
+              "text": "They resign, and the letter puts two dates next to each other: the report, and the rota."
+            },
+            {
+              "when": "At the tribunal",
+              "text": "Nobody argues about the shifts. They argue about the two dates, and the rota is the evidence."
+            }
+          ],
           "allow_text": false,
           "choices": [],
           "knowledge": [
@@ -2240,6 +2450,20 @@
           "npc_id": "mira",
           "category": "personal_development",
           "text": "Review the cited conditions before deciding again. You can rewind to the decision point.",
+          "consequence": [
+            {
+              "when": "Wednesday",
+              "text": "Ten hours between shifts is survivable. It is the fourth one in a row that is not."
+            },
+            {
+              "when": "Friday night",
+              "text": "Somebody makes a mistake on a task they have done a hundred times."
+            },
+            {
+              "when": "In the incident review",
+              "text": "The rota is printed and put on the table before anyone is asked what happened."
+            }
+          ],
           "allow_text": false,
           "choices": [],
           "knowledge": [
@@ -2358,6 +2582,20 @@
           "npc_id": "mira",
           "category": "personal_development",
           "text": "Review the cited conditions before deciding again. You can rewind to the decision point.",
+          "consequence": [
+            {
+              "when": "That week",
+              "text": "The rota is torn up over a week that was within the limits once you averaged it."
+            },
+            {
+              "when": "In the next cycle",
+              "text": "Planning routes around you. The rule becomes whatever gets past the person who panics."
+            },
+            {
+              "when": "When a week really does breach",
+              "text": "Nobody raises it. Raising it was your job, and your last one was wrong."
+            }
+          ],
           "allow_text": false,
           "choices": [],
           "knowledge": [

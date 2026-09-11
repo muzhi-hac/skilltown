@@ -493,3 +493,34 @@ def test_the_last_push_is_the_hardest_sell(tmp_path):
         # Someone who has decided gets the bottom rung, not the gentle opener.
         persona = client.app.state.engine.persona("alex")
         assert result["dialogue"][-1]["text"] == persona.tactics[-1].line
+
+
+def test_giving_way_returns_a_story_not_just_a_verdict(tmp_path):
+    with TestClient(create_app(tmp_path / "test.sqlite3")) as client:
+        _, headers = session(client)
+        attempt = create_attempt(client, headers)
+        result = press_through(client, headers, attempt, reference(client, "dinner-invitation", "alex_public_gift", "miss"))
+        assert result["node"]["id"] == "alex_public_gift_consequence"
+        beats = result["node"]["consequence"]
+        # The story develops: several beats, each with its own point in time.
+        assert len(beats) >= 2
+        assert all(beat["when"] and beat["text"] for beat in beats)
+        assert len({beat["when"] for beat in beats}) == len(beats)
+        # It is the situation that plays out, not a restatement of the rule.
+        assert not any("ANNEX" in beat["text"] for beat in beats)
+
+
+def test_every_consequence_has_somewhere_to_go(tmp_path):
+    with TestClient(create_app(tmp_path / "test.sqlite3")) as client:
+        engine = client.app.state.engine
+        nodes = [
+            (scenario_id, node_id, node)
+            for scenario_id, scenario in engine.content["scenarios"].items()
+            for node_id, node in scenario["nodes"].items()
+            if node_id.endswith("_consequence")
+        ]
+        assert len(nodes) >= 10
+        for scenario_id, node_id, node in nodes:
+            beats = node.get("consequence", [])
+            assert 2 <= len(beats) <= 5, f"{scenario_id}/{node_id} has {len(beats)} beats"
+            assert node.get("rewind_to"), f"{scenario_id}/{node_id} cannot be rewound"

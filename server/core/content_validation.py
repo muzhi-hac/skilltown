@@ -194,6 +194,17 @@ def _validate_node(
             _fail(f"{prefix}: branch {branch_id} cites outside node knowledge")
     if node.get("rewind_to") and node["rewind_to"] not in nodes:
         _fail(f"{prefix}: rewind_to has unknown target")
+    if node_id.endswith("_consequence"):
+        # Giving way has to lead somewhere. A consequence node that only says
+        # "review the conditions" is the lesson without the reason for it.
+        beats = node.get("consequence")
+        if not isinstance(beats, list) or not 2 <= len(beats) <= 5:
+            _fail(f"{prefix}: a consequence needs two to five beats")
+        for beat in beats:
+            if not isinstance(beat, dict) or not all(
+                _nonempty(beat.get(key)) for key in ("when", "text")
+            ):
+                _fail(f"{prefix}: each consequence beat needs when and text")
 
     if not node.get("allow_text", False):
         return

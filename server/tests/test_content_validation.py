@@ -45,3 +45,18 @@ def test_single_rung_ladder_is_rejected():
     persona["tactics"] = persona["tactics"][:1]
     with pytest.raises(ValueError, match="at least two rungs"):
         validate_content(content)
+
+
+def test_a_consequence_without_a_story_is_rejected():
+    content = deepcopy(ScenarioEngine().content)
+    content["scenarios"]["dinner-invitation"]["nodes"]["alex_public_gift_consequence"]["consequence"] = []
+    with pytest.raises(ValueError, match="two to five beats"):
+        validate_content(content)
+
+
+def test_a_consequence_beat_without_a_time_is_rejected():
+    content = deepcopy(ScenarioEngine().content)
+    beats = content["scenarios"]["supplier-gift"]["nodes"]["sam_cash_limit_consequence"]["consequence"]
+    beats[0] = {"when": "", "text": beats[0]["text"]}
+    with pytest.raises(ValueError, match="when and text"):
+        validate_content(content)

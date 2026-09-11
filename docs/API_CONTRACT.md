@@ -125,6 +125,8 @@ Content-Type: application/json
 - 问了内容里没有的东西，得到的是人设里的 `deflect` 一句敷衍。
 - 不问就决定不会被从宽：按现有信息评分，证据的 `interpretation` 写明"decided without asking anything"。
 
+**后果（consequence）**：后果节点的 `node.consequence` 是一串 2–5 拍的 `{when, text}`，由内容文件写死、经校验（缺了就构建失败），不经过模型——法律后果不适合让模型现编。前端一次只展开一拍，点"Then what?"继续，展开完才出现 Mira 的复盘和倒带入口。
+
 人设（`persona`）、升级阶梯和台词只存在于服务端内容里，`/api/v1/town` 与任何响应都不下发。
 
 ### 幂等与冲突

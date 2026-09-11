@@ -43,6 +43,7 @@ def _node_view(engine, scenario_id: str, node_id: str) -> dict:
         "choices": node.get("choices", []),
         "allow_text": node.get("allow_text", False),
         "policy_cards": get_policy_cards(list(dict.fromkeys(node.get("knowledge", [])))),
+        "consequence": node.get("consequence", []),
     }
 
 

@@ -147,6 +147,13 @@ class PolicyCard(StrictModel):
         return self
 
 
+class ConsequenceBeat(StrictModel):
+    """One step of what happens after the learner gives way."""
+
+    when: str = Field(max_length=80)
+    text: str = Field(max_length=400)
+
+
 class ScenarioNode(StrictModel):
     id: str
     npc_id: NpcId
@@ -157,6 +164,8 @@ class ScenarioNode(StrictModel):
     choices: list[Choice] = Field(max_length=4)
     allow_text: bool
     policy_cards: list[PolicyCard] = Field(default_factory=list)
+    # Only on a consequence node: the story that follows the decision.
+    consequence: list[ConsequenceBeat] = Field(default_factory=list, max_length=5)
 
 
 class CreateAttemptRequest(StrictModel):

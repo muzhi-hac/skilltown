@@ -45,11 +45,19 @@ ANNEX cards are one click away, exactly as they would be at a real desk.
 Type the weak answer: **“€26 is a small gift, so I will accept it.”**
 
 Point at what does *not* happen: no red cross, no correct answer, no evidence
-line. The header now reads **Round 1 of 4** and Alex simply pushes again -
+line. The header now reads **Round 1/2** - he heard a settled answer, so he gets
+one more push rather than three - and Alex simply pushes again -
 first as ordinary courtesy, then sweetening the offer, then making it personal,
-then asking you to keep it off the books. Keep giving way and the arc ends in
-the consequence preview; hold the line at any round and he backs off in
-character and the situation moves on.
+then asking you to keep it off the books. Keep giving way and the arc ends, and this is the part to slow down on: the
+panel does not say "wrong". It says **what happened next**, one beat at a time.
+Eleven days later an audit pulls the city office's gift register. In March the
+permit decision is reopened and the official who signed it is stood down. By
+summer you are a named party in a file you never opened. Click **Then what?**
+between beats and let the room read them. Only then does Mira debrief, and the
+rewind takes you back to the moment it turned.
+
+Hold the line at any round instead and he backs off in character, and the
+situation moves on.
 
 > "Pressure is the thing being trained. A verdict after one answer teaches you
 the rule; four rounds of someone you like asking again teaches you what you

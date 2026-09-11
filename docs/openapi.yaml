@@ -549,6 +549,23 @@ components:
       - kind
       - choice_id
       title: ChoiceResponseRequest
+    ConsequenceBeat:
+      properties:
+        when:
+          type: string
+          maxLength: 80
+          title: When
+        text:
+          type: string
+          maxLength: 400
+          title: Text
+      additionalProperties: false
+      type: object
+      required:
+      - when
+      - text
+      title: ConsequenceBeat
+      description: One step of what happens after the learner gives way.
     CreateAttemptRequest:
       properties:
         scenario_id:
@@ -1026,6 +1043,12 @@ components:
             $ref: '#/components/schemas/PolicyCard'
           type: array
           title: Policy Cards
+        consequence:
+          items:
+            $ref: '#/components/schemas/ConsequenceBeat'
+          type: array
+          maxItems: 5
+          title: Consequence
       additionalProperties: false
       type: object
       required:

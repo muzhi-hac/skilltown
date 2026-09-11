@@ -18,14 +18,17 @@
 `clarify_context` 这项能力要测的东西。
 
 答得不到位不会当场公布答案，对方会**升级施压**（当成惯例 → 加码 → 打人情 → 要你别留
-记录），顶不住才进入后果预演，再由唯一不施压的角色 Mira 复盘。**说得含糊就一路走完四
+记录）。顶不住之后不是甩一句"你错了"，而是**"后来发生了什么"三拍展开**——一拍一点，
+时间往前走，波及面从你自己扩到同事、公司，最后又落回你的名字上（第 11 天审计调取礼品
+登记 → 三月许可决定被重新打开、签字的处长停职 → 夏天你成了一份你从没打开过的卷宗里的
+当事人）。看完才由唯一不施压的角色 Mira 复盘，并可倒回决策点重来。**说得含糊就一路走完四
 级阶梯；把话说死了（"我就收下，这是我的答案"）只再推一轮**——而且直接上最狠的一级，
 不会逼你把同一句话重复四遍。作答**全部由学习者自己打字**，没有任何选择题。构建产物 233KB JS（gzip 73KB）+ 5KB CSS，页面秒开；旧的 Godot 客户端保留在
 `godot/` 但已不构建、不部署。
 
 已验证的部分：
 
-- `server/tests` 86 项通过；FastAPI 提供 `/ready` RAG 探针和 13 个接口操作，SQLite 保存匿名会话。
+- `server/tests` 90 项通过；FastAPI 提供 `/ready` RAG 探针和 13 个接口操作，SQLite 保存匿名会话。
 - `tools/e2e_room.py` 用真实 Chrome 对真实服务端跑完整验收：敲门 → 开门 → 人走进来
   → 打字作答 → Alex 施压时**不泄露判定也不给答案**（断言页面上没有
   "evidence recorded"/"learning feedback"，只有对方的下一句话和"Round 1/4"）→
@@ -94,7 +97,7 @@ OpenAI 那条路对"兼容网关"的两处常见分歧会自适应，每个进�
 ```bash
 python3 -m venv .venv
 .venv/bin/python -m pip install -r server/requirements.txt websocket-client
-.venv/bin/python -m pytest server/tests -q                     # 86 passed
+.venv/bin/python -m pytest server/tests -q                     # 90 passed
 
 cd client && npm ci && npm run build && cd ..
 
@@ -115,7 +118,7 @@ python3 tools/smoke_api.py http://127.0.0.1:8000             # HTTP 冒烟
 
 - 点击 NPC，或 WASD / 方向键移动、靠近按 E。
 - 两个醒目分类：🛡️ 伦理与合规、🌱 个人发展。
-- 合规主线：对方开价（不交代细节）→ 你追问补齐事实 → 你打字决定 → 3–4 轮升级施压 → 后果预演 → Mira 复盘 → 新情境复测。
+- 合规主线：对方开价（不交代细节）→ 你追问补齐事实 → 你打字决定 → 升级施压 → 后果三拍展开 → Mira 复盘 → 倒带重来 → 新情境复测。
 - 关键事实要自己问出来、跨 NPC 学习记忆、个人学习护照与可点击学习方案。
 - 无主管端、排行榜或自动绩效评价；虚构培训政策不作为法律结论。
 

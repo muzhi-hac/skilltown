@@ -29,6 +29,8 @@ export interface ScenarioNode {
   choices: { id: string; label: string }[];
   allow_text: boolean;
   policy_cards: PolicyCard[];
+  /** Only on a consequence node: what follows, one beat at a time. */
+  consequence: { when: string; text: string }[];
 }
 
 export interface DialogueTurn {

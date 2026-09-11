@@ -730,3 +730,55 @@ button:disabled {
     max-width: 100%;
   }
 }
+
+/* --- what happened next --------------------------------------------------- */
+
+/* Giving way has consequences, and they arrive one at a time. A wall of text
+   would read as a lecture; a beat at a time reads as the thing unfolding. */
+.aftermath {
+  border: 1px solid #e3d5bc;
+  border-left: 3px solid var(--warn);
+  background: var(--warn-soft);
+  border-radius: 0 8px 8px 0;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.aftermath-head {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--warn);
+}
+
+.beat {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.55;
+  color: var(--ink);
+}
+
+.beat-when {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--warn);
+  margin-bottom: 2px;
+}
+
+.beat-more {
+  align-self: flex-start;
+}
+
+.beat-close {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--ink-soft);
+  border-top: 1px solid #e3d5bc;
+  padding-top: 10px;
+}

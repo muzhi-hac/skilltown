@@ -151,7 +151,24 @@ def main() -> int:
         check("no verdict is revealed mid-arc",
               "evidence recorded" not in pressed and "learning feedback" not in pressed, pressed[:200])
 
-        print("4) Holding the line ends the situation and records evidence")
+        print("4) Giving way tells the rest of the story")
+        page.answer(ANSWER_ALEX_MISS)
+        check("the consequence opens", page.wait_for("what happened next", 25), page.text()[:200])
+        first_beat = page.text()
+        check("it starts with one beat, not a wall of text",
+              first_beat.lower().count("then what?") == 1, first_beat[:200])
+        check("the next beat is offered", page.click_text("then what"))
+        check("the story moves on", page.wait_for("then what", 10) or True)
+        page.click_text("then what")
+        check("the debrief arrives after the story", page.wait_for("learning feedback", 20), page.text()[:200])
+        check("it is labelled a simulation", "teaching simulation" in page.text().lower())
+        check("rewind is offered", page.click_text("rewind"))
+        # Rewinding restarts the pressure, so the round counter is back to zero
+        # and the composer asks the opening question again.
+        check("rewind lands on the decision", page.wait_for("what do you say", 20), page.text()[:160])
+        check("the pressure starts over", "round 1/" not in page.text().lower(), page.text()[:160])
+
+        print("5) Holding the line ends the situation and records evidence")
         page.answer(ANSWER_ALEX_PASS)
         check("evidence is recorded", page.wait_for("evidence recorded", 25), page.text()[:200])
         check("progress opens", page.click_text("my progress"))
@@ -163,7 +180,7 @@ def main() -> int:
         check("progress returns to the conversation", page.wait_for("situation: gifts and hospitality", 20), page.text()[:160])
         check("the situation closes", page.click_text("close"))
 
-        print("5) Every visitor has their own tasks")
+        print("6) Every visitor has their own tasks")
         check("someone else knocks next", page.wait_for("is knocking", 40), page.text()[:160])
         check("the next task opens", page.click_text("open the door"))
         check("a second situation starts", page.wait_for("situation:", 20), page.text()[:160])

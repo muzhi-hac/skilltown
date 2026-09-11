@@ -67,6 +67,9 @@ export function Lesson(props: LessonProps) {
 
   const node = attempt?.node ?? null;
   const canAnswer = Boolean(node?.allow_text) && !attempt?.is_complete && !busy;
+  const beats = node?.consequence ?? [];
+  const [revealed, setRevealed] = useState(1);
+  const moreToCome = revealed < beats.length;
   const said = transcript(attempt);
   const pressure = attempt?.pressure ?? null;
   const underPressure = Boolean(pressure?.active) && (pressure?.turn ?? 0) > 0;
@@ -75,6 +78,11 @@ export function Lesson(props: LessonProps) {
   useEffect(() => {
     if (canAnswer) input.current?.focus();
   }, [canAnswer, node?.id]);
+
+  // Each situation tells its own story from the first beat.
+  useEffect(() => {
+    setRevealed(1);
+  }, [node?.id]);
 
   // A new round should be the thing you are looking at, not something above.
   useEffect(() => {
@@ -126,7 +134,25 @@ export function Lesson(props: LessonProps) {
 
       {props.taskTitle && <p className="lesson-task">Situation: {props.taskTitle}</p>}
 
-      {node?.text && <p className="brief">{node.text}</p>}
+      {beats.length > 0 ? (
+        <div className="aftermath" aria-label="What happened next">
+          <p className="aftermath-head">What happened next</p>
+          {beats.slice(0, revealed).map((beat, index) => (
+            <p key={index} className="beat">
+              <span className="beat-when">{beat.when}</span>
+              {beat.text}
+            </p>
+          ))}
+          {moreToCome && (
+            <button className="ghost beat-more" onClick={() => setRevealed((n) => n + 1)}>
+              Then what?
+            </button>
+          )}
+          {!moreToCome && node?.text && <p className="beat-close">{node.text}</p>}
+        </div>
+      ) : (
+        node?.text && <p className="brief">{node.text}</p>
+      )}
 
       <div className="talk" aria-label="What has been said">
         {said.map((turn, index) => (
@@ -185,6 +211,7 @@ export function Lesson(props: LessonProps) {
       )}
 
       <div className="answer">
+        {beats.length > 0 ? null : (
         <label htmlFor="answer-box">
           {canAnswer
             ? underPressure
@@ -198,6 +225,8 @@ export function Lesson(props: LessonProps) {
             <span className="hint-inline"> — you can ask questions before you decide</span>
           )}
         </label>
+        )}
+        {beats.length === 0 && (
         <textarea
           id="answer-box"
           ref={input}
@@ -213,6 +242,7 @@ export function Lesson(props: LessonProps) {
           }}
           rows={3}
         />
+        )}
         <div className="answer-row">
           <button className="primary" disabled={!canAnswer || !draft.trim()} onClick={submit}>
             {busy ? "Sending…" : "Send answer"}
