@@ -118,11 +118,10 @@ export function Lesson(props: LessonProps) {
               </span>
             </span>
           )}
-          <button
-            className={attempt?.is_complete ? "primary" : "ghost"}
-            onClick={props.onClose}
-          >
-            {attempt?.is_complete ? "Next visitor →" : "Close"}
+          {/* Leaving early; carrying on after a finished situation is the
+              button down in the answer area, so the two never compete. */}
+          <button className="ghost" onClick={props.onClose}>
+            Close
           </button>
         </div>
       </header>
