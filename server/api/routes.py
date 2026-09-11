@@ -83,6 +83,19 @@ def _opening_line(engine, scenario_id: str, node_id: str) -> str:
         return ""
 
 
+def _unrepeated(line: str, history: list[dict], context) -> str:
+    """Say the gap-specific question once; after that, do not recite it.
+
+    With no model writing lines - it is off, or the verdict fell back - the same
+    strategy can come up round after round, and one sentence four times reads
+    like a recording. The authored ladder still varies by round, so it covers.
+    """
+    said = {item["text"] for item in history if item["speaker"] == "npc"}
+    if line and line not in said:
+        return line
+    return _authored_line(context) or line
+
+
 def _authored_line(context) -> str:
     """The written rung of the ladder, used when no usable model line arrived."""
     tactic = context.tactic
@@ -298,7 +311,9 @@ def respond(attempt_id: UUID, body: AnswerRequest, request: Request, session: Se
             skill_id = learning_state = None
             interpretation, feedback_message = evaluated.interpretation, None
             clause_ids = evaluated.policy_clause_ids
-            spoken = evaluated.character_line or adaptive.fallback_line(strategy)
+            spoken = evaluated.character_line or _unrepeated(
+                adaptive.fallback_line(strategy), history, context
+            )
             dialogue_rows = [("learner", body.text), ("npc", spoken)]
         elif adaptive:
             branch = engine.resolve_text(
