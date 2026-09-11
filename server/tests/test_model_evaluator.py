@@ -255,3 +255,34 @@ def test_model_default_follows_the_provider(monkeypatch):
     assert default_model_for("claude") == DEFAULT_MODEL
     monkeypatch.setenv("SKILLTOWN_MODEL", "gpt-4.1")
     assert default_model_for("openai") == "gpt-4.1"
+
+
+class RejectsEffortOnce:
+    """A cheap model: 400s on effort, then behaves once it is dropped."""
+
+    def __init__(self, verdict_json: str):
+        self.messages = self
+        self.calls: list[dict] = []
+        self._verdict = verdict_json
+
+    def create(self, **kwargs):
+        self.calls.append(kwargs)
+        if "effort" in kwargs.get("output_config", {}):
+            raise RuntimeError("Error code: 400 - This model does not support the effort parameter.")
+        return FakeResponse(self._verdict)
+
+
+def test_a_model_without_effort_is_retried_once_and_remembered():
+    from server.core.model_evaluator import ClaudeTextEvaluator
+
+    ctx = pressured_context()
+    client = RejectsEffortOnce(verdict())
+    evaluator = ClaudeTextEvaluator(api_key="x", client=client)
+    assert evaluator.evaluate("clarify_context", ctx.reference_answers[0].text, context=ctx).mode == "ai"
+    assert "effort" in client.calls[0]["output_config"]
+    assert "effort" not in client.calls[1]["output_config"]
+    # The structured output itself must survive the retry.
+    assert client.calls[1]["output_config"]["format"]["type"] == "json_schema"
+    # A second answer must not pay for the same rejection again.
+    evaluator.evaluate("clarify_context", ctx.reference_answers[0].text, context=ctx)
+    assert len(client.calls) == 3 and "effort" not in client.calls[2]["output_config"]

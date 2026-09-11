@@ -307,16 +307,21 @@ def test_local_env_file_fills_gaps_without_overriding_the_real_environment(tmp_p
 
     env_file = tmp_path / ".env"
     env_file.write_text(
-        "# a comment\n\nANTHROPIC_API_KEY=from-file\nSKILLTOWN_MODEL=\"claude-sonnet-5\"\nbroken line\n",
+        "# a comment\n\nANTHROPIC_API_KEY=from-file\nANTHROPIC_BASE_URL=\n"
+        "SKILLTOWN_MODEL=\"claude-sonnet-5\"\nbroken line\n",
         encoding="utf-8",
     )
     monkeypatch.setenv("SKILLTOWN_MODEL", "already-set")
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.delenv("ANTHROPIC_BASE_URL", raising=False)
 
     loaded = load_local_env(env_file)
 
     assert loaded == ["ANTHROPIC_API_KEY"]
     assert os.environ["ANTHROPIC_API_KEY"] == "from-file"
+    # A blank placeholder is not a value: the SDK reads this name itself, and an
+    # empty base URL surfaces as a connection error that is hard to trace back.
+    assert "ANTHROPIC_BASE_URL" not in os.environ
     # A value the deployment already set must survive a stray local file.
     assert os.environ["SKILLTOWN_MODEL"] == "already-set"
 

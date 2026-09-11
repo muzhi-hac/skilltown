@@ -33,3 +33,11 @@ def no_ambient_model(tmp_path, monkeypatch):
     monkeypatch.setattr(main, "ENV_FILE", tmp_path / "absent.env")
     for name in PROVIDER_NAMES:
         monkeypatch.delenv(name, raising=False)
+
+
+def test_isolation_actually_redirects_the_env_file(tmp_path, monkeypatch):
+    """The guard above is worthless if it can be bypassed by a bound default."""
+    monkeypatch.setattr(main, "ENV_FILE", tmp_path / "redirected.env")
+    (tmp_path / "redirected.env").write_text("SKILLTOWN_PROOF=redirected\n", encoding="utf-8")
+    assert main.load_local_env() == ["SKILLTOWN_PROOF"]
+    monkeypatch.delenv("SKILLTOWN_PROOF", raising=False)

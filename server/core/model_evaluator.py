@@ -214,13 +214,31 @@ class ClaudeTextEvaluator(RubricModelEvaluator):
             if base_url: options["base_url"] = base_url
             if user_agent: options["default_headers"] = {"User-Agent": user_agent}
             self._client = anthropic.Anthropic(**options)
+        self._send_effort = True
 
-    def _ask(self, text: str, context: EvaluationContext) -> RubricVerdict | None:
-        response = self._client.messages.create(
+    def _create(self, text: str, context: EvaluationContext):
+        output_config: dict[str, object] = {
+            "format": {"type": "json_schema", "schema": _verdict_schema()}
+        }
+        if self._send_effort:
+            output_config["effort"] = self._effort
+        return self._client.messages.create(
             model=self._model, max_tokens=MAX_OUTPUT_TOKENS, system=SYSTEM_PROMPT,
             messages=[{"role": "user", "content": self._prompt(text, context)}],
-            output_config={"effort": self._effort, "format": {"type": "json_schema", "schema": _verdict_schema()}},
+            output_config=output_config,
         )
+
+    def _ask(self, text: str, context: EvaluationContext) -> RubricVerdict | None:
+        try:
+            response = self._create(text, context)
+        except Exception as exc:  # noqa: BLE001 - inspected, then re-raised
+            # The cheap models do not take an effort setting. Learn that once
+            # rather than falling back on every answer for the rest of the demo.
+            if not (self._send_effort and "effort" in str(exc).casefold()):
+                raise
+            logger.info("model %s does not take effort; dropping it from now on", self._model)
+            self._send_effort = False
+            response = self._create(text, context)
         if getattr(response, "stop_reason", None) in {"refusal", "max_tokens"}:
             return None
         return _verdict_from_text(_response_text(response))

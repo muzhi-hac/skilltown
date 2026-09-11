@@ -34,14 +34,19 @@ logger = logging.getLogger(__name__)
 ENV_FILE = Path(__file__).parents[1] / ".env"
 
 
-def load_local_env(path: Path = ENV_FILE) -> list[str]:
+def load_local_env(path: Path | None = None) -> list[str]:
     """Read a local .env so a developer only has to paste a key into a file.
 
     A real environment variable always wins, so this can never quietly override
     what a deployment set. The file is gitignored and excluded from the image;
     production gets its configuration from the platform, not from here. Names of
     what was loaded are logged, never values.
+
+    ENV_FILE is read on every call rather than bound as a default argument, so
+    pointing it elsewhere in a test actually redirects this. Bound as a default
+    it silently would not, and the suite would run against a real key.
     """
+    path = path or ENV_FILE
     if not path.exists():
         return []
     loaded: list[str] = []
@@ -51,7 +56,11 @@ def load_local_env(path: Path = ENV_FILE) -> list[str]:
             continue
         key, _, value = line.partition("=")
         key, value = key.strip(), value.strip().strip('"').strip("'")
-        if not key or key in os.environ:
+        # A blank line in the template means "not set". Exporting it as an empty
+        # string is worse than skipping it: the SDKs read some of these names
+        # themselves, and an empty ANTHROPIC_BASE_URL becomes a URL with no
+        # scheme, which fails as a connection error rather than a config error.
+        if not key or not value or key in os.environ:
             continue
         os.environ[key] = value
         loaded.append(key)
