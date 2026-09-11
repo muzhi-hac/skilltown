@@ -1,15 +1,35 @@
-/* Type is deliberately large: this is read at a demo, from a distance. */
+/* SkillTown - compliance training for HR and L&D teams.
+ *
+ * The audience is a compliance officer evaluating a training tool, so the shell
+ * reads as enterprise software: light, quiet, one accent, clear hierarchy. The
+ * room stays a pixel scene on purpose - it is the product - but it sits in a
+ * framed card instead of filling the screen, the way a video module would.
+ *
+ * Type stays large enough to read from the back of a room during a demo.
+ */
 :root {
-  --ink: #f2f4f7;
-  --muted: #a9b2bd;
-  --panel: #14171c;
-  --panel-edge: #2b313a;
-  --accent: #f0c65a;
+  --ink: #1a2230;
+  --ink-soft: #47536a;
+  --muted: #6b7688;
+  --page: #f4f6f9;
+  --surface: #ffffff;
+  --surface-sunk: #f7f9fc;
+  --line: #dde3ec;
+  --line-strong: #c6cfdd;
+  --accent: #1f5f8b;
+  --accent-soft: #e8f1f7;
+  --warn: #8a5a1b;
+  --warn-soft: #fdf3e3;
+  --good: #1f6b46;
+  --good-soft: #e9f5ee;
+  --danger: #a32c1f;
+  /* The room keeps its own palette; it is a scene, not chrome. */
   --wall: #57534b;
   --floor: #8a6a49;
   --door: #74451f;
+  --knob: #f0c65a;
   font-family: ui-sans-serif, system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  color-scheme: dark;
+  color-scheme: light;
 }
 
 * {
@@ -18,32 +38,60 @@
 
 body {
   margin: 0;
-  background: #0b0d11;
+  background: var(--page);
   color: var(--ink);
 }
 
 .app {
   max-width: 1280px;
   margin: 0 auto;
-  padding: 18px 24px 32px;
+  padding: 0 24px 40px;
   display: flex;
   flex-direction: column;
   gap: 16px;
 }
 
-/* While a lesson is open the teacher must stay visible, so the room and the
-   panel sit side by side on anything wide enough. */
-.split {
-  display: grid;
-  grid-template-columns: minmax(420px, 520px) minmax(0, 1fr);
-  gap: 20px;
-  align-items: start;
+/* --- product header ------------------------------------------------------ */
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 16px 0 14px;
+  border-bottom: 1px solid var(--line);
 }
 
-@media (max-width: 980px) {
-  .split {
-    grid-template-columns: 1fr;
-  }
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.brand-mark {
+  width: 38px;
+  height: 38px;
+  border-radius: 9px;
+  background: var(--accent);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  font-size: 19px;
+}
+
+.brand-name {
+  margin: 0;
+  font-size: 21px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+.brand-sub {
+  margin: 1px 0 0;
+  font-size: 14px;
+  color: var(--muted);
 }
 
 .hud {
@@ -56,47 +104,77 @@ body {
 
 .hud h1 {
   margin: 0;
-  font-size: 32px;
-  line-height: 1.2;
+  font-size: 25px;
+  line-height: 1.25;
+  font-weight: 620;
+  letter-spacing: -0.01em;
 }
 
 .waiting {
-  margin: 6px 0 0;
-  font-size: 19px;
+  margin: 5px 0 0;
+  font-size: 15px;
   color: var(--muted);
 }
 
 .hud-actions {
   display: flex;
-  gap: 10px;
+  gap: 8px;
 }
 
 button {
   font: inherit;
-  border-radius: 10px;
+  border-radius: 8px;
   cursor: pointer;
+}
+
+button:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
 }
 
 button:disabled {
   cursor: not-allowed;
-  opacity: 0.5;
+  opacity: 0.45;
 }
 
 .ghost {
-  background: #1b1f26;
+  background: var(--surface);
   color: var(--ink);
-  border: 1px solid var(--panel-edge);
-  padding: 10px 16px;
-  font-size: 18px;
+  border: 1px solid var(--line-strong);
+  padding: 9px 15px;
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.ghost:hover:not(:disabled) {
+  background: var(--surface-sunk);
+  border-color: var(--accent);
 }
 
 .primary {
   background: var(--accent);
-  color: #17130a;
-  border: none;
-  padding: 12px 22px;
-  font-size: 20px;
+  color: #fff;
+  border: 1px solid var(--accent);
+  padding: 11px 22px;
+  font-size: 16px;
   font-weight: 600;
+}
+
+.primary:hover:not(:disabled) {
+  background: #18506f;
+}
+
+.split {
+  display: grid;
+  grid-template-columns: minmax(360px, 460px) minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+
+@media (max-width: 980px) {
+  .split {
+    grid-template-columns: 1fr;
+  }
 }
 
 .stage {
@@ -111,12 +189,13 @@ button:disabled {
 
 .room {
   width: 100%;
-  max-width: 640px;
-  border: 3px solid #23201c;
-  border-radius: 6px;
+  max-width: 620px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
   overflow: hidden;
   position: relative;
-  box-shadow: 0 18px 40px rgb(0 0 0 / 45%);
+  background: var(--surface);
+  box-shadow: 0 1px 2px rgb(26 34 48 / 6%), 0 8px 24px rgb(26 34 48 / 8%);
 }
 
 .room-wall {
@@ -164,11 +243,11 @@ button:disabled {
   width: 11px;
   height: 11px;
   border-radius: 50%;
-  background: var(--accent);
+  background: var(--knob);
 }
 
 .room-floor {
-  height: 330px;
+  height: 320px;
   background:
     repeating-linear-gradient(90deg, rgb(0 0 0 / 6%) 0 2px, transparent 2px 64px),
     var(--floor);
@@ -193,8 +272,9 @@ button:disabled {
   transform: translateX(-50%);
   bottom: -26px;
   white-space: nowrap;
-  font-size: 17px;
-  color: var(--accent);
+  font-size: 15px;
+  font-weight: 600;
+  color: #fff7e2;
   text-shadow: 0 1px 3px #000;
 }
 
@@ -207,324 +287,41 @@ button:disabled {
   }
 }
 
-/* --- door call to action ------------------------------------------------- */
-
 .door-cta {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
 }
 
 .knock {
   margin: 0;
-  font-size: 26px;
-  color: var(--accent);
-  animation: blink 1s ease-in-out infinite;
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  animation: blink 1.4s ease-in-out infinite;
 }
 
 @keyframes blink {
   50% {
-    opacity: 0.35;
+    opacity: 0.4;
   }
 }
 
 .door {
   background: var(--accent);
-  color: #17130a;
-  border: 3px solid #fff0c0;
-  padding: 16px 42px;
-  font-size: 27px;
-  font-weight: 700;
-  box-shadow: 0 8px 24px rgb(240 198 90 / 30%);
-}
-
-/* --- lesson panel ------------------------------------------------------- */
-
-.lesson {
-  background: var(--panel);
-  border: 2px solid var(--accent);
-  border-radius: 14px;
-  padding: 20px 22px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.lesson-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 12px;
-}
-
-.lesson-head h2 {
-  margin: 0;
-  font-size: 28px;
-}
-
-.lesson-sub {
-  margin: 4px 0 0;
-  color: var(--muted);
-  font-size: 18px;
-}
-
-.lesson-task {
-  margin: 0;
-  font-size: 18px;
-  color: var(--accent);
-}
-
-.lesson-say {
-  margin: 0;
-  font-size: 24px;
-  line-height: 1.45;
-}
-
-/* The situation is context, so it stays quieter than the person speaking. */
-.brief {
-  margin: 0;
-  font-size: 17px;
-  line-height: 1.4;
-  color: var(--muted);
-  border-left: 3px solid #39414d;
-  padding-left: 12px;
-}
-
-.head-right {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.rounds {
-  font-size: 16px;
-  color: #e8b98c;
-  border: 1px solid #6b5340;
-  border-radius: 999px;
-  padding: 3px 12px;
-  white-space: nowrap;
-}
-
-.talk {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  max-height: 42vh;
-  overflow-y: auto;
-  padding-right: 4px;
-}
-
-.bubble {
-  margin: 0;
-  font-size: 21px;
-  line-height: 1.45;
-  padding: 10px 14px;
-  border-radius: 14px;
-  max-width: 86%;
-}
-
-.bubble .who {
-  display: block;
-  font-size: 14px;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--muted);
-  margin-bottom: 3px;
-}
-
-.bubble.them {
-  align-self: flex-start;
-  background: #20262f;
-  border-bottom-left-radius: 4px;
-}
-
-.bubble.you {
-  align-self: flex-end;
-  background: #1d2b28;
-  border-bottom-right-radius: 4px;
-}
-
-.rules {
-  border: 1px solid #39414d;
-  border-radius: 10px;
-  padding: 8px 12px;
-}
-
-.rules summary {
-  cursor: pointer;
-  font-size: 17px;
-  color: #9fd7e4;
-}
-
-.rules .policy {
-  margin-top: 8px;
-}
-
-.policy {
-  margin: 0;
-  font-size: 17px;
-  color: #9fd7e4;
-  line-height: 1.4;
-}
-
-.feedback {
-  border-left: 4px solid var(--accent);
-  padding: 10px 14px;
-  background: #191d24;
-  border-radius: 0 10px 10px 0;
-  font-size: 20px;
-  line-height: 1.45;
-}
-
-.feedback p {
-  margin: 0 0 6px;
-}
-
-.feedback-head {
-  font-weight: 700;
-  display: flex;
-  gap: 10px;
-  align-items: baseline;
-  flex-wrap: wrap;
-}
-
-.feedback-mode {
-  font-size: 15px;
-  font-weight: 500;
-  color: var(--muted);
-}
-
-.feedback-ai {
-  border-left-color: #7fd18b;
-}
-
-.feedback-fallback {
-  border-left-color: #d78f6a;
-}
-
-.evidence {
-  margin: 0;
-  font-size: 18px;
-  color: #8fd39c;
-}
-
-.consequence {
-  margin: 0;
-  font-size: 18px;
-  color: #e8b98c;
-}
-
-.answer {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.answer label {
-  font-size: 18px;
-  color: var(--muted);
-}
-
-.answer textarea {
-  font: inherit;
-  font-size: 21px;
-  line-height: 1.4;
-  padding: 12px 14px;
-  border-radius: 10px;
-  border: 2px solid var(--panel-edge);
-  background: #0e1116;
-  color: var(--ink);
-  resize: vertical;
-}
-
-.answer textarea:focus {
-  outline: none;
-  border-color: var(--accent);
-}
-
-.answer-row {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-  flex-wrap: wrap;
-}
-
-.status {
-  font-size: 17px;
-  color: var(--muted);
-}
-
-/* --- progress ----------------------------------------------------------- */
-
-.skill {
-  border-top: 1px solid var(--panel-edge);
-  padding-top: 10px;
-}
-
-.skill-head {
-  margin: 0 0 4px;
-  font-size: 20px;
-}
-
-.quote {
-  margin: 0 0 4px;
-  font-size: 18px;
-  color: #d8dde4;
-  line-height: 1.4;
-}
-
-.muted {
-  color: var(--muted);
-  font-size: 17px;
-}
-
-.plan {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.plan h3 {
-  margin: 8px 0 0;
-  font-size: 22px;
-}
-
-.plan-item {
-  text-align: left;
-  background: #1b1f26;
-  border: 1px solid var(--panel-edge);
-  color: var(--ink);
-  padding: 12px 14px;
+  color: #fff;
+  border: 1px solid var(--accent);
+  padding: 13px 32px;
   font-size: 19px;
-  line-height: 1.4;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgb(31 95 139 / 22%);
 }
 
-.error {
-  margin: 0;
-  color: #ff9a8a;
-  font-size: 19px;
-}
-
-.disclaimer {
-  color: var(--muted);
-  font-size: 16px;
-  line-height: 1.5;
-  border-top: 1px solid var(--panel-edge);
-  padding-top: 12px;
-}
-
-@media (max-width: 700px) {
-  .hud h1 {
-    font-size: 25px;
-  }
-  .room {
-    width: 100%;
-  }
-  .door {
-    font-size: 22px;
-    padding: 14px 24px;
-  }
+.door:hover {
+  background: #18506f;
 }
 
 .task-chooser {
@@ -534,10 +331,397 @@ button:disabled {
   align-items: center;
   gap: 8px;
   color: var(--muted);
-  font-size: 16px;
+  font-size: 14px;
 }
 
 .task-chooser .ghost {
-  padding: 7px 10px;
+  padding: 6px 11px;
+  font-size: 14px;
+}
+
+/* --- session panel ------------------------------------------------------- */
+
+.lesson {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 20px 22px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  box-shadow: 0 1px 2px rgb(26 34 48 / 6%), 0 8px 24px rgb(26 34 48 / 6%);
+}
+
+.lesson-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+.lesson-head h2 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+.lesson-sub {
+  margin: 3px 0 0;
+  color: var(--muted);
   font-size: 15px;
+}
+
+.head-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.lesson-task {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* Rounds spent, as a meter rather than a score: the learner should see that
+   the pressure is finite without being told they are failing. */
+.rounds {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
+  color: var(--ink-soft);
+  white-space: nowrap;
+}
+
+.pips {
+  display: flex;
+  gap: 3px;
+}
+
+.pip {
+  width: 16px;
+  height: 5px;
+  border-radius: 3px;
+  background: var(--line-strong);
+}
+
+.pip.spent {
+  background: var(--warn);
+}
+
+.brief {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--ink-soft);
+  background: var(--surface-sunk);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+
+.talk {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 44vh;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.bubble {
+  margin: 0;
+  font-size: 17px;
+  line-height: 1.5;
+  padding: 11px 14px;
+  border-radius: 10px;
+  max-width: 88%;
+}
+
+.bubble .who {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 4px;
+}
+
+.bubble.them {
+  align-self: flex-start;
+  background: var(--surface-sunk);
+  border: 1px solid var(--line);
+  border-bottom-left-radius: 3px;
+}
+
+.bubble.you {
+  align-self: flex-end;
+  background: var(--accent-soft);
+  border: 1px solid #cfe2ef;
+  border-bottom-right-radius: 3px;
+}
+
+.bubble.you .who {
+  color: var(--accent);
+}
+
+.rules {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 9px 12px;
+  background: var(--surface-sunk);
+}
+
+.rules summary {
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.rules[open] summary {
+  margin-bottom: 8px;
+}
+
+.rules .policy + .policy {
+  margin-top: 8px;
+}
+
+.policy {
+  margin: 0;
+  font-size: 14px;
+  color: var(--ink-soft);
+  line-height: 1.55;
+}
+
+.policy strong {
+  color: var(--ink);
+}
+
+/* --- debrief ------------------------------------------------------------- */
+
+.feedback {
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--accent);
+  padding: 12px 14px;
+  background: var(--surface-sunk);
+  border-radius: 0 8px 8px 0;
+  font-size: 16px;
+  line-height: 1.55;
+}
+
+.feedback p {
+  margin: 0 0 8px;
+}
+
+.feedback p:last-child {
+  margin-bottom: 0;
+}
+
+.feedback-head {
+  font-weight: 650;
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  flex-wrap: wrap;
+}
+
+.feedback-mode {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--accent);
+  background: var(--accent-soft);
+  border-radius: 999px;
+  padding: 2px 9px;
+}
+
+.feedback-ai {
+  border-left-color: var(--good);
+}
+
+.feedback-ai .feedback-mode {
+  color: var(--good);
+  background: var(--good-soft);
+}
+
+.feedback-fallback {
+  border-left-color: var(--warn);
+}
+
+.feedback-fallback .feedback-mode {
+  color: var(--warn);
+  background: var(--warn-soft);
+}
+
+.evidence {
+  margin: 0;
+  font-size: 14px;
+  color: var(--good);
+  background: var(--good-soft);
+  border-radius: 6px;
+  padding: 8px 11px;
+}
+
+.consequence {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--warn);
+  background: var(--warn-soft);
+  border-radius: 6px;
+  padding: 8px 11px;
+}
+
+/* --- composer ------------------------------------------------------------ */
+
+.answer {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.answer label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+
+.answer textarea {
+  font: inherit;
+  font-size: 17px;
+  line-height: 1.45;
+  padding: 11px 13px;
+  border-radius: 8px;
+  border: 1px solid var(--line-strong);
+  background: var(--surface);
+  color: var(--ink);
+  resize: vertical;
+}
+
+.answer textarea::placeholder {
+  color: #9aa4b4;
+}
+
+.answer textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.answer textarea:disabled {
+  background: var(--surface-sunk);
+}
+
+.answer-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.status {
+  font-size: 14px;
+  color: var(--muted);
+}
+
+/* --- progress ------------------------------------------------------------ */
+
+.skill {
+  border-top: 1px solid var(--line);
+  padding-top: 12px;
+}
+
+.skill-head {
+  margin: 0 0 6px;
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.quote {
+  margin: 0 0 6px;
+  font-size: 15px;
+  color: var(--ink-soft);
+  line-height: 1.5;
+  border-left: 2px solid var(--line-strong);
+  padding-left: 10px;
+}
+
+.muted {
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 400;
+}
+
+.plan {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.plan h3 {
+  margin: 10px 0 0;
+  font-size: 17px;
+  font-weight: 650;
+}
+
+.plan-item {
+  text-align: left;
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  color: var(--ink);
+  padding: 12px 14px;
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.plan-item:hover {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+/* --- page furniture ------------------------------------------------------ */
+
+.error {
+  margin: 0;
+  color: var(--danger);
+  background: #fdecea;
+  border: 1px solid #f3c9c3;
+  border-radius: 8px;
+  padding: 10px 13px;
+  font-size: 15px;
+}
+
+.disclaimer {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.6;
+  border-top: 1px solid var(--line);
+  padding-top: 14px;
+  max-width: 78ch;
+}
+
+@media (max-width: 700px) {
+  .app {
+    padding: 0 14px 28px;
+  }
+  .hud h1 {
+    font-size: 21px;
+  }
+  .door {
+    font-size: 17px;
+    padding: 12px 22px;
+  }
+  .bubble {
+    max-width: 100%;
+  }
 }

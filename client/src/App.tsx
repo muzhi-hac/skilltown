@@ -333,12 +333,15 @@ export default function App() {
 
   return (
     <main className="app">
-      <header className="hud">
-        <div>
-          <h1>{headline}</h1>
-          <p className="waiting">
-            {waiting.length > 0 ? `Waiting: ${waiting.join(", ")}` : "No one else waiting."}
-          </p>
+      {/* A compliance officer is evaluating this, so the product says what it
+          is before the room does anything. */}
+      <div className="topbar">
+        <div className="brand">
+          <span className="brand-mark" aria-hidden="true">ST</span>
+          <div>
+            <p className="brand-name">SkillTown</p>
+            <p className="brand-sub">Compliance training &middot; guest session</p>
+          </div>
         </div>
         <div className="hud-actions">
           <button className="ghost" onClick={openProgress}>
@@ -347,6 +350,15 @@ export default function App() {
           <button className="ghost" onClick={clearRecord}>
             {confirmClear ? "Confirm clearing" : "Clear my record"}
           </button>
+        </div>
+      </div>
+
+      <header className="hud">
+        <div>
+          <h1>{headline}</h1>
+          <p className="waiting">
+            {waiting.length > 0 ? `Waiting: ${waiting.join(", ")}` : "No one else waiting."}
+          </p>
         </div>
       </header>
 

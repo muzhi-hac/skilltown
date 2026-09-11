@@ -157,7 +157,7 @@ def main() -> int:
         check("Alex speaks first", page.wait_for("thank-you note", 20), page.text()[:200])
         check("nobody is teaching", "teacher" not in page.text().lower())
         page.answer("€26 is a small gift, so I will accept it.")
-        check("Alex pushes back", page.wait_for("round 1 of 4", 20), page.text()[:200])
+        check("Alex pushes back", page.wait_for("round 1/4", 20), page.text()[:200])
         pressed = page.text().lower()
         check("no verdict is revealed mid-arc", "evidence recorded" not in pressed and "learning feedback" not in pressed, pressed[:200])
         check("the rules stay one click away", "check the rules" in pressed)

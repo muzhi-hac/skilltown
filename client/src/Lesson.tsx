@@ -106,8 +106,16 @@ export function Lesson(props: LessonProps) {
         </div>
         <div className="head-right">
           {underPressure && pressure && (
-            <span className="rounds" aria-label="Rounds of pressure so far">
-              Round {pressure.turn} of {pressure.max_turns}
+            <span
+              className="rounds"
+              aria-label={`Round ${pressure.turn} of ${pressure.max_turns}`}
+            >
+              Round {pressure.turn}/{pressure.max_turns}
+              <span className="pips" aria-hidden="true">
+                {Array.from({ length: pressure.max_turns }, (_, index) => (
+                  <span key={index} className={index < pressure.turn ? "pip spent" : "pip"} />
+                ))}
+              </span>
             </span>
           )}
           <button className="ghost" onClick={props.onClose}>
