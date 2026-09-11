@@ -6,7 +6,8 @@
 // afterwards, in the coach's voice, once the situation has played out.
 
 import { useEffect, useRef, useState } from "react";
-import type { Attempt, DialogueTurn, Passport, PolicyCard, Recommendation } from "./api";
+import { verdictKind, type Attempt, type DialogueTurn, type Passport, type PolicyCard, type Recommendation } from "./api";
+import { Verdict } from "./Verdict";
 
 const SKILL_LABELS: Record<string, string> = {
   clarify_context: "Gather relevant facts",
@@ -71,6 +72,7 @@ export function Lesson(props: LessonProps) {
   const [revealed, setRevealed] = useState(1);
   const moreToCome = revealed < beats.length;
   const said = transcript(attempt);
+  const atRest = verdictKind(attempt) !== null;
   const pressure = attempt?.pressure ?? null;
   const underPressure = Boolean(pressure?.active) && (pressure?.turn ?? 0) > 0;
   const debrief = attempt?.feedback ?? null;
@@ -126,12 +128,15 @@ export function Lesson(props: LessonProps) {
               </span>
             </span>
           )}
+          {/* Leaving early; carrying on after a finished situation is the
+              button down in the answer area, so the two never compete. */}
           <button className="ghost" onClick={props.onClose}>
             Close
           </button>
         </div>
       </header>
 
+      <div className="lesson-reader" aria-label="The situation so far">
       {props.taskTitle && <p className="lesson-task">Situation: {props.taskTitle}</p>}
 
       {beats.length > 0 ? (
@@ -210,8 +215,19 @@ export function Lesson(props: LessonProps) {
         </p>
       )}
 
+      </div>
+
+      <div className="lesson-actions">
+      {atRest && attempt ? (
+        <Verdict
+          attempt={attempt}
+          teacher={props.teacher}
+          busy={busy}
+          onRewind={props.onRewind}
+          onClose={props.onClose}
+        />
+      ) : (
       <div className="answer">
-        {beats.length > 0 ? null : (
         <label htmlFor="answer-box">
           {canAnswer
             ? underPressure
@@ -225,8 +241,6 @@ export function Lesson(props: LessonProps) {
             <span className="hint-inline"> — you can ask questions before you decide</span>
           )}
         </label>
-        )}
-        {beats.length === 0 && (
         <textarea
           id="answer-box"
           ref={input}
@@ -242,7 +256,6 @@ export function Lesson(props: LessonProps) {
           }}
           rows={3}
         />
-        )}
         <div className="answer-row">
           <button className="primary" disabled={!canAnswer || !draft.trim()} onClick={submit}>
             {busy ? "Sending…" : "Send answer"}
@@ -262,6 +275,8 @@ export function Lesson(props: LessonProps) {
           ) : null}
           <span className="status">{props.status}</span>
         </div>
+      </div>
+      )}
       </div>
     </section>
   );

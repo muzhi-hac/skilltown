@@ -28,9 +28,16 @@ def call(method: str, path: str, body=None, token: str | None = None):
 
 
 def outcome(result: dict) -> str:
+    """Read how the arc ended from the transcript, not from where it landed.
+
+    Both kinds of wrong now finish at the same consequence node on purpose, so
+    the node id no longer separates them. The answer that closed the arc is
+    tagged, which is the only thing that still tells them apart.
+    """
     if result.get("assessment_status") == "deferred": return "deferred"
-    effect = result.get("effect")
-    if effect == "consequence_preview": return "miss"
+    said = [turn for turn in result.get("dialogue", []) if turn.get("speaker") == "learner"]
+    if said and said[-1].get("kind") == "overgeneralized": return "overgeneralized"
+    if result.get("effect") == "consequence_preview": return "miss"
     node = (result.get("node") or {}).get("id", "")
     updates = result.get("learning_updates") or [{}]
     return "overgeneralized" if node in {"alex_public_gift", "sam_cash_limit"} and updates[0].get("state") == "needs_practice" else "pass"

@@ -162,7 +162,9 @@ def main() -> int:
         page.click_text("then what")
         check("the debrief arrives after the story", page.wait_for("learning feedback", 20), page.text()[:200])
         check("it is labelled a simulation", "teaching simulation" in page.text().lower())
-        check("rewind is offered", page.click_text("rewind"))
+        check("the situation says what it is", "needs another look" in page.text().lower(), page.text()[:200])
+        check("it claims nothing about passing", "passed independently" not in page.text().lower())
+        check("trying again is offered", page.click_text("try it again"))
         # Rewinding restarts the pressure, so the round counter is back to zero
         # and the composer asks the opening question again.
         check("rewind lands on the decision", page.wait_for("what do you say", 20), page.text()[:160])

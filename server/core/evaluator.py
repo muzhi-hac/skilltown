@@ -28,6 +28,13 @@ class EvaluationResult:
     # A settled decision, not thinking aloud. One more push and the arc ends:
     # repeating yourself four times to someone who heard you is not training.
     committed: bool = False
+    # Only the adaptive visitor fills these: the validated rubric signals the
+    # route needs to choose what he asks next, the strategy the server chose,
+    # and whether the learner committed to the action this node forbids.
+    covered: tuple[str, ...] = ()
+    missing: tuple[str, ...] = ()
+    strategy_id: str = ""
+    committed_violation: bool = False
 
     @property
     def outcome(self) -> str:

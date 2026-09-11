@@ -17,15 +17,17 @@ primary_region = "fra"
   WEB_DIR = "/app/client/dist"
   # Same-origin deployment, so CORS does not apply; empty avoids a misconfig.
   CORS_ORIGINS = ""
-  # Real model evaluation is on. Verified 2026-09-10 with one live call through
-  # the configured gateway: a plain text call and the structured rubric call both
-  # returned 200, and the verdict quoted the learner's own words.
+  # Real model evaluation is on. The credential is a first-party ANTHROPIC_API_KEY
+  # held as a Fly secret. The gateway this used to run through stopped serving us:
+  # on 2026-09-11 a live answer against the deployed app came back
+  # feedback_mode=fallback, assessment=deferred.
   SKILLTOWN_MODEL_ENABLED = "true"
-  # That gateway refuses the SDK's default client identity and serves plain HTTP
-  # clients, so the operator sets the header explicitly. Unset it when moving to a
-  # first-party ANTHROPIC_API_KEY - it is not needed there, and this gateway's
-  # client policy can change at any time.
-  SKILLTOWN_MODEL_USER_AGENT = "curl/8.4.0"
+  # Alex's evidence-driven questioning is enabled for the hackathon demo.
+  # Removing this line restores the fixed authored ladder on the next deploy.
+  SKILLTOWN_ALEX_ADAPTIVE_ENABLED = "true"
+  # No SKILLTOWN_MODEL_USER_AGENT here: the override existed only because that
+  # gateway refused the SDK's default client identity. A first-party key does not
+  # need it, and setting it here would survive unsetting the secret.
   # Every step is now a free-text answer, so the learner waits for one evaluation
   # per step. Opus 5 measured ~12s per answer on this endpoint, which is too long
   # to sit through repeatedly, so the demo runs Sonnet 5. Effort stays at the

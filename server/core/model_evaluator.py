@@ -8,11 +8,12 @@ import os
 import re
 import time
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import TYPE_CHECKING, Literal
 
 from pydantic import BaseModel, Field, ValidationError
 
+from server.core.alex_strategy import select_strategy
 from server.core.evaluator import EvaluationResult, FallbackTextEvaluator
 
 if TYPE_CHECKING:
@@ -33,6 +34,12 @@ DEFAULT_EFFORT = "medium"
 FAILURE_THRESHOLD = 3
 COOLDOWN_SECONDS = 120.0
 MAX_OUTPUT_TOKENS = 4096
+ACTION_INTENTS = frozenset({"unclear", "conditional", "compliant", "committed_violation"})
+CLAUSE_ID_PATTERN = re.compile(r"\b[A-Z]+-\d+(?:\.\d+)*\b", re.IGNORECASE)
+ANSWER_KEY_PHRASES = (
+    "the correct answer is", "the right answer is", "you should have said",
+    "the rubric", "criterion",
+)
 
 SYSTEM_PROMPT = """You do three jobs on one learner turn, supplied as JSON.
 
@@ -61,7 +68,12 @@ JOB 3 - stay in character. Write character_line as the person described in "char
 15. When the verdict is a pass, give ground in their own words, without praising the learner and without explaining the rule.
 16. Otherwise apply exactly the tactic in "tactic" to push once more, and never repeat a line already in "history". If you set committed, this is your last attempt before they walk away with it, so make it the strongest version of that tactic.
 17. Never volunteer a withheld fact nobody asked for, never state the correct answer, never name a rule, a clause id, a criterion id, a threshold from the passages, or the fact that this is training. No stage directions, no quotation marks around the whole line.
-18. One to three spoken sentences. Pressure, never threats of violence, slurs, or anything the character would be fired for saying out loud."""
+18. One to three spoken sentences. Pressure, never threats of violence, slurs, or anything the character would be fired for saying out loud.
+
+JOB 3b - when "strategies" is supplied instead of "tactic", there is no ladder.
+19. Choose strategy_id from "strategies" using "decision_priority" and the gap between covered and missing, and write character_line as that strategy. The server recomputes this choice; a mismatch costs you the line, not the verdict.
+20. Set action_intent to committed_violation only when the learner's own words in this answer commit to an action in "action_rules": name it in action_rule_id and quote the learner continuously in action_quote. Hypotheticals, questions, refusals and silence are not commitments; use conditional, compliant or unclear.
+21. Never invent an action_rule_id, never quote words the learner did not write, and never claim both a pass and a violation."""
 
 
 class RubricVerdict(BaseModel):
@@ -77,6 +89,12 @@ class RubricVerdict(BaseModel):
     turn_kind: Literal["probe", "decision"] = "decision"
     asked: list[str] = Field(default_factory=list)
     committed: bool = False
+    # Proposals, not decisions: the server recomputes the strategy and rechecks
+    # the stated action against this node's rules and the learner's own words.
+    strategy_id: str = ""
+    action_intent: str = "unclear"
+    action_rule_id: str = ""
+    action_quote: str = ""
 
 
 def _normalise(text: str) -> str:
@@ -166,8 +184,28 @@ class RubricModelEvaluator:
                 "opening_line": context.opening_line,
             }
             payload["on_pass"] = persona.concede
-        if tactic and context.pressure:
+        adaptive = context.adaptive
+        if adaptive and context.pressure:
+            payload["strategies"] = [
+                {"id": strategy_id} for strategy_id in adaptive.strategy_ids
+            ]
+            payload["decision_priority"] = [
+                "pass covers every required point", "a committed violation ends it",
+                "the last round ends it", "a blanket answer is probed for conditions",
+                "otherwise ask for the missing group: decision, then reasons, then action",
+            ]
+            payload["criterion_groups"] = {
+                "reasons": sorted(adaptive.reasons),
+                "decision": sorted(adaptive.decision),
+                "execution": sorted(adaptive.execution),
+            }
+            payload["action_rules"] = [
+                {"id": rule_id, "description": description}
+                for rule_id, description in adaptive.action_rules
+            ]
+        elif tactic and context.pressure:
             payload["tactic"] = {"id": tactic.id, "instruction": tactic.instruction}
+        if context.pressure:
             payload["round"] = {"number": context.pressure.turn, "of": context.pressure.max_turns}
             payload["history"] = [
                 {"speaker": speaker, "text": said} for speaker, said in context.pressure.history
@@ -199,6 +237,27 @@ class RubricModelEvaluator:
         if verdict.passed and verdict.turn_kind != "probe":
             valid = valid and required <= covered and not missing and not verdict.overgeneralized
             valid = valid and self._grounded(text, verdict.quoted_evidence)
+
+        adaptive = context.adaptive
+        violation = False
+        if adaptive:
+            # The signals now steer what Alex asks next, so a partial account of
+            # the rubric is not usable: every required point is covered or missing.
+            valid = valid and covered | missing == required
+            valid = valid and verdict.action_intent in ACTION_INTENTS
+            if verdict.action_intent == "committed_violation":
+                # A claimed violation ends the situation, so it is checked like a
+                # pass: the learner's own words, a rule that belongs to this node,
+                # and nothing contradicting it. A claim that fails those checks
+                # discredits the verdict rather than quietly becoming a miss.
+                violation = (
+                    not verdict.passed
+                    and not verdict.overgeneralized
+                    and verdict.action_rule_id in adaptive.action_rule_ids
+                    and self._grounded(text, verdict.action_quote)
+                )
+                valid = valid and violation
+
         if not valid:
             logger.warning("model verdict failed grounding validation; using deterministic fallback")
             return self._fallback.evaluate(rule, text, context=context)
@@ -207,7 +266,7 @@ class RubricModelEvaluator:
         )
         # A question is never a pass, whatever the grading half decided.
         probing = verdict.turn_kind == "probe"
-        return EvaluationResult(
+        result = EvaluationResult(
             passed=verdict.passed and not probing,
             overgeneralized=bool(verdict.overgeneralized) and not verdict.passed and not probing,
             interpretation=interpretation, feedback=feedback,
@@ -216,6 +275,27 @@ class RubricModelEvaluator:
             turn_kind="probe" if probing else "decision",
             asked=tuple(item for item in verdict.asked if item in known),
             committed=bool(verdict.committed) and not probing,
+        )
+        if not adaptive:
+            return result
+
+        # The server chooses the strategy from the signals it just validated.
+        # The model's proposal only decides whether its line is usable.
+        chosen = select_strategy(
+            assessed=True, passed=verdict.passed, overgeneralized=result.overgeneralized,
+            committed_violation=violation,
+            is_last_turn=bool(context.pressure and context.pressure.is_last_turn),
+            covered=covered, missing=missing,
+            reasons=set(adaptive.reasons), decision=set(adaptive.decision),
+        )
+        line = result.character_line if verdict.strategy_id == chosen else ""
+        if not line:
+            logger.info("alex strategy %s: using the authored line", chosen)
+        return replace(
+            result,
+            covered=tuple(sorted(covered)), missing=tuple(sorted(missing)),
+            strategy_id=chosen, committed_violation=violation,
+            character_line=line or adaptive.fallback_line(chosen),
         )
 
     @staticmethod
@@ -229,8 +309,20 @@ class RubricModelEvaluator:
         if not cleaned or len(cleaned) > MAX_LINE_CHARS:
             return ""
         lowered = cleaned.casefold()
-        leaks = [*context.allowed_clause_ids, *context.required]
-        if any(token.casefold() in lowered for token in leaks):
+        if context.adaptive:
+            # Criterion ids are ordinary English here - record, context, register -
+            # so matching them as substrings silences lines a person would really
+            # say. Clause ids and answer-key phrasing are what must not appear.
+            leaked = CLAUSE_ID_PATTERN.search(cleaned) or any(
+                clause_id.casefold() in lowered for clause_id in context.allowed_clause_ids
+            )
+            leaked = leaked or any(phrase in lowered for phrase in ANSWER_KEY_PHRASES)
+        else:
+            leaked = any(
+                token.casefold() in lowered
+                for token in (*context.allowed_clause_ids, *context.required)
+            )
+        if leaked:
             logger.warning("character line cited grounding material; using the authored line")
             return ""
         # The facts are the learner's to extract by asking. A line that states a

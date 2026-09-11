@@ -627,6 +627,7 @@ components:
           - answer
           - decision
           - commit
+          - overgeneralized
           title: Kind
           default: line
         resolved:
@@ -1038,6 +1039,11 @@ components:
         allow_text:
           type: boolean
           title: Allow Text
+        verdict_line:
+          type: string
+          maxLength: 400
+          title: Verdict Line
+          default: ''
         policy_cards:
           items:
             $ref: '#/components/schemas/PolicyCard'

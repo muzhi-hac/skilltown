@@ -125,7 +125,9 @@ Content-Type: application/json
 - 问了内容里没有的东西，得到的是人设里的 `deflect` 一句敷衍。
 - 不问就决定不会被从宽：按现有信息评分，证据的 `interpretation` 写明"decided without asking anything"。
 
-**后果（consequence）**：后果节点的 `node.consequence` 是一串 2–5 拍的 `{when, text}`，由内容文件写死、经校验（缺了就构建失败），不经过模型——法律后果不适合让模型现编。前端一次只展开一拍，点"Then what?"继续，展开完才出现 Mira 的复盘和倒带入口。
+**后果（consequence）**：后果节点的 `node.consequence` 是一串 2–5 拍的 `{when, text}`，由内容文件写死、经校验（缺了就构建失败），不经过模型——法律后果不适合让模型现编。前端一次只展开一拍，点"Then what?"继续，展开完才出现结算卡（"Try it again" / "Next visitor"）。
+
+同一个后果节点会接住两种相反的错误，所以故事按**结局**取：结束这段弧的那次作答被标成 `overgeneralized` 时，返回的是 scenario 级的 `rigid_consequence`（一律拒绝的代价），否则是节点自己的链条（让步的代价）。标记存在对话记录里，刷新后仍然一致。
 
 人设（`persona`）、升级阶梯和台词只存在于服务端内容里，`/api/v1/town` 与任何响应都不下发。
 

@@ -84,6 +84,57 @@ def _validate_persona(npc: dict[str, Any]) -> None:
         if tactic["id"] in seen:
             _fail(f"npc {npc_id}: duplicate tactic {tactic['id']}")
         seen.add(tactic["id"])
+    # Only Alex carries one this round; the others keep the fixed ladder.
+    if persona.get("adaptive_policy") is not None:
+        _validate_adaptive_policy(npc_id, persona["adaptive_policy"])
+
+
+REQUIRED_STRATEGIES = (
+    "clarify_decision", "probe_conditions", "probe_reason", "probe_action", "probe_gap",
+    "concede", "close_violation", "close_review", "retry",
+)
+
+
+def _validate_adaptive_policy(npc_id: str, policy: dict[str, Any]) -> None:
+    """Alex picks from this table, so a gap in it is a strategy he cannot play."""
+    strategies = policy.get("strategies")
+    if not isinstance(strategies, list) or not strategies:
+        _fail(f"{npc_id}: adaptive_policy.strategies must be non-empty")
+    ids = [str(item.get("id", "")) for item in strategies]
+    if len(ids) != len(set(ids)):
+        _fail(f"{npc_id}: adaptive_policy has duplicate strategy ids")
+    for required_id in REQUIRED_STRATEGIES:
+        if required_id not in ids:
+            _fail(f"{npc_id}: adaptive_policy is missing strategy {required_id!r}")
+    for item in strategies:
+        # retry says nothing at all: the learner is asked to try again, in the
+        # panel's own voice, and the visitor does not speak.
+        if item.get("id") != "retry" and not _nonempty(item.get("fallback_line")):
+            _fail(f"{npc_id}: adaptive_policy strategy {item.get('id')!r} needs a fallback_line")
+
+
+def _validate_adaptive_rubric(prefix: str, rubric: dict[str, Any], required: list[str]) -> None:
+    """The groups decide which gap Alex asks about, so they must be exactly the rubric."""
+    grouped: list[str] = []
+    for group in ("reasons", "decision", "execution"):
+        values = rubric.get(group)
+        if not isinstance(values, list):
+            _fail(f"{prefix}: adaptive_rubric.{group} must be a list")
+        grouped.extend(str(value) for value in values)
+    if len(grouped) != len(set(grouped)):
+        _fail(f"{prefix}: adaptive_rubric groups repeat a criterion")
+    if set(grouped) != set(required):
+        _fail(f"{prefix}: adaptive_rubric must group exactly the required criteria")
+
+    rules = rubric.get("action_rules")
+    if not isinstance(rules, list) or not rules:
+        _fail(f"{prefix}: adaptive_rubric.action_rules must be non-empty")
+    rule_ids = [str(rule.get("id", "")) for rule in rules]
+    if len(rule_ids) != len(set(rule_ids)) or not all(rule_ids):
+        _fail(f"{prefix}: adaptive_rubric.action_rules need unique non-empty ids")
+    for rule in rules:
+        if not _nonempty(rule.get("description")):
+            _fail(f"{prefix}: adaptive_rubric.action_rules need a description")
 
 
 def _validate_scenario(
@@ -96,6 +147,16 @@ def _validate_scenario(
     pressuring = pressuring if pressuring is not None else set()
     pressure = scenario.get("pressure")
     if pressure is not None:
+        # Both mistakes end at the same consequence node, so a pressure module
+        # owes a story for the other one: refusing everything has its own cost.
+        rigid = scenario.get("rigid_consequence")
+        if not isinstance(rigid, list) or not 2 <= len(rigid) <= 5:
+            _fail(f"{scenario_id}: rigid_consequence needs two to five beats")
+        for beat in rigid:
+            if not isinstance(beat, dict) or not all(
+                _nonempty(beat.get(key)) for key in ("when", "text")
+            ):
+                _fail(f"{scenario_id}: each rigid_consequence beat needs when and text")
         turns = pressure.get("max_turns") if isinstance(pressure, dict) else None
         if not isinstance(turns, int) or not 2 <= turns <= 6:
             _fail(f"{scenario_id}: pressure.max_turns must be an integer from 2 to 6")
@@ -103,6 +164,8 @@ def _validate_scenario(
         _fail(f"{scenario_id}: version must be non-empty")
     if not isinstance(scenario.get("available_modes"), list) or not scenario["available_modes"]:
         _fail(f"{scenario_id}: available_modes must be non-empty")
+    if not _nonempty(scenario.get("completion_summary")):
+        _fail(f"{scenario_id}: completion_summary must be non-empty")
     nodes = scenario.get("nodes")
     if not isinstance(nodes, dict) or not nodes:
         _fail(f"{scenario_id}: nodes must be non-empty")
@@ -129,6 +192,15 @@ def _validate_scenario(
             _validate_withheld(scenario_id, node_id, node)
             if pressuring and node.get("npc_id") not in pressuring:
                 _fail(f"{scenario_id}/{node_id}: {node.get('npc_id')!r} has no persona to press with")
+        if node.get("adaptive_rubric") is not None:
+            _validate_adaptive_rubric(
+                f"{scenario_id}/{node_id}", node["adaptive_rubric"],
+                list((node.get("rubric") or {}).get("required", [])),
+            )
+        if node_id.endswith("_consequence") and not _nonempty(node.get("consequence_summary")):
+            # The verdict card states this one sentence and has nothing to fall
+            # back on, so a missing line is a content bug, not a blank line.
+            _fail(f"{scenario_id}/{node_id}: consequence_summary must be non-empty")
         _validate_node(scenario_id, node_id, node, nodes)
     _validate_reachability(scenario_id, scenario, nodes)
     if scenario_id != "ethics-review":

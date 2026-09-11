@@ -187,6 +187,43 @@ def test_runtime_dense_failure_updates_readiness_and_honours_required_mode(tmp_p
         assert client.app.state.rag_status.retrieval_mode == "sparse"
 
 
+def test_ready_reports_hybrid_only_when_dense_actually_answers(tmp_path, dense_available):
+    with TestClient(create_app(tmp_path / "test.sqlite3")) as client:
+        assert client.get("/ready").json()["retrieval_mode"] == "hybrid"
+
+
+def test_ready_stops_claiming_hybrid_once_dense_fails_at_runtime(tmp_path, monkeypatch, dense_available):
+    """A probe that keeps saying hybrid after dense broke is worse than no probe.
+
+    The status is a snapshot taken at startup and deliberately not re-warmed, so
+    a dense failure recorded later has to be reflected from what is already
+    known rather than by running retrieval inside the probe.
+    """
+    import server.main as main
+    from server.core import knowledge
+
+    warmups = []
+    original = main.warmup_rag
+    monkeypatch.setattr(main, "warmup_rag", lambda required: warmups.append(required) or original(required))
+
+    with TestClient(main.create_app(tmp_path / "test.sqlite3")) as client:
+        assert client.get("/ready").json()["retrieval_mode"] == "hybrid"
+        knowledge.mark_dense_runtime_failed("query_encode_error:RuntimeError")
+
+        degraded = client.get("/ready")
+        assert degraded.status_code == 200
+        assert degraded.json()["retrieval_mode"] == "sparse"
+        assert "dense_runtime_failure" in degraded.json()["reason"]
+
+        # A deployment that demands dense should fail this probe, not pass it.
+        client.app.state.require_dense = True
+        failed = client.get("/ready")
+        assert failed.status_code == 503
+        assert failed.json()["retrieval_mode"] == "unavailable"
+
+        assert warmups == [False], "the probe re-warmed instead of reporting what it knew"
+
+
 def test_ready_reads_lifespan_snapshot_without_rewarming(tmp_path, monkeypatch):
     import server.main as main
     from server.core.rag_runtime import RagStatus
@@ -237,6 +274,51 @@ def test_pressure_arc_ends_in_consequence_and_records_how_long_it_held(tmp_path)
         passport = client.get("/api/v1/passport", headers=headers).json()
         evidence = [item for skill in passport["skills"] for item in skill["evidence"]]
         assert any("2 rounds of pressure, gave way" in str(item["interpretation"]) for item in evidence)
+
+
+def test_an_arc_out_of_rounds_lands_on_the_consequence_however_it_was_wrong(tmp_path):
+    """Out of rounds is out of rounds, whichever flavour of wrong the last answer was.
+
+    A blanket refusal grades overgeneralized, and that branch loops back to the
+    same question on purpose: mid-arc it is another chance. At the end of an arc
+    it stranded the learner on a node with no consequence to see and no rewind,
+    while the character spoke their closing line as if something had happened.
+    """
+    with TestClient(create_app(tmp_path / "test.sqlite3")) as client:
+        _, headers = session(client)
+        attempt = create_attempt(client, headers)
+        blanket = reference(client, "dinner-invitation", "alex_public_gift", "overgeneralized")
+        result = press_through(client, headers, attempt, blanket)
+        assert result["node"]["id"] == "alex_public_gift_consequence"
+        assert result["effect"] == "consequence_preview"
+        assert result["learning_updates"][0]["state"] == "needs_practice"
+        rewound = client.post(
+            f"/api/v1/attempts/{attempt['attempt_id']}/rewind", headers=headers,
+            json={"client_event_id": str(uuid4()), "expected_revision": result["revision"]},
+        )
+        assert rewound.status_code == 200, rewound.text
+        assert rewound.json()["node"]["id"] == "alex_public_gift"
+
+
+def test_a_resting_situation_carries_its_authored_verdict_line(tmp_path):
+    """The card has one sentence and no fallback, so the API has to deliver it."""
+    with TestClient(create_app(tmp_path / "test.sqlite3")) as client:
+        _, headers = session(client)
+        attempt = create_attempt(client, headers)
+        assert attempt["node"]["verdict_line"] == "", "a question is not a verdict"
+
+        miss = reference(client, "dinner-invitation", "alex_public_gift", "miss")
+        landed = press_through(client, headers, attempt, miss)
+        assert landed["node"]["id"] == "alex_public_gift_consequence"
+        assert "public officials" in landed["node"]["verdict_line"]
+
+        # The other resting place is the end of a path, which says what the
+        # practice covered without claiming the learner aced it.
+        walked = create_attempt(client, headers, scenario="data-incidents")
+        for node_id in ("mira_privacy_clock", "mira_nis2_stages", "mira_encrypted_backup"):
+            walked = answer(client, headers, walked, reference(client, "data-incidents", node_id)).json()
+        assert walked["is_complete"]
+        assert "notification timing" in walked["node"]["verdict_line"]
 
 
 def test_holding_the_line_mid_arc_ends_the_pressure_and_moves_on(tmp_path):
@@ -524,3 +606,198 @@ def test_every_consequence_has_somewhere_to_go(tmp_path):
             beats = node.get("consequence", [])
             assert 2 <= len(beats) <= 5, f"{scenario_id}/{node_id} has {len(beats)} beats"
             assert node.get("rewind_to"), f"{scenario_id}/{node_id} cannot be rewound"
+
+# --- Alex, adaptive ----------------------------------------------------------
+
+class StubEvaluator:
+    """Stands in for the model so a route test can pin one verdict at a time."""
+
+    def __init__(self, *results):
+        self.results, self.calls = list(results), []
+
+    def evaluate(self, rule, text, allow_model=True, *, context):
+        self.calls.append(text)
+        result = self.results[min(len(self.calls) - 1, len(self.results) - 1)]
+        return result
+
+
+def adaptive_client(tmp_path, monkeypatch, *results):
+    monkeypatch.setenv("SKILLTOWN_ALEX_ADAPTIVE_ENABLED", "true")
+    app = create_app(tmp_path / "test.sqlite3")
+    client = TestClient(app)
+    client.__enter__()
+    if results:
+        app.state.evaluator = StubEvaluator(*results)
+    return client
+
+
+def alex_result(**changes):
+    from server.core.evaluator import EvaluationResult
+    values = {
+        "passed": False, "interpretation": "Stated a decision, not the conditions.",
+        "feedback": "Say which limit applies.", "policy_clause_ids": ["ANNEX-1.2"],
+        "mode": "ai", "covered": ("decline_or_surrender",),
+        "missing": ("recipient_role", "applicable_limit", "record"),
+        "strategy_id": "probe_reason", "character_line": "So why not, exactly?",
+    }
+    values.update(changes)
+    return EvaluationResult(**values)
+
+
+def test_alex_presses_on_the_gap_and_stays_in_the_situation(tmp_path, monkeypatch):
+    client = adaptive_client(tmp_path, monkeypatch, alex_result())
+    try:
+        _, headers = session(client)
+        attempt = create_attempt(client, headers)
+        replied = answer(client, headers, attempt, "I will not take it.").json()
+        assert replied["node"]["id"] == "alex_public_gift"
+        assert replied["learning_updates"] == [], "no verdict is revealed mid-arc"
+        assert replied["dialogue"][-1]["text"] == "So why not, exactly?"
+        assert replied["pressure"]["turn"] == 1
+    finally:
+        client.__exit__(None, None, None)
+
+
+def test_alex_concedes_on_the_first_round_when_the_answer_is_complete(tmp_path, monkeypatch):
+    client = adaptive_client(tmp_path, monkeypatch, alex_result(
+        passed=True, strategy_id="concede", covered=("recipient_role", "applicable_limit",
+        "decline_or_surrender", "record"), missing=(), character_line="All right. I hear you."))
+    try:
+        _, headers = session(client)
+        attempt = create_attempt(client, headers)
+        replied = answer(client, headers, attempt, "Declined and logged.").json()
+        assert replied["node"]["id"] == "alex_private_gift", "a pass moves the situation on"
+        assert replied["learning_updates"][0]["state"] != "needs_practice"
+    finally:
+        client.__exit__(None, None, None)
+
+
+def test_a_committed_violation_ends_the_situation_on_the_first_round(tmp_path, monkeypatch):
+    client = adaptive_client(tmp_path, monkeypatch, alex_result(
+        strategy_id="close_violation", committed_violation=True,
+        character_line="Then we have a decision.",
+        interpretation="Committed to keeping an unrecorded gift."))
+    try:
+        _, headers = session(client)
+        attempt = create_attempt(client, headers)
+        replied = answer(client, headers, attempt, "I will keep it and say nothing.").json()
+        assert replied["node"]["id"] == "alex_public_gift_consequence"
+        assert replied["effect"] == "consequence_preview"
+        assert replied["learning_updates"][0]["state"] == "needs_practice"
+    finally:
+        client.__exit__(None, None, None)
+
+
+def test_running_out_of_rounds_says_the_evidence_was_short_not_that_alex_won(tmp_path, monkeypatch):
+    client = adaptive_client(tmp_path, monkeypatch, alex_result(),
+                             alex_result(), alex_result(), alex_result(strategy_id="close_review"))
+    try:
+        _, headers = session(client)
+        attempt = create_attempt(client, headers)
+        result = attempt
+        for _ in range(4):
+            result = answer(client, headers, result, "I will not take it.").json()
+        assert result["node"]["id"] == "alex_public_gift_consequence"
+        passport = client.get("/api/v1/passport", headers=headers).json()
+        evidence = [item for skill in passport["skills"] for item in skill["evidence"]]
+        assert any("without sufficient evidence" in str(item["interpretation"]) for item in evidence)
+        assert not any("gave way" in str(item["interpretation"]) for item in evidence)
+    finally:
+        client.__exit__(None, None, None)
+
+
+def test_a_deferred_answer_costs_alex_nothing(tmp_path, monkeypatch):
+    client = adaptive_client(tmp_path, monkeypatch, alex_result(
+        passed=False, mode="fallback", assessed=False, strategy_id="", character_line="",
+        covered=(), missing=()))
+    try:
+        _, headers = session(client)
+        attempt = create_attempt(client, headers)
+        replied = answer(client, headers, attempt, "Something unreviewed.").json()
+        assert replied["node"]["id"] == "alex_public_gift"
+        assert replied["pressure"]["turn"] == 0, "a round nobody graded is not a round"
+        assert replied["learning_updates"] == []
+    finally:
+        client.__exit__(None, None, None)
+
+
+def test_the_other_visitors_keep_the_fixed_ladder(tmp_path, monkeypatch):
+    """Sam is untouched by the switch: same rungs, same order."""
+    monkeypatch.setenv("SKILLTOWN_ALEX_ADAPTIVE_ENABLED", "true")
+    with TestClient(create_app(tmp_path / "test.sqlite3")) as client:
+        _, headers = session(client)
+        attempt = create_attempt(client, headers, scenario="supplier-gift")
+        miss = reference(client, "supplier-gift", attempt["node"]["id"], "miss")
+        replied = answer(client, headers, attempt, miss).json()
+        spoken = [turn["text"] for turn in replied["dialogue"] if turn["speaker"] == "npc"]
+        engine = client.app.state.engine
+        ladder = [tactic.line for tactic in engine.persona("sam").tactics]
+        assert spoken[-1] in ladder
+
+
+def test_replaying_the_same_event_costs_no_round_and_no_model_call(tmp_path, monkeypatch):
+    client = adaptive_client(tmp_path, monkeypatch, alex_result())
+    try:
+        _, headers = session(client)
+        attempt = create_attempt(client, headers)
+        event = str(uuid4())
+        first = answer(client, headers, attempt, "I will not take it.", event).json()
+        again = answer(client, headers, attempt, "I will not take it.", event).json()
+        assert first == again
+        assert first["pressure"]["turn"] == 1
+        assert len(client.app.state.evaluator.calls) == 1
+    finally:
+        client.__exit__(None, None, None)
+
+
+def test_a_rewound_situation_starts_its_pressure_again(tmp_path, monkeypatch):
+    """The old rounds are gone: they were answered about a decision undone."""
+    client = adaptive_client(tmp_path, monkeypatch, alex_result())
+    try:
+        _, headers = session(client)
+        attempt = create_attempt(client, headers)
+        result = answer(client, headers, attempt, "I will not take it.").json()
+        result = answer(client, headers, result, "Still no.").json()
+        assert result["pressure"]["turn"] == 2
+
+        client.app.state.evaluator = StubEvaluator(alex_result(
+            strategy_id="close_violation", committed_violation=True,
+            character_line="Then we have a decision."))
+        landed = answer(client, headers, result, "I will keep it and say nothing.").json()
+        assert landed["node"]["id"] == "alex_public_gift_consequence"
+
+        rewound = client.post(
+            f"/api/v1/attempts/{attempt['attempt_id']}/rewind", headers=headers,
+            json={"client_event_id": str(uuid4()), "expected_revision": landed["revision"]},
+        ).json()
+        assert rewound["node"]["id"] == "alex_public_gift"
+        assert rewound["pressure"]["turn"] == 0
+        learner_turns = [t for t in rewound["dialogue"] if t["speaker"] == "learner"]
+        assert learner_turns == [], "the old arc is not evidence for the new one"
+    finally:
+        client.__exit__(None, None, None)
+
+
+def test_the_story_matches_which_way_the_learner_was_wrong(tmp_path):
+    """Both mistakes land on the same node, so the node cannot narrate one of them."""
+    with TestClient(create_app(tmp_path / "test.sqlite3")) as client:
+        _, headers = session(client)
+
+        _, gave_way = session(client, "Gave way")
+        attempt = create_attempt(client, gave_way)
+        result = press_through(client, gave_way, attempt, reference(client, "dinner-invitation", "alex_public_gift", "miss"))
+        gave_way_beats = [beat["text"] for beat in result["node"]["consequence"]]
+        assert any("register" in text or "audit" in text for text in gave_way_beats)
+
+        _, refused = session(client, "Refused everything")
+        attempt = create_attempt(client, refused)
+        result = press_through(client, refused, attempt, reference(client, "dinner-invitation", "alex_public_gift", "overgeneralized"))
+        assert result["node"]["id"] == "alex_public_gift_consequence"
+        rigid_beats = [beat["text"] for beat in result["node"]["consequence"]]
+        # Refusing everything has its own cost, and it is not the one above.
+        assert rigid_beats and rigid_beats != gave_way_beats
+        assert not any("audit pulls" in text for text in rigid_beats)
+
+        # A refresh must not swap the story back.
+        restored = client.get(f"/api/v1/attempts/{attempt['attempt_id']}", headers=refused).json()
+        assert [beat["text"] for beat in restored["node"]["consequence"]] == rigid_beats

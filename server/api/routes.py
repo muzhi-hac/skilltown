@@ -17,6 +17,7 @@ from server.api.models import (
     RecommendationResponse, SessionView, TownResponse,
 )
 from server.core import knowledge
+from server.core.alex_strategy import select_strategy
 from server.core.grounding import PressureState, build_context
 from server.core.policy import get_policy_cards
 from server.core.recommendations import recommend
@@ -31,9 +32,12 @@ def _services(request: Request):
     return request.app.state.store, request.app.state.engine, request.app.state.evaluator
 
 
-def _node_view(engine, scenario_id: str, node_id: str) -> dict:
+def _node_view(engine, scenario_id: str, node_id: str, rigid: bool = False) -> dict:
     scenario = engine.get_scenario(scenario_id)
     node = engine.get_node(scenario_id, node_id)
+    # The same consequence node receives opposite mistakes. Someone who refused
+    # everything must not be shown the story of the gift they did not take.
+    beats = scenario.get("rigid_consequence", []) if rigid else node.get("consequence", [])
     return {
         "id": node_id,
         "npc_id": node["npc_id"],
@@ -42,8 +46,9 @@ def _node_view(engine, scenario_id: str, node_id: str) -> dict:
         "line": node.get("line", ""),
         "choices": node.get("choices", []),
         "allow_text": node.get("allow_text", False),
+        "verdict_line": _verdict_line(scenario, node_id, node),
         "policy_cards": get_policy_cards(list(dict.fromkeys(node.get("knowledge", [])))),
-        "consequence": node.get("consequence", []),
+        "consequence": beats,
     }
 
 
@@ -61,9 +66,43 @@ def _decisions(dialogue: list[dict], node_id: str) -> int:
     )
 
 
+def _ended_rigid(engine, scenario_id: str, node_id: str, dialogue: list[dict]) -> bool:
+    """Did the arc that led here end in a blanket refusal?
+
+    The transcript remembers it: the answer that closed the arc is tagged, and
+    the node it was given at is the one this consequence rewinds into.
+    """
+    if not node_id.endswith("_consequence"):
+        return False
+    try:
+        source = engine.rewind_target(scenario_id, node_id)
+    except Exception:  # noqa: BLE001 - a node without a way back has no arc
+        return False
+    said = [
+        item for item in dialogue
+        if item.get("node_id") == source and item["speaker"] == "learner"
+    ]
+    return bool(said) and said[-1].get("kind") == "overgeneralized"
+
+
 def _has_committed(dialogue: list[dict], node_id: str) -> bool:
     """Somebody who has said what they will do has been heard."""
     return any(item.get("kind") == "commit" for item in _open_turns(dialogue, node_id))
+
+
+def _verdict_line(scenario: dict, node_id: str, node: dict) -> str:
+    """What a resting situation says about itself.
+
+    Authored per node and per scenario: the same consequence node receives
+    opposite mistakes - accepting what should have been refused, and refusing
+    what the rules allow - so the line describes the risk in the situation and
+    never guesses what this learner did.
+    """
+    if node_id.endswith("_consequence"):
+        return str(node.get("consequence_summary", ""))
+    if not node.get("allow_text") and not node.get("choices"):
+        return str(scenario.get("completion_summary", ""))
+    return ""
 
 
 def _pressure_view(engine, scenario_id: str, node_id: str, dialogue: list[dict]) -> dict | None:
@@ -87,6 +126,19 @@ def _opening_line(engine, scenario_id: str, node_id: str) -> str:
         return str(engine.get_node(scenario_id, node_id).get("line", ""))
     except Exception:  # a missing node is the caller's problem, not the transcript's
         return ""
+
+
+def _unrepeated(line: str, history: list[dict], context) -> str:
+    """Say the gap-specific question once; after that, do not recite it.
+
+    With no model writing lines - it is off, or the verdict fell back - the same
+    strategy can come up round after round, and one sentence four times reads
+    like a recording. The authored ladder still varies by round, so it covers.
+    """
+    said = {item["text"] for item in history if item["speaker"] == "npc"}
+    if line and line not in said:
+        return line
+    return _authored_line(context) or line
 
 
 def _authored_line(context, committed: bool = False) -> str:
@@ -141,7 +193,10 @@ def _attempt_response(engine, attempt: dict, **overrides) -> dict:
         "status": values["status"],
         "revision": values["revision"],
         "assisted": bool(values["assisted"]),
-        "node": _node_view(engine, values["scenario_id"], values["current_node_id"]),
+        "node": _node_view(
+            engine, values["scenario_id"], values["current_node_id"],
+            rigid=_ended_rigid(engine, values["scenario_id"], values["current_node_id"], dialogue),
+        ),
         "feedback": overrides.get("feedback"),
         "effect": overrides.get("effect", "none"),
         "learning_updates": overrides.get("learning_updates", []),
@@ -303,6 +358,23 @@ def respond(attempt_id: UUID, body: AnswerRequest, request: Request, session: Se
         store.add_model_wait(session["id"], str(attempt_id), waited)
         observed, feedback_mode = body.text, evaluated.mode
 
+        # One visitor decides what to ask from the evidence rather than the round.
+        # The strategy is the server's: the model only proposed one, and the
+        # deterministic path proposes none at all.
+        adaptive = context.adaptive
+        strategy = evaluated.strategy_id if adaptive else ""
+        if adaptive and not strategy and evaluated.assessed:
+            # Nothing trustworthy to locate the gap with, so ask the neutral
+            # question - and never read a violation into an ordinary miss.
+            strategy = select_strategy(
+                assessed=True, passed=evaluated.passed,
+                overgeneralized=evaluated.overgeneralized, committed_violation=False,
+                is_last_turn=bool(pressure_state and pressure_state.is_last_turn),
+                covered=set(), missing=set(context.required),
+                reasons=set(adaptive.reasons), decision=set(adaptive.decision),
+            )
+        closing_strategies = {"concede", "close_violation", "close_review"}
+
         if not evaluated.assessed:
             next_node_id, effect = node_id, "none"
             skill_id = learning_state = None
@@ -310,6 +382,8 @@ def respond(attempt_id: UUID, body: AnswerRequest, request: Request, session: Se
             clause_ids = evaluated.policy_clause_ids
             assessment_status = "deferred"
         elif pressure_state and evaluated.turn_kind == "probe" and _probes_left(history, node_id):
+            # Asking comes first, adaptive or not: a question is not a decision,
+            # and the facts are the learner's to extract before anyone judges it.
             # They asked instead of deciding. Answer with the authored fact, in
             # the character's mouth, and charge them nothing for asking.
             next_node_id, effect = node_id, "none"
@@ -321,6 +395,32 @@ def respond(attempt_id: UUID, body: AnswerRequest, request: Request, session: Se
                 persona.deflect if persona else ""
             )
             dialogue_rows = [("learner", body.text, "probe"), ("npc", spoken, "answer")]
+        elif adaptive and strategy not in closing_strategies:
+            # Alex keeps the situation open and asks for the part that is absent.
+            next_node_id, effect = node_id, "none"
+            skill_id = learning_state = None
+            interpretation, feedback_message = evaluated.interpretation, None
+            clause_ids = evaluated.policy_clause_ids
+            spoken = evaluated.character_line or _unrepeated(
+                adaptive.fallback_line(strategy), history, context
+            )
+            dialogue_rows = [("learner", body.text, "decision"), ("npc", spoken, "line")]
+        elif adaptive:
+            branch = engine.resolve_text(
+                attempt["scenario_id"], node_id, "pass" if strategy == "concede" else "miss"
+            )
+            next_node_id, effect = branch.next_node_id, branch.effect
+            skill_id, learning_state = branch.skill_id or rule, branch.state
+            interpretation, feedback_message = evaluated.interpretation, evaluated.feedback
+            clause_ids = evaluated.policy_clause_ids or branch.policy_clause_ids
+            if strategy == "close_review":
+                # Running out of rounds says the evidence was short. It does not
+                # say the learner accepted anything, which they may never have.
+                interpretation = "The practice ended without sufficient evidence of mastery."
+                feedback_message = branch.feedback or evaluated.feedback
+            spoken = evaluated.character_line or adaptive.fallback_line(strategy)
+            dialogue_rows = [("learner", body.text, "decision"), ("npc", spoken, "line")]
+            resolve_dialogue = True
         elif (
             pressure_state
             and evaluated.outcome != "pass"
@@ -339,7 +439,14 @@ def respond(attempt_id: UUID, body: AnswerRequest, request: Request, session: Se
             said_kind = "commit" if evaluated.committed else "decision"
             dialogue_rows = [("learner", body.text, said_kind), ("npc", spoken, "line")]
         else:
-            branch = engine.resolve_text(attempt["scenario_id"], node_id, evaluated.outcome)
+            outcome = evaluated.outcome
+            if pressure_state and outcome != "pass":
+                # The rounds ran out. Whichever way the last answer was wrong, the
+                # arc has to land where the learner can see what it cost and rewind
+                # into it: the overgeneralized branch loops back to the same
+                # question, which is another chance mid-arc and a dead end here.
+                outcome = "miss"
+            branch = engine.resolve_text(attempt["scenario_id"], node_id, outcome)
             next_node_id, effect = branch.next_node_id, branch.effect
             skill_id, learning_state = branch.skill_id or rule, branch.state
             if evaluated.mode == "ai":
@@ -360,7 +467,8 @@ def respond(attempt_id: UUID, body: AnswerRequest, request: Request, session: Se
                 # and concede in the next will keep selling through the
                 # concession, which reads as if the verdict did not land.
                 spoken = persona.concede if held else persona.closing
-                dialogue_rows = [("learner", body.text, "decision"), ("npc", spoken, "line")]
+                said_kind = "overgeneralized" if evaluated.overgeneralized else "decision"
+                dialogue_rows = [("learner", body.text, said_kind), ("npc", spoken, "line")]
                 resolve_dialogue = True
                 interpretation = _with_rounds(
                     interpretation, pressure_state.turn, held,

@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 import mimetypes
 from contextlib import asynccontextmanager
+from dataclasses import replace
 import os
 from pathlib import Path
 from uuid import uuid4
@@ -17,6 +18,7 @@ from fastapi.staticfiles import StaticFiles
 
 from server.api.models import ErrorDetail, ErrorEnvelope, HealthResponse, ReadyResponse
 from server.api.routes import router
+from server.core import knowledge
 from server.core.model_evaluator import build_evaluator
 from server.core.scenario_engine import ScenarioEngine, ScenarioError, ScenarioVersionError
 from server.core.rag_runtime import warmup_rag
@@ -121,6 +123,18 @@ def create_app(
     @app.get("/ready", response_model=ReadyResponse, operation_id="readinessCheck")
     def ready():
         status = app.state.rag_status
+        degraded = knowledge.dense_runtime_failure_reason()
+        if degraded and status.retrieval_mode == "hybrid":
+            # Dense broke after the snapshot was taken. Re-warming here would make
+            # a probe do real retrieval work on every call, and something already
+            # asserts this endpoint does not; so report the degradation from what
+            # is already known rather than keep answering "hybrid".
+            status = replace(
+                status,
+                ready=not app.state.require_dense,
+                retrieval_mode="unavailable" if app.state.require_dense else "sparse",
+                reason=f"dense_runtime_failure:{degraded}",
+            )
         return JSONResponse(status_code=200 if status.ready else 503, content=status.payload())
 
     @app.exception_handler(ApiError)

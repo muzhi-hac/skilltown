@@ -163,6 +163,9 @@ class ScenarioNode(StrictModel):
     line: str = Field(default="", max_length=600)
     choices: list[Choice] = Field(max_length=4)
     allow_text: bool
+    # The authored sentence a verdict card states when a situation comes to rest;
+    # empty everywhere the learner is still deciding.
+    verdict_line: str = Field(default="", max_length=400)
     policy_cards: list[PolicyCard] = Field(default_factory=list)
     # Only on a consequence node: the story that follows the decision.
     consequence: list[ConsequenceBeat] = Field(default_factory=list, max_length=5)
@@ -218,7 +221,7 @@ class DialogueTurn(StrictModel):
     speaker: Literal["npc", "learner"]
     text: str = Field(max_length=1200)
     # A question costs no round of pressure; a decision does.
-    kind: Literal["line", "probe", "answer", "decision", "commit"] = "line"
+    kind: Literal["line", "probe", "answer", "decision", "commit", "overgeneralized"] = "line"
     # A resolved round is one the arc already closed; it stays on screen.
     resolved: bool = False
 

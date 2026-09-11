@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 from dataclasses import dataclass
 from typing import Any, Literal
 
@@ -51,6 +52,36 @@ class Withheld:
 
 
 @dataclass(frozen=True)
+class AdaptiveConfig:
+    """What Alex needs to choose a strategy instead of walking a ladder.
+
+    The groups say which gap a missing criterion belongs to; the fallback lines
+    are what he says when the model's line is unusable, so the situation never
+    stalls on a failed generation.
+    """
+
+    strategies: tuple[tuple[str, str], ...]
+    reasons: frozenset[str]
+    decision: frozenset[str]
+    execution: frozenset[str]
+    action_rules: tuple[tuple[str, str], ...]
+
+    def fallback_line(self, strategy_id: str) -> str:
+        for known_id, line in self.strategies:
+            if known_id == strategy_id:
+                return line
+        return ""
+
+    @property
+    def strategy_ids(self) -> tuple[str, ...]:
+        return tuple(known_id for known_id, _ in self.strategies)
+
+    @property
+    def action_rule_ids(self) -> tuple[str, ...]:
+        return tuple(rule_id for rule_id, _ in self.action_rules)
+
+
+@dataclass(frozen=True)
 class Persona:
     """The person in the room. Never a teacher: they want the learner to bend."""
 
@@ -64,6 +95,8 @@ class Persona:
     concede: str
     closing: str
     deflect: str
+    # Only the adaptive visitor carries one; the rest walk their ladder.
+    adaptive_policy: tuple[tuple[str, str], ...] = ()
 
 
 @dataclass(frozen=True)
@@ -99,6 +132,7 @@ class EvaluationContext:
     withheld: tuple[Withheld, ...] = ()
     persona: Persona | None = None
     pressure: PressureState | None = None
+    adaptive: AdaptiveConfig | None = None
 
     @property
     def allowed_clause_ids(self) -> tuple[str, ...]:
@@ -134,6 +168,43 @@ def build_persona(npc: dict[str, Any]) -> Persona | None:
         concede=data["concede"],
         closing=data["closing"],
         deflect=data["deflect"],
+        adaptive_policy=tuple(
+            (str(item["id"]), str(item.get("fallback_line", "")))
+            for item in (data.get("adaptive_policy") or {}).get("strategies", [])
+        ),
+    )
+
+
+# One visitor is adaptive this round. The switch is what makes the new behaviour
+# reachable at all: with it unset every visitor, Alex included, keeps the ladder.
+ADAPTIVE_SWITCH = "SKILLTOWN_ALEX_ADAPTIVE_ENABLED"
+ADAPTIVE_NPC_ID = "alex"
+ADAPTIVE_SCENARIO_ID = "dinner-invitation"
+
+
+def adaptive_enabled() -> bool:
+    return os.getenv(ADAPTIVE_SWITCH, "false").strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _adaptive_config(
+    scenario_id: str, node: dict[str, Any], persona: Persona | None, pressure: PressureState | None
+) -> AdaptiveConfig | None:
+    """Alex's own pressure nodes only, and only with complete configuration."""
+    if pressure is None or persona is None or not adaptive_enabled():
+        return None
+    if persona.npc_id != ADAPTIVE_NPC_ID or scenario_id != ADAPTIVE_SCENARIO_ID:
+        return None
+    rubric = node.get("adaptive_rubric")
+    if not rubric or not persona.adaptive_policy:
+        return None
+    return AdaptiveConfig(
+        strategies=persona.adaptive_policy,
+        reasons=frozenset(rubric.get("reasons", [])),
+        decision=frozenset(rubric.get("decision", [])),
+        execution=frozenset(rubric.get("execution", [])),
+        action_rules=tuple(
+            (str(rule["id"]), str(rule["description"])) for rule in rubric.get("action_rules", [])
+        ),
     )
 
 
@@ -199,4 +270,5 @@ def build_context(
         withheld=tuple(Withheld(**item) for item in node.get("withheld", [])),
         persona=persona,
         pressure=pressure,
+        adaptive=_adaptive_config(scenario_id, node, persona, pressure),
     )
