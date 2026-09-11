@@ -284,7 +284,10 @@ class RubricModelEvaluator:
         chosen = select_strategy(
             assessed=True, passed=verdict.passed, overgeneralized=result.overgeneralized,
             committed_violation=violation,
-            is_last_turn=bool(context.pressure and context.pressure.is_last_turn),
+            is_last_turn=bool(
+                context.pressure
+                and (context.pressure.is_last_turn or context.pressure.final_push)
+            ),
             covered=covered, missing=missing,
             reasons=set(adaptive.reasons), decision=set(adaptive.decision),
         )

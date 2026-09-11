@@ -369,7 +369,10 @@ def respond(attempt_id: UUID, body: AnswerRequest, request: Request, session: Se
             strategy = select_strategy(
                 assessed=True, passed=evaluated.passed,
                 overgeneralized=evaluated.overgeneralized, committed_violation=False,
-                is_last_turn=bool(pressure_state and pressure_state.is_last_turn),
+                is_last_turn=bool(
+                    pressure_state
+                    and (pressure_state.is_last_turn or pressure_state.final_push)
+                ),
                 covered=set(), missing=set(context.required),
                 reasons=set(adaptive.reasons), decision=set(adaptive.decision),
             )
@@ -406,7 +409,8 @@ def respond(attempt_id: UUID, body: AnswerRequest, request: Request, session: Se
             spoken = _unrepeated(
                 evaluated.character_line or adaptive.fallback_line(strategy), history, context
             )
-            dialogue_rows = [("learner", body.text, "decision"), ("npc", spoken, "line")]
+            said_kind = "commit" if evaluated.committed else "decision"
+            dialogue_rows = [("learner", body.text, said_kind), ("npc", spoken, "line")]
         elif adaptive:
             branch = engine.resolve_text(
                 attempt["scenario_id"], node_id, "pass" if strategy == "concede" else "miss"

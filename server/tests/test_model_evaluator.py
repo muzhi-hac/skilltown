@@ -332,6 +332,16 @@ def test_alex_carries_the_rubric_signals_back_to_the_route(monkeypatch):
     assert result.strategy_id == "probe_reason"
 
 
+def test_a_settled_answer_final_push_closes_an_adaptive_arc(monkeypatch):
+    from dataclasses import replace
+    from server.core.grounding import PressureState
+
+    ctx = adaptive_context(monkeypatch)
+    ctx = replace(ctx, pressure=PressureState(turn=2, max_turns=4, final_push=True))
+    result, _ = evaluate(ctx, "I will not take it.", adaptive_verdict(ctx))
+    assert result.strategy_id == "close_review"
+
+
 def test_one_answer_costs_one_model_call(monkeypatch):
     ctx = adaptive_context(monkeypatch)
     _, messages = evaluate(ctx, "I will not take it.", adaptive_verdict(ctx))
