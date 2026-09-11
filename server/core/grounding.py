@@ -53,7 +53,7 @@ class Withheld:
 
 @dataclass(frozen=True)
 class AdaptiveConfig:
-    """What Alex needs to choose a strategy instead of walking a ladder.
+    """What a visitor needs to choose a strategy instead of walking a ladder.
 
     The groups say which gap a missing criterion belongs to; the fallback lines
     are what he says when the model's line is unusable, so the situation never
@@ -95,7 +95,7 @@ class Persona:
     concede: str
     closing: str
     deflect: str
-    # Only the adaptive visitor carries one; the rest walk their ladder.
+    # Configured visitors use this policy; an unconfigured persona keeps its ladder.
     adaptive_policy: tuple[tuple[str, str], ...] = ()
 
 
@@ -175,24 +175,24 @@ def build_persona(npc: dict[str, Any]) -> Persona | None:
     )
 
 
-# One visitor is adaptive this round. The switch is what makes the new behaviour
-# reachable at all: with it unset every visitor, Alex included, keeps the ladder.
-ADAPTIVE_SWITCH = "SKILLTOWN_ALEX_ADAPTIVE_ENABLED"
-ADAPTIVE_NPC_ID = "alex"
-ADAPTIVE_SCENARIO_ID = "dinner-invitation"
+# The global name describes the current capability. The old Alex-specific name
+# remains a fallback so an existing deployment does not silently lose behaviour.
+ADAPTIVE_SWITCH = "SKILLTOWN_ADAPTIVE_NPCS_ENABLED"
+LEGACY_ADAPTIVE_SWITCH = "SKILLTOWN_ALEX_ADAPTIVE_ENABLED"
 
 
 def adaptive_enabled() -> bool:
-    return os.getenv(ADAPTIVE_SWITCH, "false").strip().lower() in {"1", "true", "yes", "on"}
+    configured = os.getenv(ADAPTIVE_SWITCH)
+    if configured is None:
+        configured = os.getenv(LEGACY_ADAPTIVE_SWITCH, "false")
+    return configured.strip().lower() in {"1", "true", "yes", "on"}
 
 
 def _adaptive_config(
     scenario_id: str, node: dict[str, Any], persona: Persona | None, pressure: PressureState | None
 ) -> AdaptiveConfig | None:
-    """Alex's own pressure nodes only, and only with complete configuration."""
+    """Enable any pressure persona whose authored node and strategy table agree."""
     if pressure is None or persona is None or not adaptive_enabled():
-        return None
-    if persona.npc_id != ADAPTIVE_NPC_ID or scenario_id != ADAPTIVE_SCENARIO_ID:
         return None
     rubric = node.get("adaptive_rubric")
     if not rubric or not persona.adaptive_policy:

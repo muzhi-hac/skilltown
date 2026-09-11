@@ -19,6 +19,7 @@ PROVIDER_NAMES = (
     # A switch a developer has on in their shell must not decide what the suite
     # tests, the way the dense model on disk used to.
     "SKILLTOWN_ALEX_ADAPTIVE_ENABLED",
+    "SKILLTOWN_ADAPTIVE_NPCS_ENABLED",
     "SKILLTOWN_MODEL_ENABLED",
     "SKILLTOWN_MODEL",
     "SKILLTOWN_MODEL_PROVIDER",

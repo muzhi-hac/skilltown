@@ -25,6 +25,7 @@ primary_region = "fra"
   # Alex's evidence-driven questioning is enabled for the hackathon demo.
   # Removing this line restores the fixed authored ladder on the next deploy.
   SKILLTOWN_ALEX_ADAPTIVE_ENABLED = "true"
+  SKILLTOWN_ADAPTIVE_NPCS_ENABLED = "true"
   # No SKILLTOWN_MODEL_USER_AGENT here: the override existed only because that
   # gateway refused the SDK's default client identity. A first-party key does not
   # need it, and setting it here would survive unsetting the secret.

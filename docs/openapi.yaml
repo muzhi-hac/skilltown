@@ -1114,6 +1114,26 @@ components:
       - state
       - evidence
       title: SkillPassportEntry
+    ModuleSummary:
+      properties:
+        label:
+          type: string
+          title: Label
+        summary:
+          type: string
+          title: Summary
+        skills:
+          items:
+            type: string
+          type: array
+          title: Skills
+      additionalProperties: false
+      type: object
+      required:
+      - label
+      - summary
+      - skills
+      title: ModuleSummary
     TaskSummary:
       properties:
         scenario_id:
@@ -1200,6 +1220,8 @@ components:
           $ref: '#/components/schemas/LearningCategory'
         position:
           $ref: '#/components/schemas/Position'
+        module:
+          $ref: '#/components/schemas/ModuleSummary'
         tasks:
           items:
             $ref: '#/components/schemas/TaskSummary'
@@ -1221,6 +1243,7 @@ components:
       - title
       - category
       - position
+      - module
       - tasks
       title: TownNpc
     TownResponse:

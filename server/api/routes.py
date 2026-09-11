@@ -358,7 +358,7 @@ def respond(attempt_id: UUID, body: AnswerRequest, request: Request, session: Se
         store.add_model_wait(session["id"], str(attempt_id), waited)
         observed, feedback_mode = body.text, evaluated.mode
 
-        # One visitor decides what to ask from the evidence rather than the round.
+        # Configured visitors decide what to ask from evidence rather than round.
         # The strategy is the server's: the model only proposed one, and the
         # deterministic path proposes none at all.
         adaptive = context.adaptive
@@ -401,8 +401,10 @@ def respond(attempt_id: UUID, body: AnswerRequest, request: Request, session: Se
             skill_id = learning_state = None
             interpretation, feedback_message = evaluated.interpretation, None
             clause_ids = evaluated.policy_clause_ids
-            spoken = evaluated.character_line or _unrepeated(
-                adaptive.fallback_line(strategy), history, context
+            # Generated and authored lines use the same repetition guard. Models
+            # are asked not to repeat history, but the route enforces it.
+            spoken = _unrepeated(
+                evaluated.character_line or adaptive.fallback_line(strategy), history, context
             )
             dialogue_rows = [("learner", body.text, "decision"), ("npc", spoken, "line")]
         elif adaptive:

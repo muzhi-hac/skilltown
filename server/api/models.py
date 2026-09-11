@@ -111,12 +111,19 @@ class TaskSummary(StrictModel):
     available_modes: list[AttemptMode]
 
 
+class ModuleSummary(StrictModel):
+    label: str
+    summary: str
+    skills: list[str]
+
+
 class TownNpc(StrictModel):
     id: NpcId
     name: str
     title: str
     category: LearningCategory
     position: Position
+    module: ModuleSummary
     tasks: list[TaskSummary]
     recommendation_state: Literal["none", "recommended", "review"] = "none"
 

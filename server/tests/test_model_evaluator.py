@@ -424,9 +424,9 @@ def test_alex_may_not_read_out_the_answer_key(monkeypatch):
     assert result.character_line == ctx.adaptive.fallback_line("probe_reason")
 
 
-def test_the_fixed_ladder_is_untouched_for_everyone_else(monkeypatch):
-    """Sam keeps the old shape: no strategy, no signals, tactic by round."""
-    monkeypatch.setenv("SKILLTOWN_ALEX_ADAPTIVE_ENABLED", "true")
+def test_the_fixed_ladder_remains_available_when_adaptive_is_off(monkeypatch):
+    """The authored rungs remain the rollback path for every visitor."""
+    monkeypatch.setenv("SKILLTOWN_ADAPTIVE_NPCS_ENABLED", "false")
     from server.core.grounding import PressureState
     engine = ScenarioEngine()
     scenario = engine.get_scenario("supplier-gift")

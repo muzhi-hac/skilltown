@@ -383,6 +383,9 @@ def test_town_never_ships_the_pressure_script(tmp_path):
         town = client.get("/api/v1/town", headers=headers).json()
         assert {npc["name"] for npc in town["npcs"]} == {"Alex", "Sam", "Nina", "Jo", "Mira"}
         assert all("persona" not in npc for npc in town["npcs"])
+        assert all(npc["module"]["label"] for npc in town["npcs"])
+        assert all(npc["module"]["summary"] for npc in town["npcs"])
+        assert all(npc["module"]["skills"] for npc in town["npcs"])
         # The tactic wording must not reach the browser in any field at all.
         assert "conceal" not in str(town)
 
@@ -721,8 +724,8 @@ def test_a_deferred_answer_costs_alex_nothing(tmp_path, monkeypatch):
         client.__exit__(None, None, None)
 
 
-def test_the_other_visitors_keep_the_fixed_ladder(tmp_path, monkeypatch):
-    """Sam is untouched by the switch: same rungs, same order."""
+def test_another_visitor_uses_the_gap_strategy(tmp_path, monkeypatch):
+    """Sam now uses the same server-owned gap selection contract as Alex."""
     monkeypatch.setenv("SKILLTOWN_ALEX_ADAPTIVE_ENABLED", "true")
     with TestClient(create_app(tmp_path / "test.sqlite3")) as client:
         _, headers = session(client)
@@ -730,9 +733,27 @@ def test_the_other_visitors_keep_the_fixed_ladder(tmp_path, monkeypatch):
         miss = reference(client, "supplier-gift", attempt["node"]["id"], "miss")
         replied = answer(client, headers, attempt, miss).json()
         spoken = [turn["text"] for turn in replied["dialogue"] if turn["speaker"] == "npc"]
-        engine = client.app.state.engine
-        ladder = [tactic.line for tactic in engine.persona("sam").tactics]
-        assert spoken[-1] in ladder
+        adaptive = client.app.state.engine.persona("sam").adaptive_policy
+        assert spoken[-1] == dict(adaptive)["clarify_decision"]
+
+
+def test_a_generated_line_that_repeats_history_is_replaced(tmp_path, monkeypatch):
+    repeated = "What makes you say that?"
+    client = adaptive_client(
+        tmp_path, monkeypatch,
+        alex_result(character_line=repeated),
+        alex_result(character_line=repeated),
+    )
+    try:
+        _, headers = session(client)
+        attempt = create_attempt(client, headers)
+        first = answer(client, headers, attempt, "I will not take it.").json()
+        second = answer(client, headers, first, "I still will not take it.").json()
+        npc_lines = [turn["text"] for turn in second["dialogue"] if turn["speaker"] == "npc"]
+        assert npc_lines[-2] == repeated
+        assert npc_lines[-1] != repeated
+    finally:
+        client.__exit__(None, None, None)
 
 
 def test_replaying_the_same_event_costs_no_round_and_no_model_call(tmp_path, monkeypatch):

@@ -94,6 +94,14 @@
             }
           ]
         }
+      },
+      "module": {
+        "label": "Gifts and hospitality",
+        "summary": "Practice judging gifts, meals and cash offers using role, value, context, approval and records.",
+        "skills": [
+          "Gather relevant facts",
+          "Recognize risks and applicable conditions"
+        ]
       }
     },
     {
@@ -137,7 +145,55 @@
         ],
         "concede": "All right. Run your checks. I will wait.",
         "closing": "Smart. Split it up, and nobody has to file anything.",
-        "deflect": "Does that matter? Money is money. Can we get on with it?"
+        "deflect": "Does that matter? Money is money. Can we get on with it?",
+        "adaptive_policy": {
+          "strategies": [
+            {
+              "id": "clarify_decision",
+              "fallback_line": "Are you taking the payment or not?"
+            },
+            {
+              "id": "probe_conditions",
+              "fallback_line": "Which fact about this payment changes your answer?"
+            },
+            {
+              "id": "probe_reason",
+              "fallback_line": "What rule or threshold are you relying on?"
+            },
+            {
+              "id": "probe_action",
+              "fallback_line": "What do you do with the payment next?"
+            },
+            {
+              "id": "probe_gap",
+              "fallback_line": "Walk me through the check you think is missing."
+            },
+            {
+              "id": "concede",
+              "fallback_line": "All right. Run your checks. I will wait."
+            },
+            {
+              "id": "close_violation",
+              "fallback_line": "So you are taking it that way. Understood."
+            },
+            {
+              "id": "close_review",
+              "fallback_line": "We are going in circles. Stop the transaction here."
+            },
+            {
+              "id": "retry",
+              "fallback_line": ""
+            }
+          ]
+        }
+      },
+      "module": {
+        "label": "Cash payments and customer checks",
+        "summary": "Practice applying cash limits, identity checks, linked-payment rules and beneficial-owner thresholds.",
+        "skills": [
+          "Gather relevant facts",
+          "Recognize risks and applicable conditions"
+        ]
       }
     },
     {
@@ -181,7 +237,56 @@
         ],
         "concede": "Okay. Okay. I will take it to the response team myself.",
         "closing": "Thank you. Nothing in writing, then. We never had this conversation.",
-        "deflect": "Is that really the thing to focus on right now?"
+        "deflect": "Is that really the thing to focus on right now?",
+        "adaptive_policy": {
+          "strategies": [
+            {
+              "id": "clarify_decision",
+              "fallback_line": "What are you proposing we do right now?"
+            },
+            {
+              "id": "probe_conditions",
+              "fallback_line": "Which facts decide whether this needs external notice?"
+            },
+            {
+              "id": "probe_reason",
+              "fallback_line": "What makes you say that clock or duty applies?"
+            },
+            {
+              "id": "probe_action",
+              "fallback_line": "Who do you contact or what do you record next?"
+            },
+            {
+              "id": "probe_gap",
+              "fallback_line": "Walk me through the response step you have not covered."
+            },
+            {
+              "id": "concede",
+              "fallback_line": "Okay. I will take it to the response team now."
+            },
+            {
+              "id": "close_violation",
+              "fallback_line": "So we are keeping it out of the process. That is your decision."
+            },
+            {
+              "id": "close_review",
+              "fallback_line": "We have run out of time. Pause it and escalate it."
+            },
+            {
+              "id": "retry",
+              "fallback_line": ""
+            }
+          ]
+        }
+      },
+      "module": {
+        "label": "Privacy and incident response",
+        "summary": "Practice assessing incidents, starting the correct clocks, notifying the right recipients and preserving records.",
+        "skills": [
+          "Gather relevant facts",
+          "Recognize risks and applicable conditions",
+          "Explain the decision and next step"
+        ]
       }
     },
     {
@@ -225,7 +330,54 @@
         ],
         "concede": "Understood. Do it the formal way. I will not hold it against you.",
         "closing": "Good. We keep this in the team, then.",
-        "deflect": "That is not the point here, and you know it."
+        "deflect": "That is not the point here, and you know it.",
+        "adaptive_policy": {
+          "strategies": [
+            {
+              "id": "clarify_decision",
+              "fallback_line": "What are you actually going to do?"
+            },
+            {
+              "id": "probe_conditions",
+              "fallback_line": "Which facts make this acceptable or unacceptable?"
+            },
+            {
+              "id": "probe_reason",
+              "fallback_line": "What requirement are you relying on?"
+            },
+            {
+              "id": "probe_action",
+              "fallback_line": "What will you say or do next?"
+            },
+            {
+              "id": "probe_gap",
+              "fallback_line": "Walk me through the part you have not addressed."
+            },
+            {
+              "id": "concede",
+              "fallback_line": "Understood. We will follow that process."
+            },
+            {
+              "id": "close_violation",
+              "fallback_line": "Then that is the decision you are making."
+            },
+            {
+              "id": "close_review",
+              "fallback_line": "We are not resolving this here. Pause it."
+            },
+            {
+              "id": "retry",
+              "fallback_line": ""
+            }
+          ]
+        }
+      },
+      "module": {
+        "label": "Speaking up and working time",
+        "summary": "Practice protecting reporters, using confidential channels and communicating working-time boundaries.",
+        "skills": [
+          "Explain the decision and next step"
+        ]
       }
     },
     {
@@ -239,7 +391,16 @@
       },
       "scenario_ids": [
         "ethics-review"
-      ]
+      ],
+      "module": {
+        "label": "Compliance review",
+        "summary": "Check your starting judgment and revisit situations where your recorded evidence needs more practice.",
+        "skills": [
+          "Gather relevant facts",
+          "Recognize risks and applicable conditions",
+          "Explain the decision and next step"
+        ]
+      }
     }
   ],
   "scenarios": {
@@ -1083,7 +1244,7 @@
       ]
     },
     "supplier-gift": {
-      "version": "2.0.0",
+      "version": "2.1.0",
       "title": "Cash and customer checks",
       "category": "ethics_compliance",
       "estimated_minutes": 6,
@@ -1202,6 +1363,22 @@
             "pass": "pass",
             "miss": "miss",
             "overgeneralized": "overgeneralized"
+          },
+          "adaptive_rubric": {
+            "reasons": [
+              "scope_and_date",
+              "over_limit"
+            ],
+            "decision": [
+              "non_cash_next_step"
+            ],
+            "execution": [],
+            "action_rules": [
+              {
+                "id": "accept_over_limit_cash",
+                "description": "Says plainly they will accept the €10,001 cash payment."
+              }
+            ]
           }
         },
         "sam_cash_limit_consequence": {
@@ -1335,6 +1512,22 @@
             "pass": "pass",
             "miss": "miss",
             "overgeneralized": "overgeneralized"
+          },
+          "adaptive_rubric": {
+            "reasons": [
+              "at_threshold",
+              "not_cash_ban"
+            ],
+            "decision": [
+              "identify_before_acceptance"
+            ],
+            "execution": [],
+            "action_rules": [
+              {
+                "id": "accept_without_identity",
+                "description": "Says plainly they will accept the €3,000 cash payment without verifying identity."
+              }
+            ]
           }
         },
         "sam_kyc_boundary_consequence": {
@@ -1472,6 +1665,22 @@
             "pass": "pass",
             "miss": "miss",
             "overgeneralized": "overgeneralized"
+          },
+          "adaptive_rubric": {
+            "reasons": [
+              "aggregate_12000",
+              "no_splitting_evasion"
+            ],
+            "decision": [
+              "escalate_process"
+            ],
+            "execution": [],
+            "action_rules": [
+              {
+                "id": "accept_split_cash",
+                "description": "Says plainly they will accept the four linked cash payments as separate transactions."
+              }
+            ]
           }
         },
         "sam_linked_payments_consequence": {
@@ -1606,6 +1815,22 @@
             "pass": "pass",
             "miss": "miss",
             "overgeneralized": "overgeneralized"
+          },
+          "adaptive_rubric": {
+            "reasons": [
+              "ownership_and_control",
+              "risk_scope"
+            ],
+            "decision": [
+              "applicable_threshold"
+            ],
+            "execution": [],
+            "action_rules": [
+              {
+                "id": "ignore_required_owner_check",
+                "description": "Says plainly they will skip the beneficial-owner assessment."
+              }
+            ]
           }
         },
         "sam_beneficial_owner_consequence": {
@@ -1739,6 +1964,23 @@
             "pass": "pass",
             "miss": "miss",
             "overgeneralized": "overgeneralized"
+          },
+          "adaptive_rubric": {
+            "reasons": [
+              "no_linked_payments"
+            ],
+            "decision": [
+              "allow_with_conditions"
+            ],
+            "execution": [
+              "retain_record"
+            ],
+            "action_rules": [
+              {
+                "id": "omit_cash_record",
+                "description": "Says plainly they will process the payment without retaining the required record."
+              }
+            ]
           }
         },
         "sam_permitted_cash_consequence": {
@@ -1792,7 +2034,7 @@
       ]
     },
     "data-incidents": {
-      "version": "2.0.0",
+      "version": "2.1.0",
       "title": "Privacy and incident response",
       "category": "ethics_compliance",
       "estimated_minutes": 5,
@@ -1912,6 +2154,23 @@
             "pass": "pass",
             "miss": "miss",
             "overgeneralized": "overgeneralized"
+          },
+          "adaptive_rubric": {
+            "reasons": [
+              "awareness_clock"
+            ],
+            "decision": [
+              "authority_window"
+            ],
+            "execution": [
+              "individual_notice"
+            ],
+            "action_rules": [
+              {
+                "id": "delay_required_breach_notice",
+                "description": "Says plainly they will delay the required notifications until after the deadline."
+              }
+            ]
           }
         },
         "mira_privacy_clock_consequence": {
@@ -2045,6 +2304,22 @@
             "pass": "pass",
             "miss": "miss",
             "overgeneralized": "overgeneralized"
+          },
+          "adaptive_rubric": {
+            "reasons": [],
+            "decision": [
+              "warning_24h",
+              "notification_72h"
+            ],
+            "execution": [
+              "final_from_notification"
+            ],
+            "action_rules": [
+              {
+                "id": "delay_all_nis2_reports",
+                "description": "Says plainly they will wait one month before making any required report."
+              }
+            ]
           }
         },
         "mira_nis2_stages_consequence": {
@@ -2182,6 +2457,23 @@
             "pass": "pass",
             "miss": "miss",
             "overgeneralized": "overgeneralized"
+          },
+          "adaptive_rubric": {
+            "reasons": [
+              "risk_assessment"
+            ],
+            "decision": [
+              "no_automatic_external_notice"
+            ],
+            "execution": [
+              "internal_record"
+            ],
+            "action_rules": [
+              {
+                "id": "omit_incident_record",
+                "description": "Says plainly they will leave the incident undocumented."
+              }
+            ]
           }
         },
         "mira_encrypted_backup_consequence": {
@@ -2236,7 +2528,7 @@
       ]
     },
     "boundary-response": {
-      "version": "2.0.0",
+      "version": "2.1.0",
       "title": "Speaking up and working time",
       "category": "personal_development",
       "estimated_minutes": 5,
@@ -2354,6 +2646,22 @@
             "pass": "pass",
             "miss": "miss",
             "overgeneralized": "overgeneralized"
+          },
+          "adaptive_rubric": {
+            "reasons": [],
+            "decision": [
+              "confidential_process"
+            ],
+            "execution": [
+              "acknowledgement_window",
+              "feedback_window_and_start"
+            ],
+            "action_rules": [
+              {
+                "id": "expose_or_ignore_report",
+                "description": "Says plainly they will expose the report or leave it unacknowledged beyond the required window."
+              }
+            ]
           }
         },
         "jo_report_receipt_consequence": {
@@ -2487,6 +2795,23 @@
             "pass": "pass",
             "miss": "miss",
             "overgeneralized": "overgeneralized"
+          },
+          "adaptive_rubric": {
+            "reasons": [
+              "identify_retaliation"
+            ],
+            "decision": [
+              "protect_reporter"
+            ],
+            "execution": [
+              "report_internal_concern"
+            ],
+            "action_rules": [
+              {
+                "id": "retaliate_against_reporter",
+                "description": "Says plainly they will impose punitive shifts because the employee reported a concern."
+              }
+            ]
           }
         },
         "jo_no_retaliation_consequence": {
@@ -2620,6 +2945,22 @@
             "pass": "pass",
             "miss": "miss",
             "overgeneralized": "overgeneralized"
+          },
+          "adaptive_rubric": {
+            "reasons": [
+              "daily_rest",
+              "not_just_weekly_total"
+            ],
+            "decision": [
+              "adjust_schedule"
+            ],
+            "execution": [],
+            "action_rules": [
+              {
+                "id": "impose_ten_hour_rest",
+                "description": "Says plainly they will keep the schedule with only ten hours of daily rest."
+              }
+            ]
           }
         },
         "jo_rest_hours_consequence": {
@@ -2753,6 +3094,22 @@
             "pass": "pass",
             "miss": "miss",
             "overgeneralized": "overgeneralized"
+          },
+          "adaptive_rubric": {
+            "reasons": [
+              "average_not_single_week",
+              "reference_period"
+            ],
+            "decision": [
+              "allow_with_conditions"
+            ],
+            "execution": [],
+            "action_rules": [
+              {
+                "id": "ignore_reference_period",
+                "description": "Says plainly they will decide solely from the single week and ignore the stated reference-period conditions."
+              }
+            ]
           }
         },
         "jo_average_hours_consequence": {

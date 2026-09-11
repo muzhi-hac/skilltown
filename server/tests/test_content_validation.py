@@ -148,10 +148,25 @@ def test_an_action_rule_without_a_description_is_rejected():
         validate_content(content)
 
 
-def test_the_other_visitors_need_no_adaptive_configuration():
-    """Only Alex is adaptive this round; Sam and Jo keep the fixed ladder."""
+def test_every_pressure_visitor_has_adaptive_configuration():
     content = deepcopy(ScenarioEngine().content)
     for npc in content["npcs"]:
-        if npc["id"] != "alex" and npc.get("persona"):
-            assert "adaptive_policy" not in npc["persona"]
+        if npc.get("persona"):
+            assert npc["persona"].get("adaptive_policy")
     validate_content(content)
+
+
+def test_every_visitor_has_a_public_module_description():
+    content = deepcopy(ScenarioEngine().content)
+    for npc in content["npcs"]:
+        assert npc["module"]["label"]
+        assert npc["module"]["summary"]
+        assert npc["module"]["skills"]
+    validate_content(content)
+
+
+def test_an_adaptive_pressure_node_cannot_drop_its_grouping():
+    content = deepcopy(ScenarioEngine().content)
+    del content["scenarios"]["supplier-gift"]["nodes"]["sam_cash_limit"]["adaptive_rubric"]
+    with pytest.raises(ValueError, match="adaptive persona needs adaptive_rubric"):
+        validate_content(content)

@@ -72,13 +72,24 @@ def test_the_switch_defaults_to_the_fixed_ladder(monkeypatch):
     assert context.tactic is not None, "the old ladder still has to work"
 
 
-def test_only_alex_is_adaptive(monkeypatch):
-    monkeypatch.setenv("SKILLTOWN_ALEX_ADAPTIVE_ENABLED", "true")
+def test_another_configured_visitor_is_adaptive(monkeypatch):
+    monkeypatch.setenv("SKILLTOWN_ADAPTIVE_NPCS_ENABLED", "true")
     from server.core.scenario_engine import ScenarioEngine
     engine = ScenarioEngine()
     node = engine.get_node("supplier-gift", "sam_cash_limit")
-    context = build_context("supplier-gift", "1.0.0", "sam_cash_limit", node,
+    context = build_context("supplier-gift", "2.1.0", "sam_cash_limit", node,
                             persona=engine.persona("sam"), pressure=pressure_state())
+    assert context.adaptive is not None
+    assert context.adaptive.decision == frozenset({"non_cash_next_step"})
+    assert context.adaptive.fallback_line("probe_reason")
+
+
+def test_new_switch_overrides_the_legacy_switch(monkeypatch):
+    monkeypatch.setenv("SKILLTOWN_ALEX_ADAPTIVE_ENABLED", "true")
+    monkeypatch.setenv("SKILLTOWN_ADAPTIVE_NPCS_ENABLED", "false")
+    _, persona, node = alex_pieces()
+    context = build_context("dinner-invitation", "2.1.0", "alex_public_gift", node,
+                            persona=persona, pressure=pressure_state())
     assert context.adaptive is None
 
 

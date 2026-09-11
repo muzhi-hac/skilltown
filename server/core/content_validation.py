@@ -45,9 +45,14 @@ def validate_content(content: dict[str, Any]) -> None:
             if scenario_id not in scenarios:
                 _fail(f"npc {npc.get('id')}: unknown scenario {scenario_id}")
         _validate_persona(npc)
+        _validate_module(npc)
     known_npcs = {npc.get("id") for npc in content.get("npcs", [])}
     pressuring = {
         npc.get("id") for npc in content.get("npcs", []) if npc.get("persona")
+    }
+    adaptive_npcs = {
+        npc.get("id") for npc in content.get("npcs", [])
+        if (npc.get("persona") or {}).get("adaptive_policy")
     }
     from server.core.recommendations import TASK_BY_SKILL
     for skill_id, (scenario_id, _npc_id) in TASK_BY_SKILL.items():
@@ -55,10 +60,24 @@ def validate_content(content: dict[str, Any]) -> None:
             _fail(f"TASK_BY_SKILL[{skill_id}] points to an unknown scenario")
 
     for scenario_id, scenario in scenarios.items():
-        _validate_scenario(scenario_id, scenario, known_npcs, pressuring)
+        _validate_scenario(scenario_id, scenario, known_npcs, pressuring, adaptive_npcs)
 
 
 PERSONA_FIELDS = ("role", "relationship", "wants", "voice", "concede", "closing", "deflect")
+MODULE_FIELDS = ("label", "summary")
+
+
+def _validate_module(npc: dict[str, Any]) -> None:
+    module = npc.get("module")
+    npc_id = npc.get("id")
+    if not isinstance(module, dict):
+        _fail(f"npc {npc_id}: module must be an object")
+    for field in MODULE_FIELDS:
+        if not _nonempty(module.get(field)):
+            _fail(f"npc {npc_id}: module.{field} must be non-empty")
+    skills = module.get("skills")
+    if not isinstance(skills, list) or not skills or not all(_nonempty(skill) for skill in skills):
+        _fail(f"npc {npc_id}: module.skills must be a non-empty list")
 
 
 def _validate_persona(npc: dict[str, Any]) -> None:
@@ -84,7 +103,7 @@ def _validate_persona(npc: dict[str, Any]) -> None:
         if tactic["id"] in seen:
             _fail(f"npc {npc_id}: duplicate tactic {tactic['id']}")
         seen.add(tactic["id"])
-    # Only Alex carries one this round; the others keep the fixed ladder.
+    # Any pressure persona may carry an evidence-driven strategy table.
     if persona.get("adaptive_policy") is not None:
         _validate_adaptive_policy(npc_id, persona["adaptive_policy"])
 
@@ -96,7 +115,7 @@ REQUIRED_STRATEGIES = (
 
 
 def _validate_adaptive_policy(npc_id: str, policy: dict[str, Any]) -> None:
-    """Alex picks from this table, so a gap in it is a strategy he cannot play."""
+    """A gap in this table is a strategy the visitor cannot play."""
     strategies = policy.get("strategies")
     if not isinstance(strategies, list) or not strategies:
         _fail(f"{npc_id}: adaptive_policy.strategies must be non-empty")
@@ -114,7 +133,7 @@ def _validate_adaptive_policy(npc_id: str, policy: dict[str, Any]) -> None:
 
 
 def _validate_adaptive_rubric(prefix: str, rubric: dict[str, Any], required: list[str]) -> None:
-    """The groups decide which gap Alex asks about, so they must be exactly the rubric."""
+    """The groups decide which gap is asked about, so they must equal the rubric."""
     grouped: list[str] = []
     for group in ("reasons", "decision", "execution"):
         values = rubric.get(group)
@@ -142,9 +161,11 @@ def _validate_scenario(
     scenario: dict[str, Any],
     known_npcs: set[str | None] | None = None,
     pressuring: set[str | None] | None = None,
+    adaptive_npcs: set[str | None] | None = None,
 ) -> None:
     known_npcs = known_npcs if known_npcs is not None else set()
     pressuring = pressuring if pressuring is not None else set()
+    adaptive_npcs = adaptive_npcs if adaptive_npcs is not None else set()
     pressure = scenario.get("pressure")
     if pressure is not None:
         # Both mistakes end at the same consequence node, so a pressure module
@@ -192,6 +213,10 @@ def _validate_scenario(
             _validate_withheld(scenario_id, node_id, node)
             if pressuring and node.get("npc_id") not in pressuring:
                 _fail(f"{scenario_id}/{node_id}: {node.get('npc_id')!r} has no persona to press with")
+            if node.get("npc_id") in adaptive_npcs and node.get("adaptive_rubric") is None:
+                _fail(f"{scenario_id}/{node_id}: adaptive persona needs adaptive_rubric")
+        if node.get("adaptive_rubric") is not None and node.get("npc_id") not in adaptive_npcs:
+            _fail(f"{scenario_id}/{node_id}: adaptive_rubric needs adaptive_policy")
         if node.get("adaptive_rubric") is not None:
             _validate_adaptive_rubric(
                 f"{scenario_id}/{node_id}", node["adaptive_rubric"],
