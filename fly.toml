@@ -22,6 +22,9 @@ primary_region = "fra"
   # on 2026-09-11 a live answer against the deployed app came back
   # feedback_mode=fallback, assessment=deferred.
   SKILLTOWN_MODEL_ENABLED = "true"
+  # Alex's evidence-driven questioning is enabled for the hackathon demo.
+  # Removing this line restores the fixed authored ladder on the next deploy.
+  SKILLTOWN_ALEX_ADAPTIVE_ENABLED = "true"
   # No SKILLTOWN_MODEL_USER_AGENT here: the override existed only because that
   # gateway refused the SDK's default client identity. A first-party key does not
   # need it, and setting it here would survive unsetting the secret.
